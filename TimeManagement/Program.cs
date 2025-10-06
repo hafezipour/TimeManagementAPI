@@ -1,0 +1,147 @@
+using DbOperations;
+using WebPortalSecurityManager;
+using TimeManagement.Infra.Extensions;
+using TimeManagement.Infra.Logging;
+using Microsoft.Extensions.Logging;
+using log4net;
+using log4net.Config;
+using System.Reflection;
+
+var builder = WebApplication.CreateBuilder(args);
+var services = builder.Services;
+
+IConfiguration configuration = builder.Configuration;
+
+#region ConfigureServices
+
+services.AddHttpContextAccessor();
+var dbVersionStr = configuration["WebPortalDBVersion"];
+new WebPortalCredentialsHandler(new WebPortalSecurityManager.Models.WPSecurityCredentialsDto() { }).LoadCredentials(builder.Configuration["FilePath"], Convert.ToInt32(dbVersionStr)).Wait();
+
+DbOperationsConfiguration.ConnectionString = WebPortalCredentials.ConnectionStrings.WebportalDB;
+
+
+#endregion
+
+// Add services to the container.
+
+builder.Services.AddControllers();
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+
+var app = builder.Build();
+
+// Configure log4net
+var logRepository = LogManager.GetRepository(Assembly.GetEntryAssembly());
+var logConfigPath = Path.Combine(AppContext.BaseDirectory, "Logging", "log4net.config");
+Console.WriteLine($"Looking for log4net config at: {logConfigPath}");
+Console.WriteLine($"Config file exists: {File.Exists(logConfigPath)}");
+Console.WriteLine($"App base directory: {AppContext.BaseDirectory}");
+
+// Try multiple possible paths for the config file
+var possiblePaths = new[]
+{
+    logConfigPath,
+    Path.Combine(Directory.GetCurrentDirectory(), "Logging", "log4net.config"),
+    Path.Combine(AppContext.BaseDirectory, "TimeManagement.Infra", "Logging", "log4net.config"),
+    "Logging\\log4net.config"
+};
+
+string foundConfigPath = null;
+foreach (var path in possiblePaths)
+{
+    Console.WriteLine($"Checking: {path} - Exists: {File.Exists(path)}");
+    if (File.Exists(path))
+    {
+        foundConfigPath = path;
+        break;
+    }
+}
+
+if (foundConfigPath != null)
+{
+    XmlConfigurator.Configure(logRepository, new FileInfo(foundConfigPath));
+    Console.WriteLine($"log4net configured successfully with: {foundConfigPath}");
+}
+else
+{
+    Console.WriteLine("log4net config file not found in any expected location!");
+    Console.WriteLine("Current directory: " + Directory.GetCurrentDirectory());
+}
+
+// Configure ApiContext and logging
+ApiContext.Configure(app.Services.GetRequiredService<IHttpContextAccessor>());
+
+// Configure custom logging like survey_api
+var loggerFactory = app.Services.GetRequiredService<ILoggerFactory>();
+TimeManagement.Infra.Extensions.CustomLogger.LoggerFactory = loggerFactory;
+string logLevelDebug = WebPortalCredentials.TestingServiceLogging.LogLevel.Debug;
+string logLevelTrace = WebPortalCredentials.TestingServiceLogging.LogLevel.Trace;
+string logLevelInformation = WebPortalCredentials.TestingServiceLogging.LogLevel.Information;
+string logLevelWarning = WebPortalCredentials.TestingServiceLogging.LogLevel.Warning;
+string logLevelError = WebPortalCredentials.TestingServiceLogging.LogLevel.Error;
+string logLevelCritical = WebPortalCredentials.TestingServiceLogging.LogLevel.Critical;
+
+var configs = new List<LoggerConfiguration>();
+if (!string.IsNullOrEmpty(logLevelDebug))
+{
+    configs.Add(new LoggerConfiguration
+    {
+        LogLevel = (LogLevel)Enum.Parse(typeof(LogLevel), logLevelDebug)
+    });
+}
+if (!string.IsNullOrEmpty(logLevelTrace))
+{
+    configs.Add(new LoggerConfiguration
+    {
+        LogLevel = (LogLevel)Enum.Parse(typeof(LogLevel), logLevelTrace)
+    });
+}
+if (!string.IsNullOrEmpty(logLevelInformation))
+{
+    configs.Add(new LoggerConfiguration
+    {
+        LogLevel = (LogLevel)Enum.Parse(typeof(LogLevel), logLevelInformation)
+    });
+}
+if (!string.IsNullOrEmpty(logLevelWarning))
+{
+    configs.Add(new LoggerConfiguration
+    {
+        LogLevel = (LogLevel)Enum.Parse(typeof(LogLevel), logLevelWarning)
+    });
+}
+if (!string.IsNullOrEmpty(logLevelError))
+{
+    configs.Add(new LoggerConfiguration
+    {
+        LogLevel = (LogLevel)Enum.Parse(typeof(LogLevel), logLevelError)
+    });
+}
+if (!string.IsNullOrEmpty(logLevelCritical))
+{
+    configs.Add(new LoggerConfiguration
+    {
+        LogLevel = (LogLevel)Enum.Parse(typeof(LogLevel), logLevelCritical)
+    });
+}
+if (configs.Count() > 0)
+{
+    loggerFactory.AddProvider(new LoggerProvider(configs));
+}
+
+// Configure the HTTP request pipeline.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
+app.UseAuthorization();
+
+app.MapControllers();
+
+app.Run();

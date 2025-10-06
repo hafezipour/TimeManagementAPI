@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<Nullable>enable</Nullable>
+		<ImplicitUsings>enable</ImplicitUsings>
+	</PropertyGroup>
+
+
+	<ItemGroup>
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
+		<PackageReference Include="log4net" Version="2.0.15" />
+
+		<PackageReference Include="AzureFileManager" Version="1.0.0.5" />
+		<PackageReference Include="DbOperations" Version="1.0.0.4" />
+		<PackageReference Include="WebPortalSecurityManager" Version="1.0.6.1" />
+
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\TimeManagement.Infra\TimeManagement.Infra.csproj" />
+	</ItemGroup>
+
+</Project>
