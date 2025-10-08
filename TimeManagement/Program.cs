@@ -26,6 +26,10 @@ DbOperationsConfiguration.ConnectionString = WebPortalCredentials.ConnectionStri
 // Add services to the container.
 builder.Services.AddGrpc();
 
+// Register processors for dependency injection
+builder.Services.AddScoped<TimeManagement.Application.Processors.JobCodeProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Processors.WorkCodeProcessor>();
+
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();

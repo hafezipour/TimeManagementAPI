@@ -9,10 +9,10 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly JobCodeProcessor _jobCodeProcessor;
     private readonly WorkCodeProcessor _workCodeProcessor;
 
-    public HttpGrpcService()
+    public HttpGrpcService(JobCodeProcessor jobCodeProcessor, WorkCodeProcessor workCodeProcessor)
     {
-        _jobCodeProcessor = new JobCodeProcessor();
-        _workCodeProcessor = new WorkCodeProcessor();
+        _jobCodeProcessor = jobCodeProcessor;
+        _workCodeProcessor = workCodeProcessor;
     }
 
     public override async Task<HttpResponse> Get(HttpRequest request, ServerCallContext context)

@@ -56,14 +56,14 @@ public class WorkCodeProcessor
         workCodeDto.Id = new Random().Next(1000, 9999);
         workCodeDto.CreatedDate = DateTime.UtcNow;
 
-        var result = new
-        {
-            success = true,
-            message = "Work Code added successfully",
-            data = workCodeDto
-        };
+        //var result = new
+        //{
+        //    success = true,
+        //    message = "Work Code added successfully",
+        //    data = workCodeDto
+        //};
 
-        return JsonSerializer.Serialize(result);
+        return JsonSerializer.Serialize(workCodeDto);
     }
 
     /// <summary>
