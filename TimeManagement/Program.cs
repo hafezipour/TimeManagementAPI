@@ -24,6 +24,7 @@ DbOperationsConfiguration.ConnectionString = WebPortalCredentials.ConnectionStri
 #endregion
 
 // Add services to the container.
+builder.Services.AddGrpc();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
@@ -141,6 +142,9 @@ if (app.Environment.IsDevelopment())
 app.UseHttpsRedirection();
 
 app.UseAuthorization();
+
+// Map gRPC service
+app.MapGrpcService<TimeManagement.Application.Services.HttpGrpcService>();
 
 app.MapControllers();
 

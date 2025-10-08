@@ -22,7 +22,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         // Return some raw data for now
         var response = new HttpResponse
         {
-            StatusCode = 201,
+            StatusCode = 200,
             Data = $"{{\"message\": \"POST request received\", \"serviceName\": \"{request.ServiceName}\", \"methodName\": \"{request.MethodName}\", \"receivedData\": {request.JsonData}}}"
         };
 
