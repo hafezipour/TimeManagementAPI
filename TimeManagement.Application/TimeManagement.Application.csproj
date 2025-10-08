@@ -8,6 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="GrpcProtoLibrary" Version="1.0.3" />
+    <PackageReference Include="System.Text.Json" Version="8.0.0" />
   </ItemGroup>
 
 </Project>
