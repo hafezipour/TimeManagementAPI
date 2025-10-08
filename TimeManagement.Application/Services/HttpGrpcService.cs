@@ -1,6 +1,7 @@
 using Grpc.Core;
 using GrpcProtoLibrary.Protos;
 using TimeManagement.Application.Processors;
+using TimeManagement.Application.Extensions;
 
 namespace TimeManagement.Application.Services;
 
@@ -93,11 +94,11 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                     break;
 
                 default:
-                    result = System.Text.Json.JsonSerializer.Serialize(new
+                    result = new
                     {
                         success = false,
                         message = $"Unknown service: {request.ServiceName}"
-                    });
+                    }.ToJson();
                     return (404, result);
             }
 
@@ -105,11 +106,11 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         }
         catch (Exception ex)
         {
-            var errorResult = System.Text.Json.JsonSerializer.Serialize(new
+            var errorResult = new
             {
                 success = false,
                 message = $"Error processing request: {ex.Message}"
-            });
+            }.ToJson();
             return (500, errorResult);
         }
     }

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using TimeManagement.Application.DTOs;
+using TimeManagement.Application.Extensions;
 
 namespace TimeManagement.Application.Processors;
 
@@ -16,14 +17,11 @@ public class JobCodeProcessor
     {
         try
         {
-            var dto = JsonSerializer.Deserialize<JobCodeDto>(jsonData, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var dto = jsonData.FromJson<JobCodeDto>();
 
             if (dto == null)
             {
-                return JsonSerializer.Serialize(new { success = false, message = "Invalid JSON data" });
+                return new { success = false, message = "Invalid JSON data" }.ToJson();
             }
 
             return methodName.ToLower() switch
@@ -31,16 +29,16 @@ public class JobCodeProcessor
                 "add" => await Add(dto),
                 "update" => await Update(dto),
                 "delete" => await Delete(dto.Id),
-                _ => JsonSerializer.Serialize(new { success = false, message = $"Unknown method: {methodName}" })
+                _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
         catch (JsonException ex)
         {
-            return JsonSerializer.Serialize(new { success = false, message = $"JSON parsing error: {ex.Message}" });
+            return new { success = false, message = $"JSON parsing error: {ex.Message}" }.ToJson();
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new { success = false, message = $"Error processing request: {ex.Message}" });
+            return new { success = false, message = $"Error processing request: {ex.Message}" }.ToJson();
         }
     }
 
@@ -63,7 +61,7 @@ public class JobCodeProcessor
             data = jobCodeDto
         };
 
-        return JsonSerializer.Serialize(result);
+        return result.ToJson();
     }
 
     /// <summary>
@@ -83,7 +81,7 @@ public class JobCodeProcessor
             data = jobCodeDto
         };
 
-        return JsonSerializer.Serialize(result);
+        return result.ToJson();
     }
 
     /// <summary>
@@ -101,7 +99,7 @@ public class JobCodeProcessor
             deletedId = id
         };
 
-        return JsonSerializer.Serialize(result);
+        return result.ToJson();
     }
 
     /// <summary>
@@ -128,7 +126,7 @@ public class JobCodeProcessor
             data = mockData
         };
 
-        return JsonSerializer.Serialize(result);
+        return result.ToJson();
     }
 
     /// <summary>
@@ -166,7 +164,7 @@ public class JobCodeProcessor
             data = mockDataList
         };
 
-        return JsonSerializer.Serialize(result);
+        return result.ToJson();
     }
 }
 

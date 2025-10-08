@@ -1,5 +1,6 @@
 using System.Text.Json;
 using TimeManagement.Application.DTOs;
+using TimeManagement.Application.Extensions;
 
 namespace TimeManagement.Application.Processors;
 
@@ -16,14 +17,11 @@ public class WorkCodeProcessor
     {
         try
         {
-            var dto = JsonSerializer.Deserialize<WorkCodeDto>(jsonData, new JsonSerializerOptions
-            {
-                PropertyNameCaseInsensitive = true
-            });
+            var dto = jsonData.FromJson<WorkCodeDto>();
 
             if (dto == null)
             {
-                return JsonSerializer.Serialize(new { success = false, message = "Invalid JSON data" });
+                return new { success = false, message = "Invalid JSON data" }.ToJson();
             }
 
             return methodName.ToLower() switch
@@ -31,16 +29,16 @@ public class WorkCodeProcessor
                 "add" => await Add(dto),
                 "update" => await Update(dto),
                 "delete" => await Delete(dto.Id),
-                _ => JsonSerializer.Serialize(new { success = false, message = $"Unknown method: {methodName}" })
+                _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
         catch (JsonException ex)
         {
-            return JsonSerializer.Serialize(new { success = false, message = $"JSON parsing error: {ex.Message}" });
+            return new { success = false, message = $"JSON parsing error: {ex.Message}" }.ToJson();
         }
         catch (Exception ex)
         {
-            return JsonSerializer.Serialize(new { success = false, message = $"Error processing request: {ex.Message}" });
+            return new { success = false, message = $"Error processing request: {ex.Message}" }.ToJson();
         }
     }
 
@@ -56,14 +54,14 @@ public class WorkCodeProcessor
         workCodeDto.Id = new Random().Next(1000, 9999);
         workCodeDto.CreatedDate = DateTime.UtcNow;
 
-        //var result = new
-        //{
-        //    success = true,
-        //    message = "Work Code added successfully",
-        //    data = workCodeDto
-        //};
+        var result = new
+        {
+            success = true,
+            message = "Work Code added successfully",
+            data = workCodeDto
+        };
 
-        return JsonSerializer.Serialize(workCodeDto);
+        return result.ToJson();
     }
 
     /// <summary>
@@ -83,7 +81,7 @@ public class WorkCodeProcessor
             data = workCodeDto
         };
 
-        return JsonSerializer.Serialize(result);
+        return result.ToJson();
     }
 
     /// <summary>
@@ -101,7 +99,7 @@ public class WorkCodeProcessor
             deletedId = id
         };
 
-        return JsonSerializer.Serialize(result);
+        return result.ToJson();
     }
 
     /// <summary>
@@ -129,7 +127,7 @@ public class WorkCodeProcessor
             data = mockData
         };
 
-        return JsonSerializer.Serialize(result);
+        return result.ToJson();
     }
 
     /// <summary>
@@ -169,7 +167,7 @@ public class WorkCodeProcessor
             data = mockDataList
         };
 
-        return JsonSerializer.Serialize(result);
+        return result.ToJson();
     }
 }
 
