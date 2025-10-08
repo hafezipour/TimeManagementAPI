@@ -2,6 +2,7 @@ using Grpc.Core;
 using GrpcProtoLibrary.Protos;
 using TimeManagement.Application.Processors;
 using TimeManagement.Application.Extensions;
+using TimeManagement.Application.Security;
 
 namespace TimeManagement.Application.Services;
 
@@ -9,16 +10,18 @@ public class HttpGrpcService : HttpService.HttpServiceBase
 {
     private readonly JobCodeProcessor _jobCodeProcessor;
     private readonly WorkCodeProcessor _workCodeProcessor;
+    private readonly ValidateToken _validateToken;
 
     public HttpGrpcService(JobCodeProcessor jobCodeProcessor, WorkCodeProcessor workCodeProcessor)
     {
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
+        _validateToken = new ValidateToken();
     }
 
     public override async Task<HttpResponse> Get(HttpRequest request, ServerCallContext context)
     {
-        var result = await RouteRequest(request);
+        var result = await RouteRequest(request, context);
         
         var response = new HttpResponse
         {
@@ -31,7 +34,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
 
     public override async Task<HttpResponse> Post(HttpRequest request, ServerCallContext context)
     {
-        var result = await RouteRequest(request);
+        var result = await RouteRequest(request, context);
         
         var response = new HttpResponse
         {
@@ -44,7 +47,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
 
     public override async Task<HttpResponse> Put(HttpRequest request, ServerCallContext context)
     {
-        var result = await RouteRequest(request);
+        var result = await RouteRequest(request, context);
         
         var response = new HttpResponse
         {
@@ -57,7 +60,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
 
     public override async Task<HttpResponse> Delete(HttpRequest request, ServerCallContext context)
     {
-        var result = await RouteRequest(request);
+        var result = await RouteRequest(request, context);
         
         var response = new HttpResponse
         {
@@ -71,28 +74,40 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     /// <summary>
     /// Routes the request to the appropriate processor based on ServiceName
     /// </summary>
-    private async Task<(int StatusCode, string Data)> RouteRequest(HttpRequest request)
+    private async Task<(int StatusCode, string Data)> RouteRequest(HttpRequest request, ServerCallContext context)
     {
         try
         {
+            // Generic authentication check using ValidateToken
+            var authResult = await _validateToken.AuthenticateRequest(context);
+            if (!authResult.IsAuthenticated)
+            {
+                var unauthorizedResult = new
+                {
+                    success = false,
+                    message = "Unauthorized"
+                }.ToJson();
+                return (401, unauthorizedResult);
+            }
+
             string result;
 
             switch (request.ServiceName.ToLower())
             {
                 case "jobcode":
+                    _jobCodeProcessor.CurrentUser = authResult.User;
                     result = await _jobCodeProcessor.ProcessRequest(
                         request.ServiceName, 
                         request.MethodName, 
-                        request.JsonData,
-                        context);
+                        request.JsonData);
                     break;
 
                 case "workcode":
+                    _workCodeProcessor.CurrentUser = authResult.User;
                     result = await _workCodeProcessor.ProcessRequest(
                         request.ServiceName, 
                         request.MethodName, 
-                        request.JsonData,
-                        context);
+                        request.JsonData);
                     break;
 
                 default:

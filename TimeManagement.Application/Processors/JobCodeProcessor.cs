@@ -1,5 +1,4 @@
 using System.Text.Json;
-using Grpc.Core;
 using TimeManagement.Application.DTOs;
 using TimeManagement.Application.Extensions;
 
@@ -13,22 +12,11 @@ public class JobCodeProcessor : BaseProcessor
     /// <param name="serviceName">Name of the service</param>
     /// <param name="methodName">Method to execute (Add, Update, Delete)</param>
     /// <param name="jsonData">JSON string data to be auto-translated to DTO</param>
-    /// <param name="context">gRPC ServerCallContext for authentication</param>
     /// <returns>Result as JSON string</returns>
-    public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData, ServerCallContext? context = null)
+    public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData)
     {
         try
         {
-            // Authenticate if context is provided
-            if (context != null)
-            {
-                bool isAuthenticated = await AuthenticateRequest(context);
-                if (!isAuthenticated)
-                {
-                    return new { success = false, message = "Unauthorized" }.ToJson();
-                }
-            }
-
             var dto = jsonData.FromJson<JobCodeDto>();
 
             if (dto == null)
