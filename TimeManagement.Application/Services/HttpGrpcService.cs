@@ -83,14 +83,16 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                     result = await _jobCodeProcessor.ProcessRequest(
                         request.ServiceName, 
                         request.MethodName, 
-                        request.JsonData);
+                        request.JsonData,
+                        context);
                     break;
 
                 case "workcode":
                     result = await _workCodeProcessor.ProcessRequest(
                         request.ServiceName, 
                         request.MethodName, 
-                        request.JsonData);
+                        request.JsonData,
+                        context);
                     break;
 
                 default:

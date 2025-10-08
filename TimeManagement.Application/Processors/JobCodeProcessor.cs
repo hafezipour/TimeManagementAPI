@@ -1,10 +1,11 @@
 using System.Text.Json;
+using Grpc.Core;
 using TimeManagement.Application.DTOs;
 using TimeManagement.Application.Extensions;
 
 namespace TimeManagement.Application.Processors;
 
-public class JobCodeProcessor
+public class JobCodeProcessor : BaseProcessor
 {
     /// <summary>
     /// Common method to process requests with ServiceName, MethodName, and JsonData
@@ -12,11 +13,22 @@ public class JobCodeProcessor
     /// <param name="serviceName">Name of the service</param>
     /// <param name="methodName">Method to execute (Add, Update, Delete)</param>
     /// <param name="jsonData">JSON string data to be auto-translated to DTO</param>
+    /// <param name="context">gRPC ServerCallContext for authentication</param>
     /// <returns>Result as JSON string</returns>
-    public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData)
+    public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData, ServerCallContext? context = null)
     {
         try
         {
+            // Authenticate if context is provided
+            if (context != null)
+            {
+                bool isAuthenticated = await AuthenticateRequest(context);
+                if (!isAuthenticated)
+                {
+                    return new { success = false, message = "Unauthorized" }.ToJson();
+                }
+            }
+
             var dto = jsonData.FromJson<JobCodeDto>();
 
             if (dto == null)
@@ -54,11 +66,19 @@ public class JobCodeProcessor
         jobCodeDto.Id = new Random().Next(1000, 9999);
         jobCodeDto.CreatedDate = DateTime.UtcNow;
 
+        // Example: Access CurrentUser from BaseProcessor
+        // if (CurrentUser != null)
+        // {
+        //     Console.WriteLine($"User {CurrentUser.UserName} (ID: {CurrentUser.LoginId}) from Tenant {CurrentUser.TenantID} is adding a job code");
+        // }
+
         var result = new
         {
             success = true,
             message = "Job Code added successfully",
-            data = jobCodeDto
+            data = jobCodeDto,
+            // Optional: Include user info in response
+            // createdBy = CurrentUser?.UserName
         };
 
         return result.ToJson();

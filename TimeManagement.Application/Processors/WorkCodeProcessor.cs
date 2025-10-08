@@ -1,10 +1,11 @@
 using System.Text.Json;
+using Grpc.Core;
 using TimeManagement.Application.DTOs;
 using TimeManagement.Application.Extensions;
 
 namespace TimeManagement.Application.Processors;
 
-public class WorkCodeProcessor
+public class WorkCodeProcessor : BaseProcessor
 {
     /// <summary>
     /// Common method to process requests with ServiceName, MethodName, and JsonData
@@ -12,11 +13,22 @@ public class WorkCodeProcessor
     /// <param name="serviceName">Name of the service</param>
     /// <param name="methodName">Method to execute (Add, Update, Delete)</param>
     /// <param name="jsonData">JSON string data to be auto-translated to DTO</param>
+    /// <param name="context">gRPC ServerCallContext for authentication</param>
     /// <returns>Result as JSON string</returns>
-    public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData)
+    public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData, ServerCallContext? context = null)
     {
         try
         {
+            // Authenticate if context is provided
+            if (context != null)
+            {
+                bool isAuthenticated = await AuthenticateRequest(context);
+                if (!isAuthenticated)
+                {
+                    return new { success = false, message = "Unauthorized" }.ToJson();
+                }
+            }
+
             var dto = jsonData.FromJson<WorkCodeDto>();
 
             if (dto == null)
