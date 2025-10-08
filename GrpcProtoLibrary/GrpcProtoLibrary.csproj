@@ -1,0 +1,31 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net6.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageId>GrpcProtoLibrary</PackageId>
+    <Version>1.0.2</Version>
+    <Authors>Your Name</Authors>
+    <Description>Shared gRPC Protocol Buffer definitions</Description>
+    <PackageTags>grpc;protobuf;proto</PackageTags>
+    <PackageProjectUrl>https://github.com/yourusername/grpc-proto-library</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/yourusername/grpc-proto-library</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.32.1" />
+    <PackageReference Include="Grpc.Core.Api" Version="2.71.0" />
+    <PackageReference Include="Grpc.Tools" Version="2.72.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Protobuf Include="Protos\httpservice.proto" />
+  </ItemGroup>
+
+</Project>

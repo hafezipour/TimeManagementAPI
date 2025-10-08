@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option csharp_namespace = "GrpcProtoLibrary.Protos";
+
+package httpservice;
+
+service HttpService {
+  rpc Get (HttpRequest) returns (HttpResponse);
+  rpc Post (HttpRequest) returns (HttpResponse);
+  rpc Put (HttpRequest) returns (HttpResponse);
+  rpc Delete (HttpRequest) returns (HttpResponse);
+}
+
+message HttpRequest {
+  string serviceName = 1;
+  string methodName = 2;
+  string jsonData = 3;
+}
+
+message HttpResponse {
+  int32 statusCode = 1;
+  string data = 2;
+}
