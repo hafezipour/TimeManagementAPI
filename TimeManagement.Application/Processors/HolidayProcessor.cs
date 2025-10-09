@@ -26,10 +26,9 @@ public class HolidayProcessor : BaseProcessor
         {
             return methodName.ToLower() switch
             {
-                "add" => await Add(jsonData.FromJson<HolidayDto>()),
-                "update" => await Update(jsonData.FromJson<HolidayDto>()),
-                "delete" => await Delete(jsonData.FromJson<HolidayDto>().Id),
-                "get" => await GetAll(),
+                "save" => await Save(jsonData.FromJson<HolidayModel>()),
+                "delete" => await Delete((int)jsonData.FromJson<HolidayModel>().Id),
+                "get" => await GetHolidays(null),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -46,36 +45,18 @@ public class HolidayProcessor : BaseProcessor
     /// <summary>
     /// Add a new Holiday
     /// </summary>
-    public async Task<string> Add(HolidayDto holidayDto)
+    public async Task<string> Save(HolidayModel holidayDto)
     {
         try
         {
             var json = holidayDto.ToJson();
             var result = await _holidaysRepository.SaveHoliday(json, CurrentUser.LoginId, CurrentUser.TenantID);
-            
+
             return result;
         }
         catch (Exception ex)
         {
             return new { success = false, message = $"Error adding holiday: {ex.Message}" }.ToJson();
-        }
-    }
-
-    /// <summary>
-    /// Update an existing Holiday
-    /// </summary>
-    public async Task<string> Update(HolidayDto holidayDto)
-    {
-        try
-        {
-            var json = holidayDto.ToJson();
-            var result = await _holidaysRepository.SaveHoliday(json, CurrentUser.LoginId, CurrentUser.TenantID);
-            
-            return result;
-        }
-        catch (Exception ex)
-        {
-            return new { success = false, message = $"Error updating holiday: {ex.Message}" }.ToJson();
         }
     }
 
@@ -87,7 +68,7 @@ public class HolidayProcessor : BaseProcessor
         try
         {
             var result = await _holidaysRepository.DeleteHoliday(id, CurrentUser.LoginId, CurrentUser.TenantID);
-            
+
             return result;
         }
         catch (Exception ex)
@@ -99,12 +80,12 @@ public class HolidayProcessor : BaseProcessor
     /// <summary>
     /// Get Holiday by ID
     /// </summary>
-    public async Task<string> GetById(int id)
+    public async Task<string> GetHolidays(int? id)
     {
         try
         {
             var result = await _holidaysRepository.GetHolidays(id, CurrentUser.TenantID);
-            
+
             return result;
         }
         catch (Exception ex)
@@ -113,21 +94,5 @@ public class HolidayProcessor : BaseProcessor
         }
     }
 
-    /// <summary>
-    /// Get all Holidays
-    /// </summary>
-    public async Task<string> GetAll()
-    {
-        try
-        {
-            var result = await _holidaysRepository.GetHolidays(null, CurrentUser.TenantID);
-            
-            return result;
-        }
-        catch (Exception ex)
-        {
-            return new { success = false, message = $"Error retrieving holidays: {ex.Message}" }.ToJson();
-        }
-    }
 }
 
