@@ -22,13 +22,14 @@ public class HolidayAssignmentRepository
     {
         try
         {
+            int offset = (pageNumber - 1) * pageSize;
             List<SqlParameterModel> param = new List<SqlParameterModel>()
             {
-                new SqlParameterModel(){ Name = "HolidayIds", Value = holidayIds},
-                new SqlParameterModel(){ Name = "JobCodeId", Value = jobCodeId},
-                new SqlParameterModel(){ Name = "UserId", Value = userId},
-                new SqlParameterModel(){ Name = "PageNumber", Value = pageNumber},
-                new SqlParameterModel(){ Name = "PageSize", Value = pageSize},
+                new SqlParameterModel(){ Name = "OffSet", Value = offset},
+                new SqlParameterModel(){ Name = "Limit", Value = pageSize},
+                new SqlParameterModel(){ Name = "HolidayIds", Value = holidayIds ?? ""},
+                new SqlParameterModel(){ Name = "JobCodeId", Value = jobCodeId ?? 0},
+                new SqlParameterModel(){ Name = "UserId", Value = userId ?? 0},
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
             return await _dbOperations.ExecuteDataSetAsync("usp_HolidayAssignment_Get", param);

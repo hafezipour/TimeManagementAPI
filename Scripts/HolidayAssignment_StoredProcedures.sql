@@ -5,50 +5,41 @@ GO
 -- Stored Procedures for HolidayAssignment
 -- =============================================
 
--- =============================================
--- Author: TimeManagement API
--- Create date: 10/9/2025
--- Description: Get Holiday Assignments with filters and paging
--- =============================================
+/*---------------------=========================================================================================================
+CREATED BY			: TimeManagement API
+CREATED DATE 		: 10/9/2025
+DESCRIPTION			: Get Holiday Assignment List with filters and paging
+LAST UPDATED BY 	:
+DATE LAST UPDATED 	:
+EXEC [usp_HolidayAssignment_Get] 0, 10, '1,2,3', 1, 1, 1
+---------------------=========================================================================================================+*/
 CREATE OR ALTER PROCEDURE [dbo].[usp_HolidayAssignment_Get]
-    @HolidayIds varchar(max) = NULL,
-    @JobCodeId int = NULL,
-    @UserId int = NULL,
-    @PageNumber int = 1,
-    @PageSize int = 10,
+(
+    @OffSet int,
+    @Limit int,
+    @HolidayIds nvarchar(max),
+    @JobCodeId int,
+    @UserId int,
     @TenantId int
+)
 AS
 BEGIN
-    SET NOCOUNT ON;
-    
-    DECLARE @Offset int = (@PageNumber - 1) * @PageSize;
-    
-    -- Build dynamic WHERE clause
-    DECLARE @WhereClause nvarchar(max) = 'WHERE TenantId = @TenantId';
-    
-    IF @HolidayIds IS NOT NULL AND @HolidayIds != ''
+    IF(ISNULL(@HolidayIds, '') = '')
     BEGIN
-        SET @WhereClause = @WhereClause + ' AND HolidayId IN (SELECT value FROM STRING_SPLIT(@HolidayIds, '',''))';
+        SET @HolidayIds = '0'
     END
     
-    IF @JobCodeId IS NOT NULL
+    IF(ISNULL(@JobCodeId, 0) = 0)
     BEGIN
-        SET @WhereClause = @WhereClause + ' AND JobCodeId = @JobCodeId';
+        SET @JobCodeId = 0
     END
     
-    IF @UserId IS NOT NULL
+    IF(ISNULL(@UserId, 0) = 0)
     BEGIN
-        SET @WhereClause = @WhereClause + ' AND UserId = @UserId';
+        SET @UserId = 0
     END
     
-    -- Get total count
-    DECLARE @TotalCount int;
-    DECLARE @CountSql nvarchar(max) = 'SELECT @TotalCount = COUNT(*) FROM HolidayAssignment ' + @WhereClause;
-    EXEC sp_executesql @CountSql, N'@TenantId int, @HolidayIds varchar(max), @JobCodeId int, @UserId int, @TotalCount int OUTPUT',
-        @TenantId, @HolidayIds, @JobCodeId, @UserId, @TotalCount OUTPUT;
-    
-    -- Get paginated results
-    DECLARE @Sql nvarchar(max) = '
+    ;WITH _rows AS (
         SELECT 
             ha.Id as id,
             ha.TenantId as tenantId,
@@ -65,22 +56,30 @@ BEGIN
             h.HolidayCode as holidayCode,
             h.HolidayName as holidayName,
             h.HolidayDate as holidayDate,
+            h.IsObserved as holidayIsObserved,
+            h.IsFloating as holidayIsFloating,
+            h.IsAppliesToAll as holidayIsAppliesToAll,
             jc.JobCode as jobCode,
             jc.JobTitle as jobTitle,
-            u.FirstName + '' '' + u.LastName as userName,
-            @TotalCount as totalCount
+            jc.Description as jobDescription,
+            jc.Category as jobCategory,
+            ISNULL(ha.DateUpdated, ha.DateCreated) as sortingDate
         FROM HolidayAssignment ha
         LEFT JOIN Holidays h ON ha.HolidayId = h.Id AND h.TenantId = @TenantId
         LEFT JOIN JobCodes jc ON ha.JobCodeId = jc.Id AND jc.TenantId = @TenantId
-        LEFT JOIN Users u ON ha.UserId = u.Id AND u.TenantId = @TenantId
-        ' + @WhereClause + '
-        ORDER BY ha.DateCreated DESC
-        OFFSET @Offset ROWS
-        FETCH NEXT @PageSize ROWS ONLY';
-    
-    EXEC sp_executesql @Sql, 
-        N'@TenantId int, @HolidayIds varchar(max), @JobCodeId int, @UserId int, @Offset int, @PageSize int, @TotalCount int',
-        @TenantId, @HolidayIds, @JobCodeId, @UserId, @Offset, @PageSize, @TotalCount;
+        WHERE ha.TenantId = @TenantId
+            AND (@HolidayIds = '0' OR ha.HolidayId IN (SELECT value FROM STRING_SPLIT(@HolidayIds, ',')))
+            AND (@JobCodeId = 0 OR ha.JobCodeId = @JobCodeId)
+            AND (@UserId = 0 OR ha.UserId = @UserId)
+    )
+    SELECT 
+        (SELECT count(_rows.id) from _rows) as totalRecordsCount,
+        * 
+    FROM _rows
+    ORDER BY TRIM(_rows.holidayName) ASC
+    OFFSET @OffSet ROWS 
+    FETCH NEXT @Limit ROWS ONLY
+    FOR JSON PATH, INCLUDE_NULL_VALUES
 END
 GO
 
