@@ -22,7 +22,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     public override async Task<HttpResponse> Get(HttpRequest request, ServerCallContext context)
     {
         var result = await RouteRequest(request, context);
-        
+
         var response = new HttpResponse
         {
             StatusCode = result.StatusCode,
@@ -35,7 +35,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     public override async Task<HttpResponse> Post(HttpRequest request, ServerCallContext context)
     {
         var result = await RouteRequest(request, context);
-        
+
         var response = new HttpResponse
         {
             StatusCode = result.StatusCode,
@@ -48,7 +48,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     public override async Task<HttpResponse> Put(HttpRequest request, ServerCallContext context)
     {
         var result = await RouteRequest(request, context);
-        
+
         var response = new HttpResponse
         {
             StatusCode = result.StatusCode,
@@ -61,7 +61,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     public override async Task<HttpResponse> Delete(HttpRequest request, ServerCallContext context)
     {
         var result = await RouteRequest(request, context);
-        
+
         var response = new HttpResponse
         {
             StatusCode = result.StatusCode,
@@ -95,19 +95,13 @@ public class HttpGrpcService : HttpService.HttpServiceBase
             switch (request.ServiceName.ToLower())
             {
                 case "jobcode":
-                    _jobCodeProcessor.CurrentUser = authResult.User;
-                    result = await _jobCodeProcessor.ProcessRequest(
-                        request.ServiceName, 
-                        request.MethodName, 
-                        request.JsonData);
+                    _jobCodeProcessor.SetCurrentUser(authResult.User);
+                    result = await _jobCodeProcessor.ProcessRequest(request.ServiceName, request.MethodName, request.JsonData);
                     break;
 
                 case "workcode":
-                    _workCodeProcessor.CurrentUser = authResult.User;
-                    result = await _workCodeProcessor.ProcessRequest(
-                        request.ServiceName, 
-                        request.MethodName, 
-                        request.JsonData);
+                    _workCodeProcessor.SetCurrentUser(authResult.User);
+                    result = await _workCodeProcessor.ProcessRequest(request.ServiceName, request.MethodName, request.JsonData);
                     break;
 
                 default:
