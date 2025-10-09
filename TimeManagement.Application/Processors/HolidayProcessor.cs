@@ -123,11 +123,12 @@ public class HolidayProcessor : BaseProcessor
         var mockData = new HolidayDto
         {
             Id = id,
+            HolidayCode = $"HOL-{id}",
             HolidayName = $"Holiday-{id}",
             HolidayDate = DateTime.UtcNow.AddDays(30),
-            HolidayType = "National",
-            Description = $"Mock Holiday Description for {id}",
-            IsActive = true,
+            IsObserved = true,
+            IsFloating = false,
+            IsAppliesToAll = true,
             CreatedDate = DateTime.UtcNow.AddDays(-30)
         };
 
@@ -154,31 +155,34 @@ public class HolidayProcessor : BaseProcessor
             new HolidayDto
             {
                 Id = 1,
+                HolidayCode = "HOL-NYD",
                 HolidayName = "New Year's Day",
                 HolidayDate = new DateTime(DateTime.UtcNow.Year, 1, 1),
-                HolidayType = "National",
-                Description = "First day of the year",
-                IsActive = true,
+                IsObserved = true,
+                IsFloating = false,
+                IsAppliesToAll = true,
                 CreatedDate = DateTime.UtcNow.AddDays(-60)
             },
             new HolidayDto
             {
                 Id = 2,
+                HolidayCode = "HOL-IND",
                 HolidayName = "Independence Day",
                 HolidayDate = new DateTime(DateTime.UtcNow.Year, 7, 4),
-                HolidayType = "National",
-                Description = "National Independence Day",
-                IsActive = true,
+                IsObserved = true,
+                IsFloating = false,
+                IsAppliesToAll = true,
                 CreatedDate = DateTime.UtcNow.AddDays(-45)
             },
             new HolidayDto
             {
                 Id = 3,
+                HolidayCode = "HOL-XMAS",
                 HolidayName = "Christmas Day",
                 HolidayDate = new DateTime(DateTime.UtcNow.Year, 12, 25),
-                HolidayType = "Religious",
-                Description = "Christmas celebration",
-                IsActive = true,
+                IsObserved = true,
+                IsFloating = false,
+                IsAppliesToAll = false,
                 CreatedDate = DateTime.UtcNow.AddDays(-30)
             }
         };

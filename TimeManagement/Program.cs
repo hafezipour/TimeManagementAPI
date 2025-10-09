@@ -18,7 +18,7 @@ services.AddHttpContextAccessor();
 var dbVersionStr = configuration["WebPortalDBVersion"];
 new WebPortalCredentialsHandler(new WebPortalSecurityManager.Models.WPSecurityCredentialsDto() { }).LoadCredentials(builder.Configuration["FilePath"], Convert.ToInt32(dbVersionStr)).Wait();
 
-DbOperationsConfiguration.ConnectionString = WebPortalCredentials.ConnectionStrings.WebportalDB;
+DbOperationsConfiguration.ConnectionString = WebPortalCredentials.ConnectionStrings.TimeManagementDB;
 
 
 #endregion
@@ -30,6 +30,11 @@ builder.Services.AddGrpc();
 builder.Services.AddScoped<TimeManagement.Application.Processors.JobCodeProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.WorkCodeProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayProcessor>();
+
+// Register repositories for dependency injection
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.HolidaysRepository>();
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.JobCodesRepository>();
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.WorkCodesRepository>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

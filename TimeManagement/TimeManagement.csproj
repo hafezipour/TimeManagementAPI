@@ -16,7 +16,7 @@
 		<PackageReference Include="AzureFileManager" Version="1.0.0.5" />
 		<PackageReference Include="DbOperations" Version="1.0.0.4" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
-		<PackageReference Include="WebPortalSecurityManager" Version="1.0.6.1" />
+		<PackageReference Include="WebPortalSecurityManager" Version="1.0.6.3" />
 
 	</ItemGroup>
 
