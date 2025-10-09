@@ -1,11 +1,18 @@
 using System.Text.Json;
 using TimeManagement.Application.DTOs;
 using TimeManagement.Application.Extensions;
+using TimeManagement.Infra.Repositories;
 
 namespace TimeManagement.Application.Processors;
 
 public class HolidayProcessor : BaseProcessor
 {
+    private readonly HolidaysRepository _holidaysRepository;
+
+    public HolidayProcessor(HolidaysRepository holidaysRepository)
+    {
+        _holidaysRepository = holidaysRepository;
+    }
     /// <summary>
     /// Common method to process requests with ServiceName, MethodName, and JsonData
     /// </summary>
@@ -49,29 +56,17 @@ public class HolidayProcessor : BaseProcessor
     /// </summary>
     public async Task<string> Add(HolidayDto holidayDto)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        // Mock: Generate a new ID
-        holidayDto.Id = new Random().Next(1000, 9999);
-        holidayDto.CreatedDate = DateTime.UtcNow;
-
-        // Example: Access CurrentUser from BaseProcessor
-        // if (CurrentUser != null)
-        // {
-        //     Console.WriteLine($"User {CurrentUser.UserName} (ID: {CurrentUser.LoginId}) from Tenant {CurrentUser.TenantID} is adding a holiday");
-        // }
-
-        var result = new
+        try
         {
-            success = true,
-            message = "Holiday added successfully",
-            data = holidayDto,
-            // Optional: Include user info in response
-            // createdBy = CurrentUser?.UserName
-        };
-
-        return result.ToJson();
+            var json = holidayDto.ToJson();
+            var result = await _holidaysRepository.SaveHoliday(json, CurrentUser.LoginId, CurrentUser.TenantID);
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error adding holiday: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
@@ -79,19 +74,17 @@ public class HolidayProcessor : BaseProcessor
     /// </summary>
     public async Task<string> Update(HolidayDto holidayDto)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        holidayDto.ModifiedDate = DateTime.UtcNow;
-
-        var result = new
+        try
         {
-            success = true,
-            message = $"Holiday with ID {holidayDto.Id} updated successfully",
-            data = holidayDto
-        };
-
-        return result.ToJson();
+            var json = holidayDto.ToJson();
+            var result = await _holidaysRepository.SaveHoliday(json, CurrentUser.LoginId, CurrentUser.TenantID);
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error updating holiday: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
@@ -99,17 +92,16 @@ public class HolidayProcessor : BaseProcessor
     /// </summary>
     public async Task<string> Delete(int id)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        var result = new
+        try
         {
-            success = true,
-            message = $"Holiday with ID {id} deleted successfully",
-            deletedId = id
-        };
-
-        return result.ToJson();
+            var result = await _holidaysRepository.DeleteHoliday(id, CurrentUser.LoginId, CurrentUser.TenantID);
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error deleting holiday: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
@@ -117,29 +109,16 @@ public class HolidayProcessor : BaseProcessor
     /// </summary>
     public async Task<string> GetById(int id)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        var mockData = new HolidayDto
+        try
         {
-            Id = id,
-            HolidayCode = $"HOL-{id}",
-            HolidayName = $"Holiday-{id}",
-            HolidayDate = DateTime.UtcNow.AddDays(30),
-            IsObserved = true,
-            IsFloating = false,
-            IsAppliesToAll = true,
-            CreatedDate = DateTime.UtcNow.AddDays(-30)
-        };
-
-        var result = new
+            var result = await _holidaysRepository.GetHolidays(id, CurrentUser.TenantID);
+            
+            return result;
+        }
+        catch (Exception ex)
         {
-            success = true,
-            message = "Holiday retrieved successfully",
-            data = mockData
-        };
-
-        return result.ToJson();
+            return new { success = false, message = $"Error retrieving holiday: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
@@ -147,54 +126,16 @@ public class HolidayProcessor : BaseProcessor
     /// </summary>
     public async Task<string> GetAll()
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        var mockDataList = new List<HolidayDto>
+        try
         {
-            new HolidayDto
-            {
-                Id = 1,
-                HolidayCode = "HOL-NYD",
-                HolidayName = "New Year's Day",
-                HolidayDate = new DateTime(DateTime.UtcNow.Year, 1, 1),
-                IsObserved = true,
-                IsFloating = false,
-                IsAppliesToAll = true,
-                CreatedDate = DateTime.UtcNow.AddDays(-60)
-            },
-            new HolidayDto
-            {
-                Id = 2,
-                HolidayCode = "HOL-IND",
-                HolidayName = "Independence Day",
-                HolidayDate = new DateTime(DateTime.UtcNow.Year, 7, 4),
-                IsObserved = true,
-                IsFloating = false,
-                IsAppliesToAll = true,
-                CreatedDate = DateTime.UtcNow.AddDays(-45)
-            },
-            new HolidayDto
-            {
-                Id = 3,
-                HolidayCode = "HOL-XMAS",
-                HolidayName = "Christmas Day",
-                HolidayDate = new DateTime(DateTime.UtcNow.Year, 12, 25),
-                IsObserved = true,
-                IsFloating = false,
-                IsAppliesToAll = false,
-                CreatedDate = DateTime.UtcNow.AddDays(-30)
-            }
-        };
-
-        var result = new
+            var result = await _holidaysRepository.GetHolidays(null, CurrentUser.TenantID);
+            
+            return result;
+        }
+        catch (Exception ex)
         {
-            success = true,
-            message = "Holidays retrieved successfully",
-            data = mockDataList
-        };
-
-        return result.ToJson();
+            return new { success = false, message = $"Error retrieving holidays: {ex.Message}" }.ToJson();
+        }
     }
 }
 

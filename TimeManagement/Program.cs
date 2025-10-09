@@ -35,6 +35,7 @@ builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayProcesso
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.HolidaysRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.JobCodesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.WorkCodesRepository>();
+builder.Services.AddScoped<WebPortal.EF.Repository.DataBaseRepo.EfDbOperationsRepository>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
