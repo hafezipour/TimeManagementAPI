@@ -11,13 +11,15 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly JobCodeProcessor _jobCodeProcessor;
     private readonly WorkCodeProcessor _workCodeProcessor;
     private readonly HolidayProcessor _holidayProcessor;
+    private readonly HolidayAssignmentProcessor _holidayAssignmentProcessor;
     private readonly ValidateToken _validateToken;
 
-    public HttpGrpcService(JobCodeProcessor jobCodeProcessor, WorkCodeProcessor workCodeProcessor, HolidayProcessor holidayProcessor)
+    public HttpGrpcService(JobCodeProcessor jobCodeProcessor, WorkCodeProcessor workCodeProcessor, HolidayProcessor holidayProcessor, HolidayAssignmentProcessor holidayAssignmentProcessor)
     {
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
         _holidayProcessor = holidayProcessor;
+        _holidayAssignmentProcessor = holidayAssignmentProcessor;
         _validateToken = new ValidateToken();
     }
 
@@ -115,6 +117,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "holidays":
                     _holidayProcessor.SetCurrentUser(authResult.User);
                     result = await _holidayProcessor.ProcessRequest(
+                        request.ServiceName, 
+                        request.MethodName, 
+                        request.JsonData);
+                    break;
+
+                case "holiday-assignments":
+                    _holidayAssignmentProcessor.SetCurrentUser(authResult.User);
+                    result = await _holidayAssignmentProcessor.ProcessRequest(
                         request.ServiceName, 
                         request.MethodName, 
                         request.JsonData);
