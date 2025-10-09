@@ -29,6 +29,7 @@ builder.Services.AddGrpc();
 // Register processors for dependency injection
 builder.Services.AddScoped<TimeManagement.Application.Processors.JobCodeProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.WorkCodeProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayProcessor>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle

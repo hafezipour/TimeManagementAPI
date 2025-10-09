@@ -4,7 +4,7 @@ using TimeManagement.Application.Extensions;
 
 namespace TimeManagement.Application.Processors;
 
-public class JobCodeProcessor : BaseProcessor
+public class HolidayProcessor : BaseProcessor
 {
     /// <summary>
     /// Common method to process requests with ServiceName, MethodName, and JsonData
@@ -17,7 +17,7 @@ public class JobCodeProcessor : BaseProcessor
     {
         try
         {
-            var dto = jsonData.FromJson<JobCodeDto>();
+            var dto = jsonData.FromJson<HolidayDto>();
 
             if (dto == null)
             {
@@ -29,6 +29,8 @@ public class JobCodeProcessor : BaseProcessor
                 "add" => await Add(dto),
                 "update" => await Update(dto),
                 "delete" => await Delete(dto.Id),
+                "getbyid" => await GetById(dto.Id),
+                "getall" => await GetAll(),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -43,28 +45,28 @@ public class JobCodeProcessor : BaseProcessor
     }
 
     /// <summary>
-    /// Add a new Job Code
+    /// Add a new Holiday
     /// </summary>
-    public async Task<string> Add(JobCodeDto jobCodeDto)
+    public async Task<string> Add(HolidayDto holidayDto)
     {
         // Mock implementation
-       
+        await Task.Delay(10); // Simulate async operation
 
         // Mock: Generate a new ID
-        jobCodeDto.Id = new Random().Next(1000, 9999);
-        jobCodeDto.CreatedDate = DateTime.UtcNow;
+        holidayDto.Id = new Random().Next(1000, 9999);
+        holidayDto.CreatedDate = DateTime.UtcNow;
 
         // Example: Access CurrentUser from BaseProcessor
         // if (CurrentUser != null)
         // {
-        //     Console.WriteLine($"User {CurrentUser.UserName} (ID: {CurrentUser.LoginId}) from Tenant {CurrentUser.TenantID} is adding a job code");
+        //     Console.WriteLine($"User {CurrentUser.UserName} (ID: {CurrentUser.LoginId}) from Tenant {CurrentUser.TenantID} is adding a holiday");
         // }
 
         var result = new
         {
             success = true,
-            message = "Job Code added successfully",
-            data = jobCodeDto,
+            message = "Holiday added successfully",
+            data = holidayDto,
             // Optional: Include user info in response
             // createdBy = CurrentUser?.UserName
         };
@@ -73,27 +75,27 @@ public class JobCodeProcessor : BaseProcessor
     }
 
     /// <summary>
-    /// Update an existing Job Code
+    /// Update an existing Holiday
     /// </summary>
-    public async Task<string> Update(JobCodeDto jobCodeDto)
+    public async Task<string> Update(HolidayDto holidayDto)
     {
         // Mock implementation
         await Task.Delay(10); // Simulate async operation
 
-        jobCodeDto.ModifiedDate = DateTime.UtcNow;
+        holidayDto.ModifiedDate = DateTime.UtcNow;
 
         var result = new
         {
             success = true,
-            message = $"Job Code with ID {jobCodeDto.Id} updated successfully",
-            data = jobCodeDto
+            message = $"Holiday with ID {holidayDto.Id} updated successfully",
+            data = holidayDto
         };
 
         return result.ToJson();
     }
 
     /// <summary>
-    /// Delete a Job Code by ID
+    /// Delete a Holiday by ID
     /// </summary>
     public async Task<string> Delete(int id)
     {
@@ -103,7 +105,7 @@ public class JobCodeProcessor : BaseProcessor
         var result = new
         {
             success = true,
-            message = $"Job Code with ID {id} deleted successfully",
+            message = $"Holiday with ID {id} deleted successfully",
             deletedId = id
         };
 
@@ -111,18 +113,20 @@ public class JobCodeProcessor : BaseProcessor
     }
 
     /// <summary>
-    /// Get Job Code by ID (bonus method)
+    /// Get Holiday by ID
     /// </summary>
     public async Task<string> GetById(int id)
     {
         // Mock implementation
         await Task.Delay(10); // Simulate async operation
 
-        var mockData = new JobCodeDto
+        var mockData = new HolidayDto
         {
             Id = id,
-            JobCode = $"JOB-{id}",
-            JobDescription = $"Mock Job Code Description for {id}",
+            HolidayName = $"Holiday-{id}",
+            HolidayDate = DateTime.UtcNow.AddDays(30),
+            HolidayType = "National",
+            Description = $"Mock Holiday Description for {id}",
             IsActive = true,
             CreatedDate = DateTime.UtcNow.AddDays(-30)
         };
@@ -130,7 +134,7 @@ public class JobCodeProcessor : BaseProcessor
         var result = new
         {
             success = true,
-            message = "Job Code retrieved successfully",
+            message = "Holiday retrieved successfully",
             data = mockData
         };
 
@@ -138,37 +142,51 @@ public class JobCodeProcessor : BaseProcessor
     }
 
     /// <summary>
-    /// Get all Job Codes (bonus method)
+    /// Get all Holidays
     /// </summary>
     public async Task<string> GetAll()
     {
         // Mock implementation
         await Task.Delay(10); // Simulate async operation
 
-        var mockDataList = new List<JobCodeDto>
+        var mockDataList = new List<HolidayDto>
         {
-            new JobCodeDto
+            new HolidayDto
             {
                 Id = 1,
-                JobCode = "JOB-001",
-                JobDescription = "Development",
+                HolidayName = "New Year's Day",
+                HolidayDate = new DateTime(DateTime.UtcNow.Year, 1, 1),
+                HolidayType = "National",
+                Description = "First day of the year",
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow.AddDays(-60)
             },
-            new JobCodeDto
+            new HolidayDto
             {
                 Id = 2,
-                JobCode = "JOB-002",
-                JobDescription = "Testing",
+                HolidayName = "Independence Day",
+                HolidayDate = new DateTime(DateTime.UtcNow.Year, 7, 4),
+                HolidayType = "National",
+                Description = "National Independence Day",
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow.AddDays(-45)
+            },
+            new HolidayDto
+            {
+                Id = 3,
+                HolidayName = "Christmas Day",
+                HolidayDate = new DateTime(DateTime.UtcNow.Year, 12, 25),
+                HolidayType = "Religious",
+                Description = "Christmas celebration",
+                IsActive = true,
+                CreatedDate = DateTime.UtcNow.AddDays(-30)
             }
         };
 
         var result = new
         {
             success = true,
-            message = "Job Codes retrieved successfully",
+            message = "Holidays retrieved successfully",
             data = mockDataList
         };
 

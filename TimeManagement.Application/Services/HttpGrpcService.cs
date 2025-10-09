@@ -104,6 +104,11 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                     result = await _workCodeProcessor.ProcessRequest(request.ServiceName, request.MethodName, request.JsonData);
                     break;
 
+                case "holidays":
+                    _jobCodeProcessor.SetCurrentUser(authResult.User);
+                    result = await _jobCodeProcessor.ProcessRequest(request.ServiceName, request.MethodName, request.JsonData);
+                    break;
+
                 default:
                     result = new
                     {

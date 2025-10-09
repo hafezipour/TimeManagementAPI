@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36511.14 d17.14
+VisualStudioVersion = 17.14.36511.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeManagement", "TimeManagement.csproj", "{1BE22A22-F36C-466F-9BFE-6B83505F09A2}"
 EndProject
@@ -10,8 +10,6 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeManagement.Domain", "..\TimeManagement.Domain\TimeManagement.Domain.csproj", "{2D15EEBF-62DC-4FC8-AB81-D7CD4021C964}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeManagement.Infra", "..\TimeManagement.Infra\TimeManagement.Infra.csproj", "{CD10C20A-EC0B-4D16-9B9E-8B661088C539}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeManagement.Sdk", "..\TimeManagement.Sdk\TimeManagement.Sdk.csproj", "{F21A4913-8A57-4AD7-BC0C-FB076F231CBD}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -35,10 +33,6 @@ Global
 		{CD10C20A-EC0B-4D16-9B9E-8B661088C539}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CD10C20A-EC0B-4D16-9B9E-8B661088C539}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CD10C20A-EC0B-4D16-9B9E-8B661088C539}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F21A4913-8A57-4AD7-BC0C-FB076F231CBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F21A4913-8A57-4AD7-BC0C-FB076F231CBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{F21A4913-8A57-4AD7-BC0C-FB076F231CBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{F21A4913-8A57-4AD7-BC0C-FB076F231CBD}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
