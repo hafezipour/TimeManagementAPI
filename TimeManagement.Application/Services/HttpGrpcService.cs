@@ -10,12 +10,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
 {
     private readonly JobCodeProcessor _jobCodeProcessor;
     private readonly WorkCodeProcessor _workCodeProcessor;
+    private readonly HolidayProcessor _holidayProcessor;
     private readonly ValidateToken _validateToken;
 
-    public HttpGrpcService(JobCodeProcessor jobCodeProcessor, WorkCodeProcessor workCodeProcessor)
+    public HttpGrpcService(JobCodeProcessor jobCodeProcessor, WorkCodeProcessor workCodeProcessor, HolidayProcessor holidayProcessor)
     {
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
+        _holidayProcessor = holidayProcessor;
         _validateToken = new ValidateToken();
     }
 
@@ -96,17 +98,26 @@ public class HttpGrpcService : HttpService.HttpServiceBase
             {
                 case "jobcode":
                     _jobCodeProcessor.SetCurrentUser(authResult.User);
-                    result = await _jobCodeProcessor.ProcessRequest(request.ServiceName, request.MethodName, request.JsonData);
+                    result = await _jobCodeProcessor.ProcessRequest(
+                        request.ServiceName, 
+                        request.MethodName, 
+                        request.JsonData);
                     break;
 
                 case "workcode":
                     _workCodeProcessor.SetCurrentUser(authResult.User);
-                    result = await _workCodeProcessor.ProcessRequest(request.ServiceName, request.MethodName, request.JsonData);
+                    result = await _workCodeProcessor.ProcessRequest(
+                        request.ServiceName, 
+                        request.MethodName, 
+                        request.JsonData);
                     break;
 
                 case "holidays":
-                    _jobCodeProcessor.SetCurrentUser(authResult.User);
-                    result = await _jobCodeProcessor.ProcessRequest(request.ServiceName, request.MethodName, request.JsonData);
+                    _holidayProcessor.SetCurrentUser(authResult.User);
+                    result = await _holidayProcessor.ProcessRequest(
+                        request.ServiceName, 
+                        request.MethodName, 
+                        request.JsonData);
                     break;
 
                 default:
