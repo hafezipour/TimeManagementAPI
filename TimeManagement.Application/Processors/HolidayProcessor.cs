@@ -26,9 +26,9 @@ public class HolidayProcessor : BaseProcessor
         {
             return methodName.ToLower() switch
             {
-                "save" => await Save(jsonData.FromJson<HolidayModel>()),
-                "delete" => await Delete((int)jsonData.FromJson<HolidayModel>().Id),
-                "get" => await GetHolidays(null),
+                "save" => await Save(jsonData.FromJson<SaveHolidayRequest>()),
+                "delete" => await Delete(jsonData.FromJson<DeleteHolidayRequest>()),
+                "get" => await GetHolidays(jsonData.FromJson<GetHolidayRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -43,9 +43,9 @@ public class HolidayProcessor : BaseProcessor
     }
 
     /// <summary>
-    /// Add a new Holiday
+    /// Save a Holiday (Create/Update)
     /// </summary>
-    public async Task<string> Save(HolidayModel holidayDto)
+    public async Task<string> Save(SaveHolidayRequest holidayDto)
     {
         try
         {
@@ -63,11 +63,11 @@ public class HolidayProcessor : BaseProcessor
     /// <summary>
     /// Delete a Holiday by ID
     /// </summary>
-    public async Task<string> Delete(int id)
+    public async Task<string> Delete(DeleteHolidayRequest request)
     {
         try
         {
-            var result = await _holidaysRepository.DeleteHoliday(id, CurrentUser.LoginId, CurrentUser.TenantID);
+            var result = await _holidaysRepository.DeleteHoliday(request.HolidayId, CurrentUser.LoginId, CurrentUser.TenantID);
 
             return result;
         }
@@ -78,13 +78,13 @@ public class HolidayProcessor : BaseProcessor
     }
 
     /// <summary>
-    /// Get Holiday by ID
+    /// Get Holidays (all or by specific ID)
     /// </summary>
-    public async Task<string> GetHolidays(int? id)
+    public async Task<string> GetHolidays(GetHolidayRequest request)
     {
         try
         {
-            var result = await _holidaysRepository.GetHolidays(id, CurrentUser.TenantID);
+            var result = await _holidaysRepository.GetHolidays(request.HolidayId, CurrentUser.TenantID);
 
             return result;
         }
