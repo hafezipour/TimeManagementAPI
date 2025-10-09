@@ -24,20 +24,12 @@ public class HolidayProcessor : BaseProcessor
     {
         try
         {
-            var dto = jsonData.FromJson<HolidayDto>();
-
-            if (dto == null)
-            {
-                return new { success = false, message = "Invalid JSON data" }.ToJson();
-            }
-
             return methodName.ToLower() switch
             {
-                "add" => await Add(dto),
-                "update" => await Update(dto),
-                "delete" => await Delete(dto.Id),
-                "getbyid" => await GetById(dto.Id),
-                "getall" => await GetAll(),
+                "add" => await Add(jsonData.FromJson<HolidayDto>()),
+                "update" => await Update(jsonData.FromJson<HolidayDto>()),
+                "delete" => await Delete(jsonData.FromJson<HolidayDto>().Id),
+                "get" => await GetAll(),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
