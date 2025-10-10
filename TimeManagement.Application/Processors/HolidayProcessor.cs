@@ -29,6 +29,7 @@ public class HolidayProcessor : BaseProcessor
                 "save" => await Save(jsonData.FromJson<SaveHolidayRequest>()),
                 "delete" => await Delete(jsonData.FromJson<DeleteHolidayRequest>()),
                 "get" => await GetHolidays(jsonData.FromJson<GetHolidayRequest>()),
+                "getshortlist" => await GetHolidaysShortList(),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -91,6 +92,23 @@ public class HolidayProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving holiday: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Get Holidays Short List for dropdowns/lookups
+    /// </summary>
+    public async Task<string> GetHolidaysShortList()
+    {
+        try
+        {
+            var result = await _holidaysRepository.GetHolidaysShortList(CurrentUser.TenantID);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving holidays short list: {ex.Message}" }.ToJson();
         }
     }
 

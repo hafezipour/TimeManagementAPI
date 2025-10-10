@@ -1,11 +1,19 @@
 using System.Text.Json;
 using TimeManagement.Application.DTOs;
 using TimeManagement.Application.Extensions;
+using TimeManagement.Infra.Repositories;
 
 namespace TimeManagement.Application.Processors;
 
 public class JobCodeProcessor : BaseProcessor
 {
+    private readonly JobCodesRepository _jobCodesRepository;
+
+    public JobCodeProcessor(JobCodesRepository jobCodesRepository)
+    {
+        _jobCodesRepository = jobCodesRepository;
+    }
+
     /// <summary>
     /// Common method to process requests with ServiceName, MethodName, and JsonData
     /// </summary>
@@ -17,6 +25,12 @@ public class JobCodeProcessor : BaseProcessor
     {
         try
         {
+            // Handle methods that don't require JSON data
+            if (methodName.ToLower() == "getshortlist")
+            {
+                return await GetJobCodesShortList();
+            }
+
             var dto = jsonData.FromJson<JobCodeModel>();
 
             if (dto == null)
@@ -173,6 +187,23 @@ public class JobCodeProcessor : BaseProcessor
         };
 
         return result.ToJson();
+    }
+
+    /// <summary>
+    /// Get JobCodes Short List for dropdowns/lookups
+    /// </summary>
+    public async Task<string> GetJobCodesShortList()
+    {
+        try
+        {
+            var result = await _jobCodesRepository.GetJobCodesShortList(CurrentUser.TenantID);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving job codes short list: {ex.Message}" }.ToJson();
+        }
     }
 }
 

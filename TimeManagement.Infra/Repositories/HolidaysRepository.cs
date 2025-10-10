@@ -76,5 +76,24 @@ public class HolidaysRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Get Holidays Short List for dropdowns/lookups
+    /// </summary>
+    public async Task<string> GetHolidaysShortList(int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_Holidays_GetShortList", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
