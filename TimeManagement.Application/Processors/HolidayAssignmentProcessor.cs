@@ -55,6 +55,7 @@ public class HolidayAssignmentProcessor : BaseProcessor
                 request.JobCodeId,
                 request.UserId,
                 request.SearchStr,
+                request.AssignmentBy,
                 request.OffSet,
                 request.Limit,
                 CurrentUser.TenantID
