@@ -48,11 +48,11 @@ public class JobCodeProcessor : BaseProcessor
         }
         catch (JsonException ex)
         {
-            return new { success = false, message = $"JSON parsing error: {ex.Message}" }.ToJson();
+            throw ex;
         }
         catch (Exception ex)
         {
-            return new { success = false, message = $"Error processing request: {ex.Message}" }.ToJson();
+            throw ex;
         }
     }
 
