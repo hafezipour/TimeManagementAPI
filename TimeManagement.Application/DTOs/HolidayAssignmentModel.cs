@@ -10,7 +10,6 @@ public class HolidayAssignmentModel
     public int holidayId { get; set; }
     public int jobCodeId { get; set; }
     public int userId { get; set; }
-    public bool isActive { get; set; }
     public DateTime? effectiveDate { get; set; }
     public DateTime? expiryDate { get; set; }
     public int createdBy { get; set; }

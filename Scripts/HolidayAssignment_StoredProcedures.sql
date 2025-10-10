@@ -1,10 +1,3 @@
-USE [TimeManagement_DEV]
-GO
-
--- =============================================
--- Stored Procedures for HolidayAssignment
--- =============================================
-
 /*---------------------=========================================================================================================
 CREATED BY			: TimeManagement API
 CREATED DATE 		: 10/9/2025
@@ -42,11 +35,9 @@ BEGIN
     ;WITH _rows AS (
         SELECT 
             ha.Id as id,
-            ha.TenantId as tenantId,
             ha.HolidayId as holidayId,
             ha.JobCodeId as jobCodeId,
             ha.UserId as userId,
-            ha.IsActive as isActive,
             ha.EffectiveDate as effectiveDate,
             ha.ExpiryDate as expiryDate,
             ha.CreatedBy as createdBy,
@@ -101,8 +92,7 @@ BEGIN
         DECLARE @Id int
         DECLARE @HolidayId int
         DECLARE @JobCodeId int
-        DECLARE @UserId int
-        DECLARE @IsActive bit
+        DECLARE @AssignmentUserId int
         DECLARE @EffectiveDate datetimeoffset(7)
         DECLARE @ExpiryDate datetimeoffset(7)
         
@@ -111,8 +101,7 @@ BEGIN
             @Id = id,
             @HolidayId = holidayId,
             @JobCodeId = jobCodeId,
-            @UserId = userId,
-            @IsActive = ISNULL(isActive, 1),
+            @AssignmentUserId = userId,
             @EffectiveDate = effectiveDate,
             @ExpiryDate = expiryDate
         FROM OPENJSON(@Json) WITH (
@@ -120,7 +109,6 @@ BEGIN
             holidayId int,
             jobCodeId int,
             userId int,
-            isActive bit,
             effectiveDate datetimeoffset(7),
             expiryDate datetimeoffset(7)
         )
@@ -132,8 +120,7 @@ BEGIN
             UPDATE HolidayAssignment SET
                 HolidayId = @HolidayId,
                 JobCodeId = @JobCodeId,
-                UserId = @UserId,
-                IsActive = @IsActive,
+                UserId = @AssignmentUserId,
                 EffectiveDate = @EffectiveDate,
                 ExpiryDate = @ExpiryDate,
                 UpdatedBy = @UserId,
@@ -154,7 +141,6 @@ BEGIN
                 HolidayId,
                 JobCodeId,
                 UserId,
-                IsActive,
                 EffectiveDate,
                 ExpiryDate,
                 CreatedBy,
@@ -164,8 +150,7 @@ BEGIN
                 @TenantId,
                 @HolidayId,
                 @JobCodeId,
-                @UserId,
-                @IsActive,
+                @AssignmentUserId,
                 @EffectiveDate,
                 @ExpiryDate,
                 @UserId,

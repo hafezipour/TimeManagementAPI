@@ -54,8 +54,8 @@ public class HolidayAssignmentProcessor : BaseProcessor
                 request.HolidayIds,
                 request.JobCodeId,
                 request.UserId,
-                request.PageNumber,
-                request.PageSize,
+                request.OffSet,
+                request.Limit,
                 CurrentUser.TenantID
             );
 

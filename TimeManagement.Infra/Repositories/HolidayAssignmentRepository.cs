@@ -18,15 +18,14 @@ public class HolidayAssignmentRepository
     /// <summary>
     /// Get Holiday Assignments with filters and paging
     /// </summary>
-    public async Task<string> GetHolidayAssignments(string? holidayIds, int? jobCodeId, int? userId, int pageNumber, int pageSize, int tenantId)
+    public async Task<string> GetHolidayAssignments(string? holidayIds, int? jobCodeId, int? userId, int offset, int limit, int tenantId)
     {
         try
         {
-            int offset = (pageNumber - 1) * pageSize;
             List<SqlParameterModel> param = new List<SqlParameterModel>()
             {
                 new SqlParameterModel(){ Name = "OffSet", Value = offset},
-                new SqlParameterModel(){ Name = "Limit", Value = pageSize},
+                new SqlParameterModel(){ Name = "Limit", Value = limit},
                 new SqlParameterModel(){ Name = "HolidayIds", Value = holidayIds ?? ""},
                 new SqlParameterModel(){ Name = "JobCodeId", Value = jobCodeId ?? 0},
                 new SqlParameterModel(){ Name = "UserId", Value = userId ?? 0},
