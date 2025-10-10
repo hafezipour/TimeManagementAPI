@@ -1,6 +1,6 @@
 namespace TimeManagement.Application.DTOs;
 
-public class WorkCodeDto
+public class WorkCodeModel
 {
     public int Id { get; set; }
     public string WorkCode { get; set; } = string.Empty;

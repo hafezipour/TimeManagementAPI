@@ -18,7 +18,7 @@ public class HolidayAssignmentRepository
     /// <summary>
     /// Get Holiday Assignments with filters and paging
     /// </summary>
-    public async Task<string> GetHolidayAssignments(string? holidayIds, int? jobCodeId, int? userId, int offset, int limit, int tenantId)
+    public async Task<string> GetHolidayAssignments(string? holidayIds, int? jobCodeId, int? userId, string? searchStr, int offset, int limit, int tenantId)
     {
         try
         {
@@ -29,6 +29,7 @@ public class HolidayAssignmentRepository
                 new SqlParameterModel(){ Name = "HolidayIds", Value = holidayIds ?? ""},
                 new SqlParameterModel(){ Name = "JobCodeId", Value = jobCodeId ?? 0},
                 new SqlParameterModel(){ Name = "UserId", Value = userId ?? 0},
+                new SqlParameterModel(){ Name = "SearchStr", Value = searchStr ?? ""},
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
             return await _dbOperations.ExecuteDataSetAsync("usp_HolidayAssignment_Get", param);

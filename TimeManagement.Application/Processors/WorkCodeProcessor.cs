@@ -17,7 +17,7 @@ public class WorkCodeProcessor : BaseProcessor
     {
         try
         {
-            var dto = jsonData.FromJson<WorkCodeDto>();
+            var dto = jsonData.FromJson<WorkCodeModel>();
 
             if (dto == null)
             {
@@ -45,7 +45,7 @@ public class WorkCodeProcessor : BaseProcessor
     /// <summary>
     /// Add a new Work Code
     /// </summary>
-    public async Task<string> Add(WorkCodeDto workCodeDto)
+    public async Task<string> Add(WorkCodeModel workCodeDto)
     {
         // Mock implementation
         await Task.Delay(10); // Simulate async operation
@@ -67,7 +67,7 @@ public class WorkCodeProcessor : BaseProcessor
     /// <summary>
     /// Update an existing Work Code
     /// </summary>
-    public async Task<string> Update(WorkCodeDto workCodeDto)
+    public async Task<string> Update(WorkCodeModel workCodeDto)
     {
         // Mock implementation
         await Task.Delay(10); // Simulate async operation
@@ -110,7 +110,7 @@ public class WorkCodeProcessor : BaseProcessor
         // Mock implementation
         await Task.Delay(10); // Simulate async operation
 
-        var mockData = new WorkCodeDto
+        var mockData = new WorkCodeModel
         {
             Id = id,
             WorkCode = $"WORK-{id}",
@@ -138,9 +138,9 @@ public class WorkCodeProcessor : BaseProcessor
         // Mock implementation
         await Task.Delay(10); // Simulate async operation
 
-        var mockDataList = new List<WorkCodeDto>
+        var mockDataList = new List<WorkCodeModel>
         {
-            new WorkCodeDto
+            new WorkCodeModel
             {
                 Id = 1,
                 WorkCode = "WORK-001",
@@ -149,7 +149,7 @@ public class WorkCodeProcessor : BaseProcessor
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow.AddDays(-60)
             },
-            new WorkCodeDto
+            new WorkCodeModel
             {
                 Id = 2,
                 WorkCode = "WORK-002",

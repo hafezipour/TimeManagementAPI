@@ -122,7 +122,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                         request.JsonData);
                     break;
 
-                case "holiday-assignments":
+                case "holidayassignment":
                     _holidayAssignmentProcessor.SetCurrentUser(authResult.User);
                     result = await _holidayAssignmentProcessor.ProcessRequest(
                         request.ServiceName, 

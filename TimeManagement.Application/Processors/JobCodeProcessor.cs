@@ -17,7 +17,7 @@ public class JobCodeProcessor : BaseProcessor
     {
         try
         {
-            var dto = jsonData.FromJson<JobCodeDto>();
+            var dto = jsonData.FromJson<JobCodeModel>();
 
             if (dto == null)
             {
@@ -45,7 +45,7 @@ public class JobCodeProcessor : BaseProcessor
     /// <summary>
     /// Add a new Job Code
     /// </summary>
-    public async Task<string> Add(JobCodeDto jobCodeDto)
+    public async Task<string> Add(JobCodeModel jobCodeDto)
     {
         // Mock implementation
        
@@ -75,7 +75,7 @@ public class JobCodeProcessor : BaseProcessor
     /// <summary>
     /// Update an existing Job Code
     /// </summary>
-    public async Task<string> Update(JobCodeDto jobCodeDto)
+    public async Task<string> Update(JobCodeModel jobCodeDto)
     {
         // Mock implementation
         await Task.Delay(10); // Simulate async operation
@@ -118,7 +118,7 @@ public class JobCodeProcessor : BaseProcessor
         // Mock implementation
         await Task.Delay(10); // Simulate async operation
 
-        var mockData = new JobCodeDto
+        var mockData = new JobCodeModel
         {
             Id = id,
             JobCode = $"JOB-{id}",
@@ -145,9 +145,9 @@ public class JobCodeProcessor : BaseProcessor
         // Mock implementation
         await Task.Delay(10); // Simulate async operation
 
-        var mockDataList = new List<JobCodeDto>
+        var mockDataList = new List<JobCodeModel>
         {
-            new JobCodeDto
+            new JobCodeModel
             {
                 Id = 1,
                 JobCode = "JOB-001",
@@ -155,7 +155,7 @@ public class JobCodeProcessor : BaseProcessor
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow.AddDays(-60)
             },
-            new JobCodeDto
+            new JobCodeModel
             {
                 Id = 2,
                 JobCode = "JOB-002",

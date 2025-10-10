@@ -1,28 +1,18 @@
 namespace TimeManagement.Application.DTOs;
 
-/// <summary>
-/// Holiday Assignment entity interface - matches the response from usp_HolidayAssignment_Get
-/// </summary>
 public class HolidayAssignmentModel
 {
-    public int id { get; set; }
-    public int tenantId { get; set; }
-    public int holidayId { get; set; }
-    public int jobCodeId { get; set; }
-    public int userId { get; set; }
-    public DateTime? effectiveDate { get; set; }
-    public DateTime? expiryDate { get; set; }
-    public int createdBy { get; set; }
-    public int? updatedBy { get; set; }
-    public DateTime dateCreated { get; set; }
-    public DateTime? dateUpdated { get; set; }
-    
-    // Joined data
-    public string holidayCode { get; set; } = string.Empty;
-    public string holidayName { get; set; } = string.Empty;
-    public DateTime holidayDate { get; set; }
-    public string jobCode { get; set; } = string.Empty;
-    public string jobTitle { get; set; } = string.Empty;
-    public string userName { get; set; } = string.Empty;
-    public int totalCount { get; set; }
+    public int Id { get; set; }
+    public int HolidayId { get; set; }
+    public string HolidayName { get; set; } = string.Empty;
+    public string HolidayCode { get; set; } = string.Empty;
+    public DateTime HolidayDate { get; set; }
+    public int? JobCodeId { get; set; }
+    public string? JobCodeName { get; set; }
+    public int? UserId { get; set; }
+    public string? UserName { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedDate { get; set; }
+    public DateTime? ModifiedDate { get; set; }
 }
+
