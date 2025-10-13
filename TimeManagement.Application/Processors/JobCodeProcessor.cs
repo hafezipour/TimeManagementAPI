@@ -82,7 +82,7 @@ public class JobCodeProcessor : BaseProcessor
             // Set tenant and user info from current user
             jobCodeDto.TenantId = CurrentUser.TenantID;
             jobCodeDto.CreatedBy = CurrentUser.LoginId;
-        jobCodeDto.CreatedDate = DateTime.UtcNow;
+            jobCodeDto.CreatedDate = DateTime.UtcNow;
 
             // Call repository to add job code
             var result = await _jobCodesRepository.AddJobCode(
@@ -103,7 +103,7 @@ public class JobCodeProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error adding job code: {ex.Message}" }.ToJson();
-    }
+        }
     }
 
     /// <summary>
@@ -111,19 +111,34 @@ public class JobCodeProcessor : BaseProcessor
     /// </summary>
     public async Task<string> Update(JobCodeModel jobCodeDto)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        jobCodeDto.ModifiedDate = DateTime.UtcNow;
-
-        var result = new
+        try
         {
-            success = true,
-            message = $"Job Code with ID {jobCodeDto.Id} updated successfully",
-            data = jobCodeDto
-        };
+            // Set tenant and user info from current user
+            jobCodeDto.TenantId = CurrentUser.TenantID;
+            jobCodeDto.ModifiedBy = CurrentUser.LoginId;
+            jobCodeDto.ModifiedDate = DateTime.UtcNow;
 
-        return result.ToJson();
+            // Call repository to update job code
+            var result = await _jobCodesRepository.UpdateJobCode(
+                jobCodeDto.Id,
+                jobCodeDto.JobTitle,
+                jobCodeDto.Code,
+                jobCodeDto.Description,
+                jobCodeDto.Category,
+                jobCodeDto.IsExempt,
+                jobCodeDto.PayRate,
+                jobCodeDto.DefaultHoursPerWeek,
+                jobCodeDto.IsActive,
+                jobCodeDto.TenantId,
+                jobCodeDto.ModifiedBy ?? CurrentUser.LoginId
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error updating job code: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
