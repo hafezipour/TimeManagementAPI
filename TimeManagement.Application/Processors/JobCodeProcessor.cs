@@ -36,6 +36,17 @@ public class JobCodeProcessor : BaseProcessor
                 return await GetJobCodes();
             }
 
+            if (methodName.ToLower() == "getbyid")
+            {
+                var idDto = jsonData.FromJson<JobCodeModel>();
+                if (idDto?.Id > 0)
+                {
+                    var result =  await GetById(idDto.Id);
+                    return result;
+                }
+                return new { success = false, message = "Invalid ID" }.ToJson();
+            }
+
             var dto = jsonData.FromJson<JobCodeModel>();
 
             if (dto == null)
@@ -66,29 +77,33 @@ public class JobCodeProcessor : BaseProcessor
     /// </summary>
     public async Task<string> Add(JobCodeModel jobCodeDto)
     {
-        // Mock implementation
-
-
-        // Mock: Generate a new ID
-        jobCodeDto.Id = new Random().Next(1000, 9999);
+        try
+        {
+            // Set tenant and user info from current user
+            jobCodeDto.TenantId = CurrentUser.TenantID;
+            jobCodeDto.CreatedBy = CurrentUser.LoginId;
         jobCodeDto.CreatedDate = DateTime.UtcNow;
 
-        // Example: Access CurrentUser from BaseProcessor
-        // if (CurrentUser != null)
-        // {
-        //     Console.WriteLine($"User {CurrentUser.UserName} (ID: {CurrentUser.LoginId}) from Tenant {CurrentUser.TenantID} is adding a job code");
-        // }
+            // Call repository to add job code
+            var result = await _jobCodesRepository.AddJobCode(
+                jobCodeDto.JobTitle,
+                jobCodeDto.Code,
+                jobCodeDto.Description,
+                jobCodeDto.Category,
+                jobCodeDto.IsExempt,
+                jobCodeDto.PayRate,
+                jobCodeDto.DefaultHoursPerWeek,
+                jobCodeDto.IsActive,
+                jobCodeDto.TenantId,
+                jobCodeDto.CreatedBy
+            );
 
-        var result = new
+            return result;
+        }
+        catch (Exception ex)
         {
-            success = true,
-            message = "Job Code added successfully",
-            data = jobCodeDto,
-            // Optional: Include user info in response
-            // createdBy = CurrentUser?.UserName
-        };
-
-        return result.ToJson();
+            return new { success = false, message = $"Error adding job code: {ex.Message}" }.ToJson();
+    }
     }
 
     /// <summary>
@@ -130,31 +145,18 @@ public class JobCodeProcessor : BaseProcessor
     }
 
     /// <summary>
-    /// Get Job Code by ID (bonus method)
+    /// Get Job Code by ID
     /// </summary>
     public async Task<string> GetById(int id)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        var mockData = new JobCodeModel
+        try
         {
-            Id = id,
-            Code = $"JOB-{id}",
-            JobTitle = $"Mock Job Title {id}",
-            Description = $"Mock Job Code Description for {id}",
-            IsActive = true,
-            CreatedDate = DateTime.UtcNow.AddDays(-30)
-        };
-
-        var result = new
+            return await _jobCodesRepository.GetJobCodeById(id, CurrentUser.TenantID);
+        }
+        catch (Exception ex)
         {
-            success = true,
-            message = "Job Code retrieved successfully",
-            data = mockData
-        };
-
-        return result.ToJson();
+            return new { success = false, message = $"Error retrieving job code: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
