@@ -18,7 +18,7 @@ public class JobCodeProcessor : BaseProcessor
     /// Common method to process requests with ServiceName, MethodName, and JsonData
     /// </summary>
     /// <param name="serviceName">Name of the service</param>
-    /// <param name="methodName">Method to execute (Add, Update, Delete)</param>
+    /// <param name="methodName">Method to execute (GetAll, GetShortList, Add, Update, Delete)</param>
     /// <param name="jsonData">JSON string data to be auto-translated to DTO</param>
     /// <returns>Result as JSON string</returns>
     public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData)
@@ -29,6 +29,11 @@ public class JobCodeProcessor : BaseProcessor
             if (methodName.ToLower() == "getshortlist")
             {
                 return await GetJobCodesShortList();
+            }
+
+            if (methodName.ToLower() == "getall")
+            {
+                return await GetJobCodes();
             }
 
             var dto = jsonData.FromJson<JobCodeModel>();
@@ -62,7 +67,7 @@ public class JobCodeProcessor : BaseProcessor
     public async Task<string> Add(JobCodeModel jobCodeDto)
     {
         // Mock implementation
-       
+
 
         // Mock: Generate a new ID
         jobCodeDto.Id = new Random().Next(1000, 9999);
@@ -135,8 +140,9 @@ public class JobCodeProcessor : BaseProcessor
         var mockData = new JobCodeModel
         {
             Id = id,
-            JobCode = $"JOB-{id}",
-            JobDescription = $"Mock Job Code Description for {id}",
+            Code = $"JOB-{id}",
+            JobTitle = $"Mock Job Title {id}",
+            Description = $"Mock Job Code Description for {id}",
             IsActive = true,
             CreatedDate = DateTime.UtcNow.AddDays(-30)
         };
@@ -164,16 +170,18 @@ public class JobCodeProcessor : BaseProcessor
             new JobCodeModel
             {
                 Id = 1,
-                JobCode = "JOB-001",
-                JobDescription = "Development",
+                Code = "JOB-001",
+                JobTitle = "Developer",
+                Description = "Development",
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow.AddDays(-60)
             },
             new JobCodeModel
             {
                 Id = 2,
-                JobCode = "JOB-002",
-                JobDescription = "Testing",
+                Code = "JOB-002",
+                JobTitle = "Tester",
+                Description = "Testing",
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow.AddDays(-45)
             }
@@ -203,6 +211,21 @@ public class JobCodeProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving job codes short list: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Get all JobCodes
+    /// </summary>
+    public async Task<string> GetJobCodes()
+    {
+        try
+        {
+            return await _jobCodesRepository.GetJobCodes(CurrentUser.TenantID);
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving job codes: {ex.Message}" }.ToJson();
         }
     }
 }
