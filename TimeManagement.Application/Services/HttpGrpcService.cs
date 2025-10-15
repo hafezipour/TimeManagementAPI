@@ -125,8 +125,16 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "holidayassignment":
                     _holidayAssignmentProcessor.SetCurrentUser(authResult.User);
                     result = await _holidayAssignmentProcessor.ProcessRequest(
-                        request.ServiceName, 
-                        request.MethodName, 
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "workcodes":
+                    _workCodeProcessor.SetCurrentUser(authResult.User);
+                    result = await _workCodeProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
                         request.JsonData);
                     break;
 

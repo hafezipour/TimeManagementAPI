@@ -48,7 +48,8 @@ public class WorkCodesRepository
                 new SqlParameterModel(){ Name = "UserId", Value = userId},
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
-            return await _dbOperations.ExecuteDataSetAsync("usp_WorkCodes_Save", param);
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_WorkCodes_Save", param);
+            return result;
         }
         catch (Exception ex)
         {
