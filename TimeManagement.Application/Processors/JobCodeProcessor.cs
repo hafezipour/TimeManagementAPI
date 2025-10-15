@@ -146,17 +146,20 @@ public class JobCodeProcessor : BaseProcessor
     /// </summary>
     public async Task<string> Delete(int id)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        var result = new
+        try
         {
-            success = true,
-            message = $"Job Code with ID {id} deleted successfully",
-            deletedId = id
-        };
+            // Set tenant info from current user
+            var tenantId = CurrentUser.TenantID;
 
-        return result.ToJson();
+            // Call repository to delete job code
+            var result = await _jobCodesRepository.DeleteJobCode(id, tenantId);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error deleting job code: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>

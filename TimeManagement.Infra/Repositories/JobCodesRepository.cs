@@ -93,5 +93,18 @@ public class JobCodesRepository
         };
         return await _dbOperations.ExecuteDataSetAsync("usp_JobCodes_Update", param);
     }
+
+    /// <summary>
+    /// Delete a Job Code
+    /// </summary>
+    public async Task<string> DeleteJobCode(int id, int tenantId)
+    {
+        var param = new List<SqlParameterModel>
+        {
+            new SqlParameterModel { Name = "Id", Value = id },
+            new SqlParameterModel { Name = "TenantId", Value = tenantId }
+        };
+        return await _dbOperations.ExecuteDataSetAsync("usp_JobCodes_Delete", param);
+    }
 }
 
