@@ -18,7 +18,7 @@ public class JobCodeProcessor : BaseProcessor
     /// Common method to process requests with ServiceName, MethodName, and JsonData
     /// </summary>
     /// <param name="serviceName">Name of the service</param>
-    /// <param name="methodName">Method to execute (Add, Update, Delete)</param>
+    /// <param name="methodName">Method to execute (GetAll, GetShortList, Add, Update, Delete)</param>
     /// <param name="jsonData">JSON string data to be auto-translated to DTO</param>
     /// <returns>Result as JSON string</returns>
     public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData)
@@ -29,6 +29,22 @@ public class JobCodeProcessor : BaseProcessor
             if (methodName.ToLower() == "getshortlist")
             {
                 return await GetJobCodesShortList();
+            }
+
+            if (methodName.ToLower() == "getall")
+            {
+                return await GetJobCodes();
+            }
+
+            if (methodName.ToLower() == "getbyid")
+            {
+                var idDto = jsonData.FromJson<JobCodeModel>();
+                if (idDto?.Id > 0)
+                {
+                    var result =  await GetById(idDto.Id);
+                    return result;
+                }
+                return new { success = false, message = "Invalid ID" }.ToJson();
             }
 
             var dto = jsonData.FromJson<JobCodeModel>();
@@ -61,29 +77,33 @@ public class JobCodeProcessor : BaseProcessor
     /// </summary>
     public async Task<string> Add(JobCodeModel jobCodeDto)
     {
-        // Mock implementation
-       
-
-        // Mock: Generate a new ID
-        jobCodeDto.Id = new Random().Next(1000, 9999);
-        jobCodeDto.CreatedDate = DateTime.UtcNow;
-
-        // Example: Access CurrentUser from BaseProcessor
-        // if (CurrentUser != null)
-        // {
-        //     Console.WriteLine($"User {CurrentUser.UserName} (ID: {CurrentUser.LoginId}) from Tenant {CurrentUser.TenantID} is adding a job code");
-        // }
-
-        var result = new
+        try
         {
-            success = true,
-            message = "Job Code added successfully",
-            data = jobCodeDto,
-            // Optional: Include user info in response
-            // createdBy = CurrentUser?.UserName
-        };
+            // Set tenant and user info from current user
+            jobCodeDto.TenantId = CurrentUser.TenantID;
+            jobCodeDto.CreatedBy = CurrentUser.LoginId;
+            jobCodeDto.CreatedDate = DateTime.UtcNow;
 
-        return result.ToJson();
+            // Call repository to add job code
+            var result = await _jobCodesRepository.AddJobCode(
+                jobCodeDto.JobTitle,
+                jobCodeDto.Code,
+                jobCodeDto.Description,
+                jobCodeDto.Category,
+                jobCodeDto.IsExempt,
+                jobCodeDto.PayRate,
+                jobCodeDto.DefaultHoursPerWeek,
+                jobCodeDto.IsActive,
+                jobCodeDto.TenantId,
+                jobCodeDto.CreatedBy
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error adding job code: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
@@ -91,19 +111,34 @@ public class JobCodeProcessor : BaseProcessor
     /// </summary>
     public async Task<string> Update(JobCodeModel jobCodeDto)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        jobCodeDto.ModifiedDate = DateTime.UtcNow;
-
-        var result = new
+        try
         {
-            success = true,
-            message = $"Job Code with ID {jobCodeDto.Id} updated successfully",
-            data = jobCodeDto
-        };
+            // Set tenant and user info from current user
+            jobCodeDto.TenantId = CurrentUser.TenantID;
+            jobCodeDto.ModifiedBy = CurrentUser.LoginId;
+            jobCodeDto.ModifiedDate = DateTime.UtcNow;
 
-        return result.ToJson();
+            // Call repository to update job code
+            var result = await _jobCodesRepository.UpdateJobCode(
+                jobCodeDto.Id,
+                jobCodeDto.JobTitle,
+                jobCodeDto.Code,
+                jobCodeDto.Description,
+                jobCodeDto.Category,
+                jobCodeDto.IsExempt,
+                jobCodeDto.PayRate,
+                jobCodeDto.DefaultHoursPerWeek,
+                jobCodeDto.IsActive,
+                jobCodeDto.TenantId,
+                jobCodeDto.ModifiedBy ?? CurrentUser.LoginId
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error updating job code: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
@@ -111,44 +146,35 @@ public class JobCodeProcessor : BaseProcessor
     /// </summary>
     public async Task<string> Delete(int id)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        var result = new
+        try
         {
-            success = true,
-            message = $"Job Code with ID {id} deleted successfully",
-            deletedId = id
-        };
+            // Set tenant info from current user
+            var tenantId = CurrentUser.TenantID;
 
-        return result.ToJson();
+            // Call repository to delete job code
+            var result = await _jobCodesRepository.DeleteJobCode(id, tenantId);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error deleting job code: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
-    /// Get Job Code by ID (bonus method)
+    /// Get Job Code by ID
     /// </summary>
     public async Task<string> GetById(int id)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        var mockData = new JobCodeModel
+        try
         {
-            Id = id,
-            JobCode = $"JOB-{id}",
-            JobDescription = $"Mock Job Code Description for {id}",
-            IsActive = true,
-            CreatedDate = DateTime.UtcNow.AddDays(-30)
-        };
-
-        var result = new
+            return await _jobCodesRepository.GetJobCodeById(id, CurrentUser.TenantID);
+        }
+        catch (Exception ex)
         {
-            success = true,
-            message = "Job Code retrieved successfully",
-            data = mockData
-        };
-
-        return result.ToJson();
+            return new { success = false, message = $"Error retrieving job code: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
@@ -164,16 +190,18 @@ public class JobCodeProcessor : BaseProcessor
             new JobCodeModel
             {
                 Id = 1,
-                JobCode = "JOB-001",
-                JobDescription = "Development",
+                Code = "JOB-001",
+                JobTitle = "Developer",
+                Description = "Development",
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow.AddDays(-60)
             },
             new JobCodeModel
             {
                 Id = 2,
-                JobCode = "JOB-002",
-                JobDescription = "Testing",
+                Code = "JOB-002",
+                JobTitle = "Tester",
+                Description = "Testing",
                 IsActive = true,
                 CreatedDate = DateTime.UtcNow.AddDays(-45)
             }
@@ -203,6 +231,21 @@ public class JobCodeProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving job codes short list: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Get all JobCodes
+    /// </summary>
+    public async Task<string> GetJobCodes()
+    {
+        try
+        {
+            return await _jobCodesRepository.GetJobCodes(CurrentUser.TenantID);
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving job codes: {ex.Message}" }.ToJson();
         }
     }
 }
