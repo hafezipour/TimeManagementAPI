@@ -1,11 +1,19 @@
 using System.Text.Json;
 using TimeManagement.Application.DTOs;
 using TimeManagement.Application.Extensions;
+using TimeManagement.Infra.Repositories;
 
 namespace TimeManagement.Application.Processors;
 
 public class WorkCodeProcessor : BaseProcessor
 {
+    private readonly WorkCodesRepository _workCodesRepository;
+
+    public WorkCodeProcessor(WorkCodesRepository workCodesRepository)
+    {
+        _workCodesRepository = workCodesRepository;
+    }
+    
     /// <summary>
     /// Common method to process requests with ServiceName, MethodName, and JsonData
     /// </summary>
@@ -17,18 +25,12 @@ public class WorkCodeProcessor : BaseProcessor
     {
         try
         {
-            var dto = jsonData.FromJson<WorkCodeModel>();
-
-            if (dto == null)
-            {
-                return new { success = false, message = "Invalid JSON data" }.ToJson();
-            }
-
             return methodName.ToLower() switch
             {
-                "add" => await Add(dto),
-                "update" => await Update(dto),
-                "delete" => await Delete(dto.Id),
+                "save" => await Save(jsonData.FromJson<SaveWorkCodeRequest>()),
+                "delete" => await Delete(jsonData.FromJson<DeleteWorkCodeRequest>()),
+                "get" => await GetWorkCodes(jsonData.FromJson<GetWorkCodeRequest>()),
+                "getshortlist" => await GetWorkCodesShortList(),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -43,131 +45,73 @@ public class WorkCodeProcessor : BaseProcessor
     }
 
     /// <summary>
-    /// Add a new Work Code
+    /// Save a WorkCode (Create/Update)
     /// </summary>
-    public async Task<string> Add(WorkCodeModel workCodeDto)
+    public async Task<string> Save(SaveWorkCodeRequest workCodeDto)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        // Mock: Generate a new ID
-        workCodeDto.Id = new Random().Next(1000, 9999);
-        workCodeDto.CreatedDate = DateTime.UtcNow;
-
-        var result = new
+        try
         {
-            success = true,
-            message = "Work Code added successfully",
-            data = workCodeDto
-        };
+            var json = workCodeDto.ToJson();
+            var result = await _workCodesRepository.SaveWorkCode(json, CurrentUser.LoginId, CurrentUser.TenantID);
 
-        return result.ToJson();
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error saving work code: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
-    /// Update an existing Work Code
+    /// Delete a WorkCode by ID
     /// </summary>
-    public async Task<string> Update(WorkCodeModel workCodeDto)
+    public async Task<string> Delete(DeleteWorkCodeRequest request)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        workCodeDto.ModifiedDate = DateTime.UtcNow;
-
-        var result = new
+        try
         {
-            success = true,
-            message = $"Work Code with ID {workCodeDto.Id} updated successfully",
-            data = workCodeDto
-        };
+            var result = await _workCodesRepository.DeleteWorkCode(request.WorkCodeId, CurrentUser.LoginId, CurrentUser.TenantID);
 
-        return result.ToJson();
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error deleting work code: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
-    /// Delete a Work Code by ID
+    /// Get WorkCodes (all or by specific ID)
     /// </summary>
-    public async Task<string> Delete(int id)
+    public async Task<string> GetWorkCodes(GetWorkCodeRequest request)
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        var result = new
+        try
         {
-            success = true,
-            message = $"Work Code with ID {id} deleted successfully",
-            deletedId = id
-        };
+            var result = await _workCodesRepository.GetWorkCodes(request.WorkCodeId, CurrentUser.TenantID);
 
-        return result.ToJson();
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving work code: {ex.Message}" }.ToJson();
+        }
     }
 
     /// <summary>
-    /// Get Work Code by ID (bonus method)
+    /// Get WorkCodes Short List for dropdowns/lookups
     /// </summary>
-    public async Task<string> GetById(int id)
+    public async Task<string> GetWorkCodesShortList()
     {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        var mockData = new WorkCodeModel
+        try
         {
-            Id = id,
-            WorkCode = $"WORK-{id}",
-            WorkDescription = $"Mock Work Code Description for {id}",
-            Category = "General",
-            IsActive = true,
-            CreatedDate = DateTime.UtcNow.AddDays(-30)
-        };
+            var result = await _workCodesRepository.GetWorkCodesShortList(CurrentUser.TenantID);
 
-        var result = new
+            return result;
+        }
+        catch (Exception ex)
         {
-            success = true,
-            message = "Work Code retrieved successfully",
-            data = mockData
-        };
-
-        return result.ToJson();
+            return new { success = false, message = $"Error retrieving work codes short list: {ex.Message}" }.ToJson();
+        }
     }
 
-    /// <summary>
-    /// Get all Work Codes (bonus method)
-    /// </summary>
-    public async Task<string> GetAll()
-    {
-        // Mock implementation
-        await Task.Delay(10); // Simulate async operation
-
-        var mockDataList = new List<WorkCodeModel>
-        {
-            new WorkCodeModel
-            {
-                Id = 1,
-                WorkCode = "WORK-001",
-                WorkDescription = "Regular Work",
-                Category = "Standard",
-                IsActive = true,
-                CreatedDate = DateTime.UtcNow.AddDays(-60)
-            },
-            new WorkCodeModel
-            {
-                Id = 2,
-                WorkCode = "WORK-002",
-                WorkDescription = "Overtime Work",
-                Category = "Overtime",
-                IsActive = true,
-                CreatedDate = DateTime.UtcNow.AddDays(-45)
-            }
-        };
-
-        var result = new
-        {
-            success = true,
-            message = "Work Codes retrieved successfully",
-            data = mockDataList
-        };
-
-        return result.ToJson();
-    }
 }
 
