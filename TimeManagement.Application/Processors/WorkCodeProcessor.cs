@@ -31,6 +31,8 @@ public class WorkCodeProcessor : BaseProcessor
                 "delete" => await Delete(jsonData.FromJson<DeleteWorkCodeRequest>()),
                 "get" => await GetWorkCodes(jsonData.FromJson<GetWorkCodeRequest>()),
                 "getshortlist" => await GetWorkCodesShortList(),
+                "updateactivestatus" => await UpdateActiveStatus(jsonData.FromJson<UpdateActiveStatusRequest>()),
+                "updatedefaultstatus" => await UpdateDefaultStatus(jsonData.FromJson<UpdateDefaultStatusRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -110,6 +112,40 @@ public class WorkCodeProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving work codes short list: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Update WorkCode Active Status
+    /// </summary>
+    public async Task<string> UpdateActiveStatus(UpdateActiveStatusRequest request)
+    {
+        try
+        {
+            var result = await _workCodesRepository.UpdateActiveStatus(request.WorkCodeId, request.IsActive, CurrentUser.LoginId, CurrentUser.TenantID);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error updating work code active status: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Update WorkCode Default Status
+    /// </summary>
+    public async Task<string> UpdateDefaultStatus(UpdateDefaultStatusRequest request)
+    {
+        try
+        {
+            var result = await _workCodesRepository.UpdateDefaultStatus(request.WorkCodeId, request.IsDefault, CurrentUser.LoginId, CurrentUser.TenantID);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error updating work code default status: {ex.Message}" }.ToJson();
         }
     }
 

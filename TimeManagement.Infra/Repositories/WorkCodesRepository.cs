@@ -96,5 +96,49 @@ public class WorkCodesRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Update WorkCode Active Status
+    /// </summary>
+    public async Task<string> UpdateActiveStatus(int workCodeId, bool isActive, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "WorkCodeId", Value = workCodeId},
+                new SqlParameterModel(){ Name = "IsActive", Value = isActive},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_WorkCodes_UpdateActiveStatus", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    /// <summary>
+    /// Update WorkCode Default Status
+    /// </summary>
+    public async Task<string> UpdateDefaultStatus(int workCodeId, bool isDefault, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "WorkCodeId", Value = workCodeId},
+                new SqlParameterModel(){ Name = "IsDefault", Value = isDefault},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_WorkCodes_UpdateDefaultStatus", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
