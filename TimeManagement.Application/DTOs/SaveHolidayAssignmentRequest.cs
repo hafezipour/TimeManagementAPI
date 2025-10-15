@@ -8,8 +8,8 @@ public class SaveHolidayAssignmentRequest
 {
     public int? Id { get; set; }
     public int HolidayId { get; set; }
-    public int JobCodeId { get; set; }
-    public int UserId { get; set; }
+    public int? JobCodeId { get; set; }
+    public int? UserId { get; set; }
     public DateTime? EffectiveDate { get; set; }
     public DateTime? ExpiryDate { get; set; }
 }
