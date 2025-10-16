@@ -65,3 +65,4 @@ public class DeleteShiftResponse
     public string Message { get; set; } = string.Empty;
     public int? DeletedId { get; set; }
 }
+
