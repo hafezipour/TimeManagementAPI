@@ -30,6 +30,7 @@ public class ShiftProcessor : BaseProcessor
                 "save" => await Save(jsonData.FromJson<SaveShiftRequest>()),
                 "delete" => await Delete(jsonData.FromJson<DeleteShiftRequest>()),
                 "get" => await GetShifts(jsonData.FromJson<GetShiftRequest>()),
+                "getbyid" => await GetShift(jsonData.FromJson<GetShiftRequest>()),
                 "getshortlist" => await GetShiftsShortList(),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
@@ -101,6 +102,28 @@ public class ShiftProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving shifts: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Get a single Shift by ID
+    /// </summary>
+    public async Task<string> GetShift(GetShiftRequest request)
+    {
+        try
+        {
+            if (request.ShiftId == null || request.ShiftId <= 0)
+            {
+                return new { success = false, message = "Shift ID is required" }.ToJson();
+            }
+
+            var result = await _shiftsRepository.GetShift(request.ShiftId.Value, CurrentUser.TenantID);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving shift: {ex.Message}" }.ToJson();
         }
     }
 

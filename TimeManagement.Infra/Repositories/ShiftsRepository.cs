@@ -41,6 +41,26 @@ public class ShiftsRepository
     }
 
     /// <summary>
+    /// Get a single Shift by ID
+    /// </summary>
+    public async Task<string> GetShift(int shiftId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "ShiftId", Value = shiftId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_Shifts_GetById", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    /// <summary>
     /// Save (Insert/Update) Shift
     /// </summary>
     public async Task<string> SaveShift(string json, int userId, int tenantId)
