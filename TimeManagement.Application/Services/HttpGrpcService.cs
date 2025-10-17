@@ -12,14 +12,24 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly WorkCodeProcessor _workCodeProcessor;
     private readonly HolidayProcessor _holidayProcessor;
     private readonly HolidayAssignmentProcessor _holidayAssignmentProcessor;
+    private readonly ShiftProcessor _shiftProcessor;
+    private readonly ScheduleProcessor _scheduleProcessor;
     private readonly ValidateToken _validateToken;
 
-    public HttpGrpcService(JobCodeProcessor jobCodeProcessor, WorkCodeProcessor workCodeProcessor, HolidayProcessor holidayProcessor, HolidayAssignmentProcessor holidayAssignmentProcessor)
+    public HttpGrpcService(
+        JobCodeProcessor jobCodeProcessor, 
+        WorkCodeProcessor workCodeProcessor, 
+        HolidayProcessor holidayProcessor, 
+        HolidayAssignmentProcessor holidayAssignmentProcessor,
+        ShiftProcessor shiftProcessor,
+        ScheduleProcessor scheduleProcessor)
     {
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
         _holidayProcessor = holidayProcessor;
         _holidayAssignmentProcessor = holidayAssignmentProcessor;
+        _shiftProcessor = shiftProcessor;
+        _scheduleProcessor = scheduleProcessor;
         _validateToken = new ValidateToken();
     }
 
@@ -133,6 +143,22 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "workcodes":
                     _workCodeProcessor.SetCurrentUser(authResult.User);
                     result = await _workCodeProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "shifts":
+                    _shiftProcessor.SetCurrentUser(authResult.User);
+                    result = await _shiftProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "schedules":
+                    _scheduleProcessor.SetCurrentUser(authResult.User);
+                    result = await _scheduleProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);
