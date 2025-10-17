@@ -1,5 +1,7 @@
 namespace TimeManagement.Application.DTOs;
 
+
+
 /// <summary>
 /// Request model for saving a Shift (Create/Update)
 /// Used with usp_Shifts_Save stored procedure
@@ -21,6 +23,13 @@ public class SaveShiftRequest
     public string? BackgroundColour { get; set; }
     public bool? IsActive { get; set; }
     public int? DisplayOrder { get; set; }
+    
+    // Comma-separated IDs
+    public string? WorkCodeIds { get; set; }
+    public string? AdminIds { get; set; }
+    
+    // Schedule data
+    public List<Schedule>? Schedules { get; set; }
 }
 
 /// <summary>
@@ -65,4 +74,7 @@ public class DeleteShiftResponse
     public string Message { get; set; } = string.Empty;
     public int? DeletedId { get; set; }
 }
+
+
+
 
