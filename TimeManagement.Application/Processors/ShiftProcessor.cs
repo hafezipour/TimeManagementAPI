@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using TimeManagement.Application.DTOs;
+using TimeManagement.Application.DTOs.Shifts;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Infra.Repositories;
 
