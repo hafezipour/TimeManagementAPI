@@ -9,12 +9,16 @@ namespace TimeManagement.Application.Processors;
 public class ShiftProcessor : BaseProcessor
 {
     private readonly ShiftsRepository _shiftsRepository;
+    private readonly ScheduleProcessor _scheduleProcessor;
 
-    public ShiftProcessor(ShiftsRepository shiftsRepository)
+    public ShiftProcessor(ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor)
     {
         _shiftsRepository = shiftsRepository;
+
+        scheduleProcessor.SetCurrentUser(this.CurrentUser);
+        _scheduleProcessor = scheduleProcessor;
     }
-    
+
     /// <summary>
     /// Common method to process requests with ServiceName, MethodName, and JsonData
     /// </summary>
@@ -36,7 +40,7 @@ public class ShiftProcessor : BaseProcessor
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
-        catch (JsonException ex)
+        catch (System.Text.Json.JsonException ex)
         {
             throw ex;
         }
@@ -55,6 +59,8 @@ public class ShiftProcessor : BaseProcessor
         {
             var json = shiftDto.ToJson();
             var result = await _shiftsRepository.SaveShift(json, CurrentUser.LoginId, CurrentUser.TenantID);
+            var resultData = Newtonsoft.Json.JsonConvert.DeserializeObject<SaveShiftResponse>(result);
+            await _scheduleProcessor.Save(shiftDto.Schedules[0]);
 
             return result;
         }
@@ -89,12 +95,12 @@ public class ShiftProcessor : BaseProcessor
         try
         {
             var result = await _shiftsRepository.GetShifts(
-                request.ShiftId, 
-                CurrentUser.TenantID, 
-                request.PageNumber ?? 1, 
-                request.PageSize ?? 10, 
-                request.SortColumn ?? "DisplayOrder", 
-                request.SortDirection ?? "ASC", 
+                request.ShiftId,
+                CurrentUser.TenantID,
+                request.PageNumber ?? 1,
+                request.PageSize ?? 10,
+                request.SortColumn ?? "DisplayOrder",
+                request.SortDirection ?? "ASC",
                 request.SearchTerm
             );
 

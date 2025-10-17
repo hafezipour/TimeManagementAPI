@@ -31,12 +31,14 @@ builder.Services.AddScoped<TimeManagement.Application.Processors.JobCodeProcesso
 builder.Services.AddScoped<TimeManagement.Application.Processors.WorkCodeProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayAssignmentProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Processors.ScheduleProcessor>();
 
 // Register repositories for dependency injection
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.HolidaysRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.HolidayAssignmentRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.JobCodesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.WorkCodesRepository>();
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.SchedulesRepository>();
 builder.Services.AddScoped<WebPortal.EF.Repository.DataBaseRepo.EfDbOperationsRepository>();
 
 builder.Services.AddControllers();
