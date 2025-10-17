@@ -4,17 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace TimeManagement.Application.DTOs
+namespace TimeManagement.Application.DTOs.Schedules
 {
-    /// <summary>
-    /// Schedule frequency model representing days and day types
-    /// </summary>
-    public class ScheduleFrequency
-    {
-        public int Day { get; set; }
-        public int? DayType { get; set; }
-    }
-
     /// <summary>
     /// Schedule model for shift schedules
     /// </summary>
@@ -34,6 +25,4 @@ namespace TimeManagement.Application.DTOs
         public int? MaxOccurrences { get; set; }
         public bool IsActive { get; set; }
     }
-
-
 }
