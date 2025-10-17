@@ -15,8 +15,9 @@ public class ShiftProcessor : BaseProcessor
     {
         _shiftsRepository = shiftsRepository;
 
-        scheduleProcessor.SetCurrentUser(this.CurrentUser);
         _scheduleProcessor = scheduleProcessor;
+        
+
     }
 
     /// <summary>
@@ -57,9 +58,12 @@ public class ShiftProcessor : BaseProcessor
     {
         try
         {
+            _scheduleProcessor.SetCurrentUser(this.CurrentUser);
             var json = shiftDto.ToJson();
             var result = await _shiftsRepository.SaveShift(json, CurrentUser.LoginId, CurrentUser.TenantID);
             var resultData = Newtonsoft.Json.JsonConvert.DeserializeObject<SaveShiftResponse>(result);
+            var sch = shiftDto.Schedules[0];
+            sch.SourceId = resultData.Id;
             await _scheduleProcessor.Save(shiftDto.Schedules[0]);
 
             return result;

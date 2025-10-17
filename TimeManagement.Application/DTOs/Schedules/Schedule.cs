@@ -13,6 +13,8 @@ namespace TimeManagement.Application.DTOs.Schedules
     {
         public int? Id { get; set; }
         public int ShiftId { get; set; }
+        public int? SourceType { get; set; }
+        public int? SourceId { get; set; }
         public DateTime StartFrom { get; set; }
         public bool ScheduleWithoutTimes { get; set; }
         public DateTime? StartTime { get; set; }

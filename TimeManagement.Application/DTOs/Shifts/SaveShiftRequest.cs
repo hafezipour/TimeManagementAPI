@@ -24,7 +24,6 @@ namespace TimeManagement.Application.DTOs.Shifts
         public bool? IsSelfSchedulingEnabled { get; set; }
         public bool? IsSelfSchedulingRequiresAdminApprovals { get; set; }
         public bool? IsHideOpenSlots { get; set; }
-        public int ShiftLabelId { get; set; }
         public string? BackgroundColour { get; set; }
         public bool? IsActive { get; set; }
         public int? DisplayOrder { get; set; }
