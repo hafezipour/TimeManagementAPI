@@ -16,6 +16,27 @@ public class SchedulesRepository
     }
 
     /// <summary>
+    /// Get Schedule by Source ID and Source Type
+    /// </summary>
+    public async Task<string> GetScheduleBySource(int sourceId, int sourceType, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "SourceId", Value = sourceId},
+                new SqlParameterModel(){ Name = "SourceType", Value = sourceType},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_Schedules_GetBySource", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    /// <summary>
     /// Save (Insert/Update) Schedule
     /// </summary>
     public async Task<string> SaveSchedule(string json, int userId, int tenantId)

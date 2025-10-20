@@ -28,6 +28,7 @@ public class ScheduleProcessor : BaseProcessor
             return methodName.ToLower() switch
             {
                 "save" => await Save(jsonData.FromJson<Schedule>()),
+                "getbysource" => await GetBySource(jsonData.FromJson<GetScheduleRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -58,5 +59,28 @@ public class ScheduleProcessor : BaseProcessor
             return new { success = false, message = $"Error saving schedule: {ex.Message}" }.ToJson();
         }
     }
+
+    /// <summary>
+    /// Get Schedule by Source ID and Source Type
+    /// </summary>
+    public async Task<string> GetBySource(GetScheduleRequest request)
+    {
+        try
+        {
+            var result = await _schedulesRepository.GetScheduleBySource(request.SourceId, request.SourceType, CurrentUser.TenantID);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving schedule: {ex.Message}" }.ToJson();
+        }
+    }
+}
+
+public class GetScheduleRequest
+{
+    public int SourceId { get; set; }
+    public int SourceType { get; set; }
 }
 
