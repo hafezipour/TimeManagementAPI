@@ -84,6 +84,27 @@ public class ShiftsRepository
     }
 
     /// <summary>
+    /// Close Shift by Id
+    /// </summary>
+    public async Task<string> CloseShift(int shiftId, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "ShiftId", Value = shiftId},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_Shifts_Close", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    /// <summary>
     /// Delete Shift by Id
     /// </summary>
     public async Task<string> DeleteShift(int shiftId, int userId, int tenantId)

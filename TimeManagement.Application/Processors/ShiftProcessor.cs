@@ -35,6 +35,7 @@ public class ShiftProcessor : BaseProcessor
             {
                 "save" => await Save(jsonData.FromJson<SaveShiftRequest>()),
                 "delete" => await Delete(jsonData.FromJson<DeleteShiftRequest>()),
+                "close" => await Close(jsonData.FromJson<DeleteShiftRequest>()),
                 "get" => await GetShifts(jsonData.FromJson<GetShiftRequest>()),
                 "getbyid" => await GetShift(jsonData.FromJson<GetShiftRequest>()),
                 "getshortlist" => await GetShiftsShortList(),
@@ -71,6 +72,23 @@ public class ShiftProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error saving shift: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Close a Shift by ID
+    /// </summary>
+    public async Task<string> Close(DeleteShiftRequest request)
+    {
+        try
+        {
+            var result = await _shiftsRepository.CloseShift(request.ShiftId, CurrentUser.LoginId, CurrentUser.TenantID);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error closing shift: {ex.Message}" }.ToJson();
         }
     }
 

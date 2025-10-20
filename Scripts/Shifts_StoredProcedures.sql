@@ -432,4 +432,64 @@ BEGIN
 END
 GO
 
+-- =============================================
+-- Author:		TimeManagement API
+-- Create date: 10/20/2025
+-- Description:	Close Shift (Set StatusCustomTableValueId = 2)
+-- =============================================
+IF EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[dbo].[usp_Shifts_Close]') AND type in (N'P', N'PC'))
+    DROP PROCEDURE [dbo].[usp_Shifts_Close]
+GO
+
+CREATE PROCEDURE [dbo].[usp_Shifts_Close]
+	@ShiftId int,
+	@UserId int,
+	@TenantId int
+AS
+BEGIN
+	SET NOCOUNT ON;
+	BEGIN TRY
+		BEGIN TRAN
+
+		-- Check if Shift exists
+		IF NOT EXISTS (SELECT 1 FROM Shifts WHERE Id = @ShiftId AND TenantId = @TenantId)
+		BEGIN
+			SELECT 
+				CAST(0 AS bit) as success,
+				'Shift not found' as message
+			FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+			ROLLBACK TRAN
+			RETURN
+		END
+
+		-- Update the Shift to set StatusCustomTableValueId = 2 (Closed)
+		-- Note: Assuming there's a StatusCustomTableValueId column in the Shifts table
+		-- If not, you may need to add this column or use a different approach
+		UPDATE Shifts 
+		SET 
+			StatusCustomTableValueId = 2, -- 2 = Closed
+			UpdatedBy = @UserId,
+			DateUpdated = GETUTCDATE()
+		WHERE Id = @ShiftId AND TenantId = @TenantId
+
+		SELECT 
+			CAST(1 AS bit) as success,
+			'Shift closed successfully' as message,
+			@ShiftId as closedId
+		FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+
+		COMMIT TRAN
+	END TRY
+	BEGIN CATCH
+		IF @@TRANCOUNT > 0
+			ROLLBACK TRAN
+		
+		SELECT 
+			CAST(0 AS bit) as success,
+			ERROR_MESSAGE() as message
+		FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+	END CATCH
+END
+GO
+
 
