@@ -105,7 +105,8 @@ public class ShiftProcessor : BaseProcessor
                 request.PageSize ?? 10,
                 request.SortColumn ?? "DisplayOrder",
                 request.SortDirection ?? "ASC",
-                request.SearchTerm
+                request.SearchTerm,
+                request.StatusCustomTableValueId
             );
 
             return result;

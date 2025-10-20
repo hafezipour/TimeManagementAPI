@@ -9,7 +9,7 @@ namespace TimeManagement.Infra.Repositories;
 public class ShiftsRepository
 {
     private readonly EfDbOperationsRepository _dbOperations;
-    
+
     public ShiftsRepository(EfDbOperationsRepository dbOperations)
     {
         _dbOperations = dbOperations;
@@ -18,7 +18,7 @@ public class ShiftsRepository
     /// <summary>
     /// Get Shifts with server-side paging
     /// </summary>
-    public async Task<string> GetShifts(int? shiftId, int tenantId, int pageNumber = 1, int pageSize = 10, string sortColumn = "DisplayOrder", string sortDirection = "ASC", string searchTerm = null)
+    public async Task<string> GetShifts(int? shiftId, int tenantId, int pageNumber = 1, int pageSize = 10, string sortColumn = "DisplayOrder", string sortDirection = "ASC", string searchTerm = null, int? statusCustomTableValueId = null)
     {
         try
         {
@@ -30,9 +30,11 @@ public class ShiftsRepository
                 new SqlParameterModel(){ Name = "PageSize", Value = pageSize},
                 new SqlParameterModel(){ Name = "SortColumn", Value = sortColumn},
                 new SqlParameterModel(){ Name = "SortDirection", Value = sortDirection},
-                new SqlParameterModel(){ Name = "SearchTerm", Value = searchTerm}
+                new SqlParameterModel(){ Name = "SearchTerm", Value = searchTerm},
+                new SqlParameterModel(){ Name = "StatusCustomTableValueId", Value = statusCustomTableValueId}
             };
-            return await _dbOperations.ExecuteDataSetAsync("usp_Shifts_Get", param);
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_Shifts_Get", param);
+            return result;
         }
         catch (Exception ex)
         {
