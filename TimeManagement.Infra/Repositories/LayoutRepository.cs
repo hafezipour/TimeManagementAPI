@@ -1,0 +1,38 @@
+using DbOperations;
+using System.Data;
+using TimeManagement.Domain.Models;
+using WebPortal.EF.Repository.DataBaseRepo;
+using WebPortal.ViewModel;
+
+namespace TimeManagement.Infra.Repositories;
+
+public class LayoutRepository
+{
+    private readonly EfDbOperationsRepository _dbOperations;
+    
+    public LayoutRepository(EfDbOperationsRepository dbOperations)
+    {
+        _dbOperations = dbOperations;
+    }
+
+    /// <summary>
+    /// Save Layout Rows and Columns
+    /// </summary>
+    public async Task<string> SaveLayoutRowsColumns(string json, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "Json", Value = json},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_Layouts_SaveRowsColumns", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+}
