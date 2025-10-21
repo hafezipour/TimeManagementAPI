@@ -34,6 +34,7 @@ builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayAssignme
 builder.Services.AddScoped<TimeManagement.Application.Processors.ShiftProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.ScheduleProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.LayoutProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Processors.ColumnProcessor>();
 
 // Register repositories for dependency injection
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.HolidaysRepository>();
@@ -43,6 +44,7 @@ builder.Services.AddScoped<TimeManagement.Infra.Repositories.WorkCodesRepository
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.SchedulesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.ShiftsRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.LayoutRepository>();
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.ColumnRepository>();
 builder.Services.AddScoped<WebPortal.EF.Repository.DataBaseRepo.EfDbOperationsRepository>();
 
 builder.Services.AddControllers();
