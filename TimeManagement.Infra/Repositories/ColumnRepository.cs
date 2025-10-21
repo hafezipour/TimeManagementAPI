@@ -9,7 +9,7 @@ namespace TimeManagement.Infra.Repositories;
 public class ColumnRepository
 {
     private readonly EfDbOperationsRepository _dbOperations;
-    
+
     public ColumnRepository(EfDbOperationsRepository dbOperations)
     {
         _dbOperations = dbOperations;
@@ -26,7 +26,8 @@ public class ColumnRepository
             {
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
-            return await _dbOperations.ExecuteDataSetAsync("usp_Columns_Get", param);
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_Columns_Get", param);
+            return result;
         }
         catch (Exception ex)
         {
