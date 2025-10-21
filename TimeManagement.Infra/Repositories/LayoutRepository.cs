@@ -16,6 +16,25 @@ public class LayoutRepository
     }
 
     /// <summary>
+    /// Get Short List of Layouts
+    /// </summary>
+    public async Task<string> GetLayoutShortList(int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_Layouts_GetShortList", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    /// <summary>
     /// Save Layout Rows and Columns
     /// </summary>
     public async Task<string> SaveLayoutRowsColumns(string json, int userId, int tenantId)

@@ -27,6 +27,7 @@ public class LayoutProcessor : BaseProcessor
         {
             return methodName.ToLower() switch
             {
+                "getshortlist" => await GetShortList(),
                 "save-rows-columns" => await SaveLayoutRowsColumns(jsonData.FromJson<LayoutRowsColumnsRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
@@ -38,6 +39,22 @@ public class LayoutProcessor : BaseProcessor
         catch (Exception ex)
         {
             throw ex;
+        }
+    }
+
+    /// <summary>
+    /// Get Short List of Layouts
+    /// </summary>
+    public async Task<string> GetShortList()
+    {
+        try
+        {
+            var result = await _layoutRepository.GetLayoutShortList(CurrentUser.TenantID);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving layouts: {ex.Message}" }.ToJson();
         }
     }
     
