@@ -1,7 +1,7 @@
 namespace TimeManagement.Application.DTOs.Layouts
 {
     /// <summary>
-    /// Layout model for saving rows and columns
+    /// Request model for saving layout rows and columns
     /// </summary>
     public class LayoutRowsColumnsRequest
     {

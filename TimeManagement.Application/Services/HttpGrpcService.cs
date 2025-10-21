@@ -14,6 +14,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly HolidayAssignmentProcessor _holidayAssignmentProcessor;
     private readonly ShiftProcessor _shiftProcessor;
     private readonly ScheduleProcessor _scheduleProcessor;
+    private readonly LayoutProcessor _layoutProcessor;
     private readonly ValidateToken _validateToken;
 
     public HttpGrpcService(
@@ -22,7 +23,8 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         HolidayProcessor holidayProcessor, 
         HolidayAssignmentProcessor holidayAssignmentProcessor,
         ShiftProcessor shiftProcessor,
-        ScheduleProcessor scheduleProcessor)
+        ScheduleProcessor scheduleProcessor,
+        LayoutProcessor layoutProcessor)
     {
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
@@ -30,6 +32,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _holidayAssignmentProcessor = holidayAssignmentProcessor;
         _shiftProcessor = shiftProcessor;
         _scheduleProcessor = scheduleProcessor;
+        _layoutProcessor = layoutProcessor;
         _validateToken = new ValidateToken();
     }
 
@@ -153,6 +156,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                     result = await _scheduleProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "layouts":
+                    _layoutProcessor.SetCurrentUser(authResult.User);
+                    result = await _layoutProcessor.ProcessRequest(
+                        request.ServiceName, 
+                        request.MethodName, 
                         request.JsonData);
                     break;
 
