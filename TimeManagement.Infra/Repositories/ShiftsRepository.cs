@@ -143,5 +143,25 @@ public class ShiftsRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Get unassigned shifts (not in ColumnShifts table)
+    /// </summary>
+    public async Task<string> GetUnassignedShifts(int tenantId, int layoutId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId},
+                new SqlParameterModel(){ Name = "LayoutId", Value = layoutId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_Shifts_GetUnassigned", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
