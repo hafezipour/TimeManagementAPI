@@ -18,13 +18,14 @@ public class ColumnRepository
     /// <summary>
     /// Get all columns for a tenant
     /// </summary>
-    public async Task<string> GetColumns(int tenantId)
+    public async Task<string> GetColumns(int tenantId, int? layoutId = null)
     {
         try
         {
             List<SqlParameterModel> param = new List<SqlParameterModel>()
             {
-                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId},
+                new SqlParameterModel(){ Name = "LayoutId", Value = layoutId ?? (object)DBNull.Value}
             };
             var result = await _dbOperations.ExecuteDataSetAsync("usp_Columns_Get", param);
             return result;

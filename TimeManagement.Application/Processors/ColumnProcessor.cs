@@ -27,7 +27,7 @@ public class ColumnProcessor : BaseProcessor
         {
             return methodName.ToLower() switch
             {
-                "get" => await Get(),
+                "get" => await Get(jsonData.FromJson<GetColumnsRequest>()),
                 "getbyid" => await GetById(jsonData.FromJson<GetColumnByIdRequest>()),
                 "save" => await Save(jsonData.FromJson<Column>()),
                 "delete" => await Delete(jsonData.FromJson<DeleteColumnRequest>()),
@@ -47,11 +47,11 @@ public class ColumnProcessor : BaseProcessor
     /// <summary>
     /// Get all columns
     /// </summary>
-    public async Task<string> Get()
+    public async Task<string> Get(GetColumnsRequest request)
     {
         try
         {
-            var result = await _columnRepository.GetColumns(CurrentUser.TenantID);
+            var result = await _columnRepository.GetColumns(CurrentUser.TenantID, request.LayoutId);
             return result;
         }
         catch (Exception ex)
