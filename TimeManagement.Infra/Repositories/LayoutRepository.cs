@@ -54,4 +54,26 @@ public class LayoutRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Save Grid Cells Data
+    /// </summary>
+    public async Task<string> SaveGridCells(string json, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "Json", Value = json},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            var result =  await _dbOperations.ExecuteDataSetAsync("usp_Layouts_SaveGridCells", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }

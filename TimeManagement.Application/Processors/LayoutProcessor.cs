@@ -29,6 +29,7 @@ public class LayoutProcessor : BaseProcessor
             {
                 "getshortlist" => await GetShortList(),
                 "save-rows-columns" => await SaveLayoutRowsColumns(jsonData.FromJson<LayoutRowsColumnsRequest>()),
+                "save-grid-cells" => await SaveGridCells(jsonData.FromJson<SaveGridCellsRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -73,6 +74,24 @@ public class LayoutProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error saving layout rows and columns: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Save Grid Cells Data
+    /// </summary>
+    public async Task<string> SaveGridCells(SaveGridCellsRequest gridCellsDto)
+    {
+        try
+        {
+            var json = gridCellsDto.ToJson();
+            var result = await _layoutRepository.SaveGridCells(json, CurrentUser.LoginId, CurrentUser.TenantID);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error saving grid cells: {ex.Message}" }.ToJson();
         }
     }
 }
