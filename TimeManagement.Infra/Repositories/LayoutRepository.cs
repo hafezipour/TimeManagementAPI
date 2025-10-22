@@ -76,4 +76,24 @@ public class LayoutRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Get Grid Cells Data for a specific layout
+    /// </summary>
+    public async Task<string> GetGridCells(int layoutId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "LayoutId", Value = layoutId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_Layouts_GetGridCells", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
