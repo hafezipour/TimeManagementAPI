@@ -1,6 +1,7 @@
 using System.Text.Json;
 using TimeManagement.Application.DTOs.Columns;
 using TimeManagement.Application.Extensions;
+using TimeManagement.Domain.Models;
 using TimeManagement.Infra.Repositories;
 
 namespace TimeManagement.Application.Processors;
@@ -31,6 +32,7 @@ public class ColumnProcessor : BaseProcessor
                 "getbyid" => await GetById(jsonData.FromJson<GetColumnByIdRequest>()),
                 "save" => await Save(jsonData.FromJson<Column>()),
                 "delete" => await Delete(jsonData.FromJson<DeleteColumnRequest>()),
+                "saveshift" => await SaveShift(jsonData.FromJson<SaveColumnShiftRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -107,6 +109,22 @@ public class ColumnProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error deleting column: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Save a shift to a column
+    /// </summary>
+    public async Task<string> SaveShift(SaveColumnShiftRequest request)
+    {
+        try
+        {
+            var result = await _columnRepository.SaveColumnShift(request.ToJson(), CurrentUser.LoginId, CurrentUser.TenantID);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error saving shift to column: {ex.Message}" }.ToJson();
         }
     }
 }

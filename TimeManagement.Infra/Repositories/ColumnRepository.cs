@@ -97,4 +97,25 @@ public class ColumnRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Save shift to column
+    /// </summary> 
+    public async Task<string> SaveColumnShift(string json, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "Json", Value = json},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_ColumnShifts_Save", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }

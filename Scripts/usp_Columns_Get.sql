@@ -51,12 +51,6 @@ BEGIN
             ) as [gridColumns]
         FROM [dbo].[Columns] c
         WHERE c.[TenantId] = @TenantId
-          AND (@LayoutId IS NULL OR c.Id NOT IN (
-              SELECT DISTINCT lg.ColumnId 
-              FROM [dbo].[LayoutGridColumns] lg 
-              WHERE lg.LayoutId = @LayoutId 
-                AND lg.TenantId = @TenantId
-          ))
         ORDER BY c.[ColumnName]
 		FOR JSON PATH, INCLUDE_NULL_VALUES
 
