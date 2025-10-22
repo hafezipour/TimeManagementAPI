@@ -73,15 +73,3 @@ public class SaveGridCellsRequest
     [JsonPropertyName("gridCells")]
     public List<GridCellRequest> GridCells { get; set; } = new();
 }
-
-/// <summary>
-/// Request model for getting grid cells data
-/// </summary>
-public class GetGridCellsRequest
-{
-    /// <summary>
-    /// Layout ID
-    /// </summary>
-    [JsonPropertyName("layoutId")]
-    public int LayoutId { get; set; }
-}

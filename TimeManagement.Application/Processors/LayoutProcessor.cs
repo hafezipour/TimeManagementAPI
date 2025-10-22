@@ -13,7 +13,7 @@ public class LayoutProcessor : BaseProcessor
     {
         _layoutRepository = layoutRepository;
     }
-    
+
     /// <summary>
     /// Common method to process requests with ServiceName, MethodName, and JsonData
     /// </summary>
@@ -30,7 +30,6 @@ public class LayoutProcessor : BaseProcessor
                 "getshortlist" => await GetShortList(),
                 "save-rows-columns" => await SaveLayoutRowsColumns(jsonData.FromJson<LayoutRowsColumnsRequest>()),
                 "save-grid-cells" => await SaveGridCells(jsonData.FromJson<SaveGridCellsRequest>()),
-                "get-grid-cells" => await GetGridCells(jsonData.FromJson<GetGridCellsRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -59,7 +58,7 @@ public class LayoutProcessor : BaseProcessor
             return new { success = false, message = $"Error retrieving layouts: {ex.Message}" }.ToJson();
         }
     }
-    
+
     /// <summary>
     /// Save Layout Rows and Columns
     /// </summary>
@@ -96,19 +95,4 @@ public class LayoutProcessor : BaseProcessor
         }
     }
 
-    /// <summary>
-    /// Get Grid Cells Data
-    /// </summary>
-    public async Task<string> GetGridCells(GetGridCellsRequest request)
-    {
-        try
-        {
-            var result = await _layoutRepository.GetGridCells(request.LayoutId, CurrentUser.TenantID);
-            return result;
-        }
-        catch (Exception ex)
-        {
-            return new { success = false, message = $"Error retrieving grid cells: {ex.Message}" }.ToJson();
-        }
-    }
 }

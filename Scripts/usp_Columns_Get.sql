@@ -27,25 +27,37 @@ BEGIN
             RETURN
         END
 
-        -- Get columns for the tenant that are NOT already assigned to the specified layout
+        -- Get columns for the tenant with their grid cell assignments
         SELECT 
-            [Id] as [id],
-            [ColumnName] as [columnName],
-            [BackgroundColor] as [backgroundColor],
-            [TenantId] as [tenantId],
-            [CreatedBy] as [createdBy],
-            [UpdatedBy] as [updatedBy],
-            [DateCreated] as [dateCreated],
-            [DateUpdated] as [dateUpdated]
+            c.[Id] as [id],
+            c.[ColumnName] as [columnName],
+            c.[BackgroundColor] as [backgroundColor],
+            c.[TenantId] as [tenantId],
+            c.[CreatedBy] as [createdBy],
+            c.[UpdatedBy] as [updatedBy],
+            c.[DateCreated] as [dateCreated],
+            c.[DateUpdated] as [dateUpdated],
+            (
+                SELECT 
+                    lg.RowNumber as [rowNumber],
+                    lg.ColumnNumber as [columnNumber],
+                    lg.DisplayOrder as [displayOrder]
+                FROM [dbo].[LayoutGridColumns] lg
+                WHERE lg.ColumnId = c.Id
+                  AND lg.TenantId = @TenantId
+                  AND (@LayoutId IS NULL OR lg.LayoutId = @LayoutId)
+                ORDER BY lg.RowNumber, lg.ColumnNumber, lg.DisplayOrder
+                FOR JSON PATH
+            ) as [gridColumns]
         FROM [dbo].[Columns] c
-        WHERE [TenantId] = @TenantId
+        WHERE c.[TenantId] = @TenantId
           AND (@LayoutId IS NULL OR c.Id NOT IN (
               SELECT DISTINCT lg.ColumnId 
               FROM [dbo].[LayoutGridColumns] lg 
               WHERE lg.LayoutId = @LayoutId 
                 AND lg.TenantId = @TenantId
           ))
-        ORDER BY [ColumnName]
+        ORDER BY c.[ColumnName]
 		FOR JSON PATH, INCLUDE_NULL_VALUES
 
     END TRY
