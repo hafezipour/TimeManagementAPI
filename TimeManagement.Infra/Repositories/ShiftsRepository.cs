@@ -163,5 +163,24 @@ public class ShiftsRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Get scheduling shifts for a tenant
+    /// </summary>
+    public async Task<string> GetSchedulingShifts(int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_Shifts_GetSchedulingShifts", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 

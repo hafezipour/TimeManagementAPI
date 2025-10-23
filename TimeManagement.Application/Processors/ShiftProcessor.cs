@@ -40,6 +40,7 @@ public class ShiftProcessor : BaseProcessor
                 "getbyid" => await GetShift(jsonData.FromJson<GetShiftRequest>()),
                 "getshortlist" => await GetShiftsShortList(),
                 "getunassigned" => await GetUnassignedShifts(jsonData.FromJson<GetUnassignedShiftsRequest>()),
+                "getschedulingshifts" => await GetSchedulingShifts(),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -189,6 +190,23 @@ public class ShiftProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving unassigned shifts: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Get scheduling shifts for a tenant
+    /// </summary>
+    public async Task<string> GetSchedulingShifts()
+    {
+        try
+        {
+            var result = await _shiftsRepository.GetSchedulingShifts(CurrentUser.TenantID);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving scheduling shifts: {ex.Message}" }.ToJson();
         }
     }
 }

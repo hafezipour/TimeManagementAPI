@@ -1,19 +1,32 @@
-using System;
+﻿using System;
+using System.Collections.Generic;
+using TimeManagement.Application.DTOs.Columns;
+using TimeManagement.Application.DTOs.Shifts;
 
-namespace TimeManagement.Application.DTOs.Columns
+namespace TimeManagement.Domain.Models
 {
     /// <summary>
-    /// Column model for staff scheduling columns
+    /// Represents a Column with its grid layout and shift assignments
     /// </summary>
     public class Column
     {
-        public int? Id { get; set; }
-        public string? ColumnName { get; set; }
-        public string? BackgroundColor { get; set; }
-        public int TenantId { get; set; }
+        public int Id { get; set; }
+
+        public string ColumnName { get; set; }
+
+        public string BackgroundColor { get; set; }
+
         public int CreatedBy { get; set; }
+
         public int? UpdatedBy { get; set; }
-        public DateTime DateCreated { get; set; }
-        public DateTime? DateUpdated { get; set; }
+
+        public DateTimeOffset DateCreated { get; set; }
+
+        public DateTimeOffset? DateUpdated { get; set; }
+
+        public List<GridColumn> GridColumns { get; set; }
+
+        public List<ColumnShift> ColumnShifts { get; set; }
+        public List<SchedulingShift> SchedulingShifts { get; set; }
     }
 }

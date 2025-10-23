@@ -1,3 +1,4 @@
+using Newtonsoft.Json;
 using System.Text.Json;
 using TimeManagement.Application.DTOs.Columns;
 using TimeManagement.Application.Extensions;
@@ -9,12 +10,14 @@ namespace TimeManagement.Application.Processors;
 public class ColumnProcessor : BaseProcessor
 {
     private readonly ColumnRepository _columnRepository;
+    private readonly ShiftProcessor _shiftProcessor;
 
-    public ColumnProcessor(ColumnRepository columnRepository)
+    public ColumnProcessor(ColumnRepository columnRepository, ShiftProcessor shiftProcessor)
     {
         _columnRepository = columnRepository;
+        _shiftProcessor = shiftProcessor;
     }
-    
+
     /// <summary>
     /// Common method to process requests with ServiceName, MethodName, and JsonData
     /// </summary>
@@ -30,13 +33,13 @@ public class ColumnProcessor : BaseProcessor
             {
                 "get" => await Get(jsonData.FromJson<GetColumnsRequest>()),
                 "getbyid" => await GetById(jsonData.FromJson<GetColumnByIdRequest>()),
-                "save" => await Save(jsonData.FromJson<Column>()),
+                "save" => await Save(jsonData.FromJson<SaveColumnRequest>()),
                 "delete" => await Delete(jsonData.FromJson<DeleteColumnRequest>()),
                 "saveshift" => await SaveShift(jsonData.FromJson<SaveColumnShiftRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
-        catch (JsonException ex)
+        catch (System.Text.Json.JsonException ex)
         {
             throw ex;
         }
@@ -53,7 +56,25 @@ public class ColumnProcessor : BaseProcessor
     {
         try
         {
+            _shiftProcessor.SetCurrentUser(this.CurrentUser);
             var result = await _columnRepository.GetColumns(CurrentUser.TenantID, request.LayoutId);
+            var data = JsonConvert.DeserializeObject<List<Column>>(result);
+
+            _shiftProcessor.SetCurrentUser(this.CurrentUser);
+            var shifts = await _shiftProcessor.GetSchedulingShifts();
+            var schedulingShifts = JsonConvert.DeserializeObject<List<SchedulingShift>>(shifts);
+
+            //TO Do, if its scheduling, then filter here the shifts, else let it go
+            foreach (var item in data)
+            {
+                var schiftIds = item.ColumnShifts?.Select(cs => cs.ShiftId).ToList();
+                var shiftsInColumn = schedulingShifts.Where(c=> schiftIds.Contains(c.Id)).ToList();
+                item.SchedulingShifts = shiftsInColumn;
+            }
+
+            
+
+
             return result;
         }
         catch (Exception ex)
@@ -77,11 +98,11 @@ public class ColumnProcessor : BaseProcessor
             return new { success = false, message = $"Error retrieving column: {ex.Message}" }.ToJson();
         }
     }
-    
+
     /// <summary>
     /// Save a Column (Create/Update)
     /// </summary>
-    public async Task<string> Save(Column columnDto)
+    public async Task<string> Save(SaveColumnRequest columnDto)
     {
         try
         {
