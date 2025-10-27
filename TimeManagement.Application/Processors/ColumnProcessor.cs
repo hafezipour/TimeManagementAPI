@@ -64,12 +64,13 @@ public class ColumnProcessor : BaseProcessor
             var result = await _columnRepository.GetColumns(CurrentUser.TenantID, request.LayoutId);
             var data = JsonConvert.DeserializeObject<List<Column>>(result);
 
-            var schiftIds = data.SelectMany(c => c.ColumnShifts).Select(cs => cs.ShiftId).ToList();
+            var schiftIds = data.Where(c => c.ColumnShifts?.Count > 0).SelectMany(c => c.ColumnShifts).Select(cs => cs.ShiftId).ToList();
             var schedulingShifts = await _shiftProcessor.GetSchedulingShifts(request, schiftIds);
 
             foreach (var item in data)
             {
-                var shiftsInColumn = schedulingShifts.Where(c => schiftIds.Contains(c.Id)).ToList();
+                var ids = item.ColumnShifts?.Select(c => c.ShiftId).ToList();
+                var shiftsInColumn = schedulingShifts.Where(c => ids.Contains(c.Id)).ToList();
                 item.SchedulingShifts = shiftsInColumn;
             }
 
