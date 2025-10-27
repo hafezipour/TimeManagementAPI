@@ -33,7 +33,7 @@ namespace TimeManagement.Application.DTOs.Shifts
         public string? AdminIds { get; set; }
 
         // Schedule data
-        public List<Schedule>? Schedules { get; set; }
+        public List<ScheduleRequest>? Schedules { get; set; }
     }
 
 }

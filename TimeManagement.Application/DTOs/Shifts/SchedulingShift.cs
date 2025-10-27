@@ -47,16 +47,6 @@ namespace TimeManagement.Domain.Models
         public DateTimeOffset? DateUpdated { get; set; }
 
         public int? DisplayOrder { get; set; }
-
-        // Schedule-related properties from fn_GetShiftData
-        public int? ScheduleId { get; set; }
-
-        public bool? ScheduleWithoutTimes { get; set; }
-
-        public DateTime? ScheduleStartFrom { get; set; }
-
-        public TimeSpan? ScheduleStartTime { get; set; }
-
-        public int? ScheduleType { get; set; }
+        
     }
 }

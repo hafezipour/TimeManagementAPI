@@ -9,7 +9,7 @@ namespace TimeManagement.Application.DTOs.Schedules
     /// <summary>
     /// Schedule model for shift schedules
     /// </summary>
-    public class Schedule
+    public class ScheduleRequest
     {
         public int? Id { get; set; }
         public int ShiftId { get; set; }
@@ -21,7 +21,7 @@ namespace TimeManagement.Application.DTOs.Schedules
         public DateTime? EndTime { get; set; }
         public int ScheduleType { get; set; }  // 1=Daily, 2=Weekly, 3=Monthly, 4=DoesNotRepeat, 5=DaysOnOff
         public int RepeatEvery { get; set; }
-        public List<ScheduleFrequency>? Frequency { get; set; }
+        public List<ScheduleFrequencyRequest>? Frequency { get; set; }
         public int EndType { get; set; }  // 1=Never, 2=OnDate, 3=AfterOccurrences
         public DateTime? ValidUntil { get; set; }
         public int? MaxOccurrences { get; set; }

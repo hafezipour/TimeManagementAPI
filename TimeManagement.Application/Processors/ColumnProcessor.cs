@@ -11,10 +11,12 @@ public class ColumnProcessor : BaseProcessor
 {
     private readonly ColumnRepository _columnRepository;
     private readonly ShiftProcessor _shiftProcessor;
+    private readonly ScheduleProcessor _scheduleProcessor;
 
-    public ColumnProcessor(ColumnRepository columnRepository, ShiftProcessor shiftProcessor)
+    public ColumnProcessor(ScheduleProcessor scheduleProcessor, ColumnRepository columnRepository, ShiftProcessor shiftProcessor)
     {
         _columnRepository = columnRepository;
+        _scheduleProcessor = scheduleProcessor;
         _shiftProcessor = shiftProcessor;
     }
 
@@ -60,8 +62,13 @@ public class ColumnProcessor : BaseProcessor
             var result = await _columnRepository.GetColumns(CurrentUser.TenantID, request.LayoutId);
             var data = JsonConvert.DeserializeObject<List<Column>>(result);
 
-            _shiftProcessor.SetCurrentUser(this.CurrentUser);
+            _scheduleProcessor.SetCurrentUser(this.CurrentUser);
             var shifts = await _shiftProcessor.GetSchedulingShifts();
+            var schedules = await _scheduleProcessor.GetBySource(new DTOs.Schedules.GetScheduleRequest()
+            {
+                SourceType = 1,
+                SourceId = string.Join(",", data.SelectMany(c => c.ColumnShifts.Select(cs => cs.ShiftId)).Distinct())
+            });
             var schedulingShifts = JsonConvert.DeserializeObject<List<SchedulingShift>>(shifts);
 
             //TO Do, if its scheduling, then filter here the shifts, else let it go
@@ -70,6 +77,7 @@ public class ColumnProcessor : BaseProcessor
                 var schiftIds = item.ColumnShifts?.Select(cs => cs.ShiftId).ToList();
                 var shiftsInColumn = schedulingShifts.Where(c=> schiftIds.Contains(c.Id)).ToList();
                 item.SchedulingShifts = shiftsInColumn;
+                
             }
 
             

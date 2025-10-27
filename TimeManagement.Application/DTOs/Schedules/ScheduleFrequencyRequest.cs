@@ -9,7 +9,7 @@ namespace TimeManagement.Application.DTOs
     /// <summary>
     /// Schedule frequency model representing days and day types
     /// </summary>
-    public class ScheduleFrequency
+    public class ScheduleFrequencyRequest
     {
         public int Day { get; set; }
         public int? DayType { get; set; }

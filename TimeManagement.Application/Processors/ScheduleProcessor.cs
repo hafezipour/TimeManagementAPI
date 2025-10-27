@@ -27,7 +27,7 @@ public class ScheduleProcessor : BaseProcessor
         {
             return methodName.ToLower() switch
             {
-                "save" => await Save(jsonData.FromJson<Schedule>()),
+                "save" => await Save(jsonData.FromJson<ScheduleRequest>()),
                 "getbysource" => await GetBySource(jsonData.FromJson<GetScheduleRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
@@ -45,7 +45,7 @@ public class ScheduleProcessor : BaseProcessor
     /// <summary>
     /// Save a Schedule (Create/Update)
     /// </summary>
-    public async Task<string> Save(Schedule scheduleDto)
+    public async Task<string> Save(ScheduleRequest scheduleDto)
     {
         try
         {
@@ -78,9 +78,5 @@ public class ScheduleProcessor : BaseProcessor
     }
 }
 
-public class GetScheduleRequest
-{
-    public int SourceId { get; set; }
-    public int SourceType { get; set; }
-}
+
 

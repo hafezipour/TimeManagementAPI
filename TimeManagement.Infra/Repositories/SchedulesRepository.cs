@@ -18,13 +18,13 @@ public class SchedulesRepository
     /// <summary>
     /// Get Schedule by Source ID and Source Type
     /// </summary>
-    public async Task<string> GetScheduleBySource(int sourceId, int sourceType, int tenantId)
+    public async Task<string> GetScheduleBySource(string sourceIds, int sourceType, int tenantId)
     {
         try
         {
             List<SqlParameterModel> param = new List<SqlParameterModel>()
             {
-                new SqlParameterModel(){ Name = "SourceId", Value = sourceId},
+                new SqlParameterModel(){ Name = "SourceIds", Value = sourceIds},
                 new SqlParameterModel(){ Name = "SourceType", Value = sourceType},
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
