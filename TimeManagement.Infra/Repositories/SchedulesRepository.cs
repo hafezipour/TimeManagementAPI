@@ -16,16 +16,16 @@ public class SchedulesRepository
     }
 
     /// <summary>
-    /// Get Schedule by Source ID and Source Type
+    /// Get Schedule by Source IDs and Source Types
     /// </summary>
-    public async Task<string> GetScheduleBySource(string sourceIds, int sourceType, int tenantId)
+    public async Task<string> GetScheduleBySource(string sourceIds, string sourceTypes, int tenantId)
     {
         try
         {
             List<SqlParameterModel> param = new List<SqlParameterModel>()
             {
                 new SqlParameterModel(){ Name = "SourceIds", Value = sourceIds},
-                new SqlParameterModel(){ Name = "SourceType", Value = sourceType},
+                new SqlParameterModel(){ Name = "SourceTypes", Value = sourceTypes},
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
             return await _dbOperations.ExecuteDataSetAsync("usp_Schedules_GetBySource", param);

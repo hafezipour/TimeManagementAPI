@@ -67,7 +67,7 @@ public class ScheduleProcessor : BaseProcessor
     {
         try
         {
-            var result = await _schedulesRepository.GetScheduleBySource(request.SourceId, request.SourceType, CurrentUser.TenantID);
+            var result = await _schedulesRepository.GetScheduleBySource(request.SourceIds, request.SourceTypes, CurrentUser.TenantID);
 
             return result;
         }

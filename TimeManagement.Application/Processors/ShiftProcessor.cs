@@ -228,14 +228,14 @@ public class ShiftProcessor : BaseProcessor
             {
                 var schedules = await _scheduleProcessor.GetBySource(new DTOs.Schedules.GetScheduleRequest()
                 {
-                    SourceType = (int)ScheduleSourceTypes.Shift,
-                    SourceId = string.Join(",", schiftIds)
+                    SourceTypes = ((int)ScheduleSourceTypes.Shift).ToString(),
+                    SourceIds = string.Join(",", schiftIds)
                 });
                 schList = JsonConvert.DeserializeObject<List<DTOs.Schedules.ScheduleResponse>>(schedules);
                 foreach (var shift in data)
                 {
                     shift.Schedules = schList.Where(s => s.SourceId == shift.Id && s.SourceType == (int)ScheduleSourceTypes.Shift).FirstOrDefault();
-                
+
                     //Check here and if schedule is valid then only proceed 
                 }
             }

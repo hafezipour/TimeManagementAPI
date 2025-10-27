@@ -8,7 +8,8 @@ namespace TimeManagement.Application.DTOs.Schedules
 {
     public class GetScheduleRequest
     {
-        public string SourceId { get; set; }
-        public int SourceType { get; set; }
+        public string SourceIds { get; set; }
+        public string SourceTypes { get; set; }
     }
 }
+
