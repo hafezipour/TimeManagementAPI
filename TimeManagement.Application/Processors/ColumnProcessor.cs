@@ -64,45 +64,16 @@ public class ColumnProcessor : BaseProcessor
             var result = await _columnRepository.GetColumns(CurrentUser.TenantID, request.LayoutId);
             var data = JsonConvert.DeserializeObject<List<Column>>(result);
 
-            _scheduleProcessor.SetCurrentUser(this.CurrentUser);
-            var shifts = await _shiftProcessor.GetSchedulingShifts();
+            var schiftIds = data.SelectMany(c => c.ColumnShifts).Select(cs => cs.ShiftId).ToList();
+            var schedulingShifts = await _shiftProcessor.GetSchedulingShifts(request, schiftIds);
 
-            var schedulingShifts = JsonConvert.DeserializeObject<List<SchedulingShift>>(shifts);
-
-            List<DTOs.Schedules.ScheduleResponse> schList = new List<DTOs.Schedules.ScheduleResponse>();
-            if (request.OnlyScheduledShifts == true)
-            {
-                var schedules = await _scheduleProcessor.GetBySource(new DTOs.Schedules.GetScheduleRequest()
-                {
-                    SourceType = (int)ScheduleSourceTypes.Shift,
-                    SourceId = string.Join(",", data.SelectMany(c => c.ColumnShifts.Select(cs => cs.ShiftId)).Distinct())
-                });
-
-                schList = JsonConvert.DeserializeObject<List<DTOs.Schedules.ScheduleResponse>>(schedules);
-            }
-
-            //TO Do, if its scheduling, then filter here the shifts, else let it go
             foreach (var item in data)
             {
-                var schiftIds = item.ColumnShifts?.Select(cs => cs.ShiftId).ToList();
                 var shiftsInColumn = schedulingShifts.Where(c => schiftIds.Contains(c.Id)).ToList();
-                if (request.OnlyScheduledShifts == true)
-                {
-                    foreach (var shift in shiftsInColumn)
-                    {
-                        shift.Schedules = schList.Where(c => c.SourceId == shift.Id && c.SourceType == (int)ScheduleSourceTypes.Shift).ToList();
-
-                    }
-                }
                 item.SchedulingShifts = shiftsInColumn;
-
-
             }
 
-
-
-
-            return result;
+            return data.ToJson();
         }
         catch (Exception ex)
         {

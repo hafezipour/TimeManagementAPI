@@ -1,7 +1,11 @@
-﻿using System.Text.Json;
+﻿using Newtonsoft.Json;
+using System.Text.Json;
 using TimeManagement.Application.DTOs;
+using TimeManagement.Application.DTOs.Columns;
 using TimeManagement.Application.DTOs.Shifts;
+using TimeManagement.Application.Enums;
 using TimeManagement.Application.Extensions;
+using TimeManagement.Domain.Models;
 using TimeManagement.Infra.Repositories;
 
 namespace TimeManagement.Application.Processors;
@@ -16,7 +20,7 @@ public class ShiftProcessor : BaseProcessor
         _shiftsRepository = shiftsRepository;
 
         _scheduleProcessor = scheduleProcessor;
-        
+
 
     }
 
@@ -201,7 +205,6 @@ public class ShiftProcessor : BaseProcessor
         try
         {
             var result = await _shiftsRepository.GetSchedulingShifts(CurrentUser.TenantID);
-
             return result;
         }
         catch (Exception ex)
@@ -209,4 +212,43 @@ public class ShiftProcessor : BaseProcessor
             return new { success = false, message = $"Error retrieving scheduling shifts: {ex.Message}" }.ToJson();
         }
     }
+
+    /// <summary>
+    /// Get scheduling shifts for a tenant
+    /// </summary>
+    public async Task<List<SchedulingShift>> GetSchedulingShifts(GetColumnsRequest request, List<int> schiftIds)
+    {
+        try
+        {
+            var result = await GetSchedulingShifts();
+            var data = JsonConvert.DeserializeObject<List<SchedulingShift>>(result);
+
+            List<DTOs.Schedules.ScheduleResponse> schList = new List<DTOs.Schedules.ScheduleResponse>();
+            if (request.OnlyScheduledShifts == true)
+            {
+                var schedules = await _scheduleProcessor.GetBySource(new DTOs.Schedules.GetScheduleRequest()
+                {
+                    SourceType = (int)ScheduleSourceTypes.Shift,
+                    SourceId = string.Join(",", schiftIds)
+                });
+                schList = JsonConvert.DeserializeObject<List<DTOs.Schedules.ScheduleResponse>>(schedules);
+                foreach (var shift in data)
+                {
+                    shift.Schedules = schList.Where(s => s.SourceId == shift.Id && s.SourceType == (int)ScheduleSourceTypes.Shift).FirstOrDefault();
+                
+                    //Check here and if schedule is valid then only proceed 
+                }
+            }
+
+            return data;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+
+
+
 }
