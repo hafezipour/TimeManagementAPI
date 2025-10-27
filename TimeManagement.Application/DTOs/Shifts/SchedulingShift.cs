@@ -1,4 +1,5 @@
 ﻿using System;
+using TimeManagement.Application.DTOs.Schedules;
 
 namespace TimeManagement.Domain.Models
 {
@@ -47,6 +48,6 @@ namespace TimeManagement.Domain.Models
         public DateTimeOffset? DateUpdated { get; set; }
 
         public int? DisplayOrder { get; set; }
-        
+        public List<ScheduleResponse> Schedules { get; set; }
     }
 }

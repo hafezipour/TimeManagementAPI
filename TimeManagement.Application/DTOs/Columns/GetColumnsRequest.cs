@@ -7,9 +7,7 @@ namespace TimeManagement.Application.DTOs.Columns;
 /// </summary>
 public class GetColumnsRequest
 {
-    /// <summary>
-    /// Layout ID to exclude columns already assigned to this layout (optional)
-    /// </summary>
-    [JsonPropertyName("layoutId")]
     public int? LayoutId { get; set; }
+    public bool? OnlyScheduledShifts { get; set; }
 }
+
