@@ -278,19 +278,17 @@ public class ShiftProcessor : BaseProcessor
             // Set current user for schedule processor
             _scheduleProcessor.SetCurrentUser(this.CurrentUser);
 
-            // Call repository to get scheduled shifts with filters
-            var result = await _shiftsRepository.GetScheduledShifts(
-                CurrentUser.TenantID,
-                request.LayoutId,
-                request.StartDate,
-                request.EndDate,
-                request.ViewType,
-                request.DepartmentId,
-                request.LocationId,
-                request.EmployeeId
-            );
+            if (request.ViewType == "day")
+            {
+                //TO DO, get here the columns data
+                //columns will have shifts data with schedules and proceed it common next for sch eval
+            }
+            else
+            {
+                //TO DO, get here the shifts data with schedules and proceed it common next for sch eval
+            }
 
-            return result;
+            return "";
         }
         catch (Exception ex)
         {

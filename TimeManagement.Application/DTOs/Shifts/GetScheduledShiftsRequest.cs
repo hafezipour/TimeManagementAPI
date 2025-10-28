@@ -7,16 +7,12 @@ namespace TimeManagement.Application.DTOs.Shifts;
 /// </summary>
 public class GetScheduledShiftsRequest
 {
-    [Required]
     public int LayoutId { get; set; }
     
-    [Required]
     public DateTime StartDate { get; set; }
     
-    [Required]
     public DateTime EndDate { get; set; }
     
-    [Required]
     public string ViewType { get; set; } // "day", "week", "month"
     
     public int? DepartmentId { get; set; }
