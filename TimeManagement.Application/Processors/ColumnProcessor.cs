@@ -69,7 +69,7 @@ public class ColumnProcessor : BaseProcessor
 
             foreach (var column in columns)
             {
-                var ids = column.ColumnShifts?.Select(c => c.ShiftId).ToList();
+                var ids = column.ColumnShifts?.Select(c => c.ShiftId).ToList() ?? new List<int>();
                 var shiftsInColumn = schedulingShifts.Where(c => ids.Contains(c.Id)).ToList();
                 column.SchedulingShifts = shiftsInColumn;
             }
