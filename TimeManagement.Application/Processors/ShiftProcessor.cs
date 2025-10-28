@@ -45,6 +45,7 @@ public class ShiftProcessor : BaseProcessor
                 "getshortlist" => await GetShiftsShortList(),
                 "getunassigned" => await GetUnassignedShifts(jsonData.FromJson<GetUnassignedShiftsRequest>()),
                 "getschedulingshifts" => await GetSchedulingShifts(),
+                "getscheduledshifts" => await GetScheduledShifts(jsonData.FromJson<GetScheduledShiftsRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -220,6 +221,7 @@ public class ShiftProcessor : BaseProcessor
     {
         try
         {
+            _scheduleProcessor.SetCurrentUser(CurrentUser);
             var result = await GetSchedulingShifts();
             var data = JsonConvert.DeserializeObject<List<SchedulingShift>>(result);
 
@@ -229,7 +231,8 @@ public class ShiftProcessor : BaseProcessor
                 var schedules = await _scheduleProcessor.GetBySource(new DTOs.Schedules.GetScheduleRequest()
                 {
                     SourceTypes = ((int)ScheduleSourceTypes.Shift).ToString(),
-                    SourceIds = string.Join(",", schiftIds)
+                    SourceIds = string.Join(",", data.Select(c => c.Id).Distinct().ToList())
+                    //SourceIds = string.Join(",", schiftIds)
                 });
                 schList = JsonConvert.DeserializeObject<List<DTOs.Schedules.ScheduleResponse>>(schedules);
                 foreach (var shift in data)
@@ -245,6 +248,53 @@ public class ShiftProcessor : BaseProcessor
         catch (Exception ex)
         {
             throw ex;
+        }
+    }
+
+    /// <summary>
+    /// Get scheduled shifts with filters (date range, view type, etc.)
+    /// </summary>
+    public async Task<string> GetScheduledShifts(GetScheduledShiftsRequest request)
+    {
+        try
+        {
+            // Validate request
+            if (request.LayoutId <= 0)
+            {
+                return new { success = false, message = "Invalid LayoutId" }.ToJson();
+            }
+
+            if (request.StartDate >= request.EndDate)
+            {
+                return new { success = false, message = "StartDate must be before EndDate" }.ToJson();
+            }
+
+            var validViewTypes = new[] { "day", "week", "month" };
+            if (string.IsNullOrEmpty(request.ViewType) || !validViewTypes.Contains(request.ViewType.ToLower()))
+            {
+                return new { success = false, message = "Invalid ViewType. Must be 'day', 'week', or 'month'" }.ToJson();
+            }
+
+            // Set current user for schedule processor
+            _scheduleProcessor.SetCurrentUser(this.CurrentUser);
+
+            // Call repository to get scheduled shifts with filters
+            var result = await _shiftsRepository.GetScheduledShifts(
+                CurrentUser.TenantID,
+                request.LayoutId,
+                request.StartDate,
+                request.EndDate,
+                request.ViewType,
+                request.DepartmentId,
+                request.LocationId,
+                request.EmployeeId
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving scheduled shifts: {ex.Message}" }.ToJson();
         }
     }
 

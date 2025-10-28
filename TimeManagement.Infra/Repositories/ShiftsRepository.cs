@@ -182,5 +182,6 @@ public class ShiftsRepository
             throw ex;
         }
     }
+
 }
 
