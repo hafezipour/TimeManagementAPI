@@ -40,6 +40,7 @@ public class ColumnProcessor : BaseProcessor
                 "save" => await Save(jsonData.FromJson<SaveColumnRequest>()),
                 "delete" => await Delete(jsonData.FromJson<DeleteColumnRequest>()),
                 "saveshift" => await SaveShift(jsonData.FromJson<SaveColumnShiftRequest>()),
+                "deleteshift" => await DeleteShift(jsonData.FromJson<DeleteColumnShiftRequest>()),
                 "batchupdateshiftorder" => await BatchUpdateShiftOrder(jsonData.FromJson<BatchUpdateShiftOrderRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
@@ -175,6 +176,22 @@ public class ColumnProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error batch updating shift orders: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Delete a shift from a column
+    /// </summary>
+    public async Task<string> DeleteShift(DeleteColumnShiftRequest request)
+    {
+        try
+        {
+            var result = await _columnRepository.DeleteColumnShift(request.ToJson(), CurrentUser.LoginId, CurrentUser.TenantID);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error deleting shift from column: {ex.Message}" }.ToJson();
         }
     }
 }
