@@ -118,4 +118,25 @@ public class ColumnRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Batch update shift display orders for a column
+    /// </summary> 
+    public async Task<string> BatchUpdateShiftOrder(string json, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "Json", Value = json},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_ColumnShifts_BatchUpdateOrder", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }

@@ -15,6 +15,7 @@ namespace TimeManagement.Application.DTOs.Shifts
 
         public int ColumnShiftId { get; set; }
         public int ShiftId { get; set; }
+        public int DisplayOrder { get; set; }
     }
 }
 
