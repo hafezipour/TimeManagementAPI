@@ -62,19 +62,19 @@ public class ColumnProcessor : BaseProcessor
         {
             _shiftProcessor.SetCurrentUser(this.CurrentUser);
             var result = await _columnRepository.GetColumns(CurrentUser.TenantID, request.LayoutId);
-            var data = JsonConvert.DeserializeObject<List<Column>>(result);
+            var columns = JsonConvert.DeserializeObject<List<Column>>(result);
 
-            var schiftIds = data.Where(c => c.ColumnShifts?.Count > 0).SelectMany(c => c.ColumnShifts).Select(cs => cs.ShiftId).ToList();
+            var schiftIds = columns.Where(c => c.ColumnShifts?.Count > 0).SelectMany(c => c.ColumnShifts).Select(cs => cs.ShiftId).ToList();
             var schedulingShifts = await _shiftProcessor.GetSchedulingShifts(request, schiftIds);
 
-            foreach (var item in data)
+            foreach (var column in columns)
             {
-                var ids = item.ColumnShifts?.Select(c => c.ShiftId).ToList();
+                var ids = column.ColumnShifts?.Select(c => c.ShiftId).ToList();
                 var shiftsInColumn = schedulingShifts.Where(c => ids.Contains(c.Id)).ToList();
-                item.SchedulingShifts = shiftsInColumn;
+                column.SchedulingShifts = shiftsInColumn;
             }
 
-            return data.ToJson();
+            return columns.ToJson();
         }
         catch (Exception ex)
         {
