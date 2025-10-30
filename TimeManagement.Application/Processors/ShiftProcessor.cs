@@ -217,7 +217,7 @@ public class ShiftProcessor : BaseProcessor
     /// <summary>
     /// Get scheduling shifts for a tenant
     /// </summary>
-    public async Task<List<SchedulingShift>> GetSchedulingShifts(GetColumnsRequest request)
+    public async Task<List<SchedulingShift>> GetSchedulingShiftsList()
     {
         try
         {
@@ -236,9 +236,6 @@ public class ShiftProcessor : BaseProcessor
             {
                 shift.Schedules = schList.Where(s => s.SourceId == shift.Id && s.SourceType == (int)ScheduleSourceTypes.Shift).FirstOrDefault();
             }
-
-
-
             return shifts;
         }
         catch (Exception ex)
@@ -276,19 +273,13 @@ public class ShiftProcessor : BaseProcessor
 
             if (request.ViewType == "day")
             {
-                //TO DO, get here the columns data
-                //columns will have shifts data with schedules and proceed it common next for sch eval
-
-
-                var data = await GetSchedulingShifts(new GetColumnsRequest() { LayoutId = request.LayoutId });
+                var shifts = await GetSchedulingShiftsList();
 
 
             }
             else
             {
-                //TO DO, get here the shifts data with schedules and proceed it common next for sch eval
-
-
+                var shifts = await GetSchedulingShiftsList();
 
 
             }
