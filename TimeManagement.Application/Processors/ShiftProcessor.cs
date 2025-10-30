@@ -276,29 +276,46 @@ public class ShiftProcessor : BaseProcessor
             // Set current user for schedule processor
             _scheduleProcessor.SetCurrentUser(this.CurrentUser);
             ColumnProcessor.SetCurrentUser(this.CurrentUser);
-            
+
+            List<CalendarDay> calendarDays = new List<CalendarDay>();
             if (request.ViewType == "day")
             {
                 var columns = await ColumnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
                 foreach (var item in columns)
                 {
-                    var shifts = await GetValidShiftsList(request.ViewType, request.StartDate, request.EndDate, item.SchedulingShifts);
+                    var shifts = await GetValidShiftsList(request.StartDate, item.SchedulingShifts);
+                    item.SchedulingShifts = shifts;
                 }
             }
             else if (request.ViewType == "week")
             {
-                var columns = await ColumnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
-                foreach (var item in columns)
+                var schedulingShifts = await GetSchedulingShiftsList();
+                for (int i = 0; i < 7; i++)
                 {
-                    var shifts = await GetValidShiftsList(request.ViewType, request.StartDate, request.EndDate, item.SchedulingShifts);
+                    var date = request.StartDate.AddDays(i);
+                    var shifts = await GetValidShiftsList(date, schedulingShifts);
+                    calendarDays.Add(new CalendarDay
+                    {
+                        DayNo = date.Day,
+                        SchedulingShifts = shifts
+                    });
                 }
             }
             else if (request.ViewType == "month")
             {
-                var columns = await ColumnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
-                foreach (var item in columns)
+                var schedulingShifts = await GetSchedulingShiftsList();
+                int numberOfDays = (request.EndDate - request.StartDate).Days + 1;
+
+                // Loop through each day in the month view
+                for (int i = 0; i < numberOfDays; i++)
                 {
-                    var shifts = await GetValidShiftsList(request.ViewType, request.StartDate, request.EndDate, item.SchedulingShifts);
+                    var date = request.StartDate.AddDays(i);
+                    var shifts = await GetValidShiftsList(date, schedulingShifts);
+                    calendarDays.Add(new CalendarDay
+                    {
+                        DayNo = date.Day,
+                        SchedulingShifts = shifts
+                    });
                 }
             }
 
@@ -310,59 +327,10 @@ public class ShiftProcessor : BaseProcessor
         }
     }
 
-    /// <summary>
-    /// Get valid shifts list based on view type
-    /// Loops through 7 times for week view and calculates days between start/end for month view
-    /// </summary>
-    /// <param name="viewType">View type: day, week, or month</param>
-    /// <param name="startDate">Start date of the view</param>
-    /// <param name="endDate">End date of the view</param>
-    /// <param name="schedulingShifts">List of scheduling shifts to process</param>
-    /// <returns>Processed list of scheduling shifts</returns>
-    public Task<List<SchedulingShift>> GetValidShiftsList(string viewType, DateTime startDate, DateTime endDate, List<SchedulingShift> schedulingShifts)
+    public Task<List<SchedulingShift>> GetValidShiftsList(DateTime date,List<SchedulingShift> schedulingShifts)
     {
         var result = new List<SchedulingShift>();
 
-        if (viewType.ToLower() == "day")
-        {
-            // For day view, just process the single day
-            result = schedulingShifts;
-        }
-        else if (viewType.ToLower() == "week")
-        {
-            // For week view, loop through 7 days
-            for (int i = 0; i < 7; i++)
-            {
-                var currentDate = startDate.AddDays(i);
-                
-                // Process shifts for this day
-                // You can add your logic here to filter/process shifts for each day
-                // For now, we're just iterating through the days
-                
-                // Example: Log or process each day
-                // Console.WriteLine($"Processing shifts for {currentDate:yyyy-MM-dd}");
-            }
-            result = schedulingShifts;
-        }
-        else if (viewType.ToLower() == "month")
-        {
-            // For month view, calculate number of days between start and end date
-            int numberOfDays = (endDate - startDate).Days + 1;
-            
-            // Loop through each day in the month view
-            for (int i = 0; i < numberOfDays; i++)
-            {
-                var currentDate = startDate.AddDays(i);
-                
-                // Process shifts for this day
-                // You can add your logic here to filter/process shifts for each day
-                // For now, we're just iterating through the days
-                
-                // Example: Log or process each day
-                // Console.WriteLine($"Processing shifts for {currentDate:yyyy-MM-dd}");
-            }
-            result = schedulingShifts;
-        }
 
         return Task.FromResult(result);
     }
