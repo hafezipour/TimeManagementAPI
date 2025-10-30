@@ -6,6 +6,7 @@ using TimeManagement.Application.DTOs.Columns;
 using TimeManagement.Application.DTOs.Shifts;
 using TimeManagement.Application.Enums;
 using TimeManagement.Application.Extensions;
+using TimeManagement.Application.Services;
 using TimeManagement.Domain.Models;
 using TimeManagement.Infra.Repositories;
 
@@ -15,13 +16,15 @@ public class ShiftProcessor : BaseProcessor
 {
     private readonly ShiftsRepository _shiftsRepository;
     private readonly ScheduleProcessor _scheduleProcessor;
+    private readonly ScheduleEvaluator _scheduleEvaluator;
     private readonly IServiceProvider _serviceProvider;
     private ColumnProcessor _columnProcessor;
 
-    public ShiftProcessor(IServiceProvider serviceProvider, ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor)
+    public ShiftProcessor(IServiceProvider serviceProvider, ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor, ScheduleEvaluator scheduleEvaluator)
     {
         _shiftsRepository = shiftsRepository;
         _scheduleProcessor = scheduleProcessor;
+        _scheduleEvaluator = scheduleEvaluator;
         _serviceProvider = serviceProvider;
     }
 
@@ -330,10 +333,35 @@ public class ShiftProcessor : BaseProcessor
         }
     }
 
+    /// <summary>
+    /// Get valid shifts for a specific date based on their schedule patterns
+    /// </summary>
+    /// <param name="date">The date to check</param>
+    /// <param name="schedulingShifts">List of shifts with their schedules</param>
+    /// <returns>List of shifts that are valid for the given date</returns>
     public Task<List<SchedulingShift>> GetValidShiftsList(DateTime date, List<SchedulingShift> schedulingShifts)
     {
         var result = new List<SchedulingShift>();
+        
+        foreach (var shift in schedulingShifts)
+        {
+            // Check if shift has a schedule
+            if (shift.Schedules == null)
+            {
+                // No schedule defined - skip this shift
+                continue;
+            }
 
+            // Use ScheduleEvaluator to check if this date is valid for the shift's schedule
+            bool isValidForDate = _scheduleEvaluator.IsDateValid(shift.Schedules, date);
+
+            if (isValidForDate)
+            {
+                // This shift occurs on this date
+                // The schedule.StartTime and schedule.EndTime define the shift times
+                result.Add(shift);
+            }
+        }
 
         return Task.FromResult(result);
     }
