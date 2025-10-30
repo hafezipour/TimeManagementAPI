@@ -243,6 +243,8 @@ public class ShiftProcessor : BaseProcessor
         }
     }
 
+    #region Shifts
+
     /// <summary>
     /// Get scheduled shifts with filters (date range, view type, etc.)
     /// </summary>
@@ -273,12 +275,16 @@ public class ShiftProcessor : BaseProcessor
             if (request.ViewType == "day")
             {
                 var columns = await _columnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
-
+                //columns[0].SchedulingShifts;
+                foreach (var item in columns)
+                {
+                    var shifts = await GetValidShiftsList(request.StartDate, item.SchedulingShifts);
+                }
             }
             else
             {
                 var shifts = await GetSchedulingShiftsList();
-
+                //var shifts = await GetValidShiftsList(request.StartDate, item.SchedulingShifts);
 
             }
 
@@ -289,6 +295,15 @@ public class ShiftProcessor : BaseProcessor
             return new { success = false, message = $"Error retrieving scheduled shifts: {ex.Message}" }.ToJson();
         }
     }
+
+    public Task<List<SchedulingShift>> GetValidShiftsList(DateTime date, List<SchedulingShift> schedulingShifts)
+    {
+
+
+        return Task.FromResult(schedulingShifts);
+    }
+
+    #endregion
 
 
 
