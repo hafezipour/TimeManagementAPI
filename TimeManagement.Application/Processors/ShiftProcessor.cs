@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json;
 using System.Text.Json;
 using TimeManagement.Application.DTOs;
 using TimeManagement.Application.DTOs.Columns;
@@ -14,14 +15,17 @@ public class ShiftProcessor : BaseProcessor
 {
     private readonly ShiftsRepository _shiftsRepository;
     private readonly ScheduleProcessor _scheduleProcessor;
-    private readonly ColumnProcessor _columnProcessor;
+    private readonly IServiceProvider _serviceProvider;
+    private ColumnProcessor _columnProcessor;
 
-    public ShiftProcessor(ColumnProcessor columnProcessor, ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor)
+    public ShiftProcessor(IServiceProvider serviceProvider, ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor)
     {
         _shiftsRepository = shiftsRepository;
-        _shiftsRepository = shiftsRepository;
-        _columnProcessor = columnProcessor;
+        _scheduleProcessor = scheduleProcessor;
+        _serviceProvider = serviceProvider;
     }
+
+    private ColumnProcessor ColumnProcessor => _columnProcessor ??= _serviceProvider.GetRequiredService<ColumnProcessor>();
 
     /// <summary>
     /// Common method to process requests with ServiceName, MethodName, and JsonData
@@ -271,21 +275,31 @@ public class ShiftProcessor : BaseProcessor
 
             // Set current user for schedule processor
             _scheduleProcessor.SetCurrentUser(this.CurrentUser);
-            _columnProcessor.SetCurrentUser(this.CurrentUser);
+            ColumnProcessor.SetCurrentUser(this.CurrentUser);
+            
             if (request.ViewType == "day")
             {
-                var columns = await _columnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
-                //columns[0].SchedulingShifts;
+                var columns = await ColumnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
                 foreach (var item in columns)
                 {
-                    var shifts = await GetValidShiftsList(request.StartDate, item.SchedulingShifts);
+                    var shifts = await GetValidShiftsList(request.ViewType, request.StartDate, request.EndDate, item.SchedulingShifts);
                 }
             }
-            else
+            else if (request.ViewType == "week")
             {
-                var shifts = await GetSchedulingShiftsList();
-                //var shifts = await GetValidShiftsList(request.StartDate, item.SchedulingShifts);
-
+                var columns = await ColumnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
+                foreach (var item in columns)
+                {
+                    var shifts = await GetValidShiftsList(request.ViewType, request.StartDate, request.EndDate, item.SchedulingShifts);
+                }
+            }
+            else if (request.ViewType == "month")
+            {
+                var columns = await ColumnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
+                foreach (var item in columns)
+                {
+                    var shifts = await GetValidShiftsList(request.ViewType, request.StartDate, request.EndDate, item.SchedulingShifts);
+                }
             }
 
             return "";
@@ -296,11 +310,61 @@ public class ShiftProcessor : BaseProcessor
         }
     }
 
-    public Task<List<SchedulingShift>> GetValidShiftsList(DateTime date, List<SchedulingShift> schedulingShifts)
+    /// <summary>
+    /// Get valid shifts list based on view type
+    /// Loops through 7 times for week view and calculates days between start/end for month view
+    /// </summary>
+    /// <param name="viewType">View type: day, week, or month</param>
+    /// <param name="startDate">Start date of the view</param>
+    /// <param name="endDate">End date of the view</param>
+    /// <param name="schedulingShifts">List of scheduling shifts to process</param>
+    /// <returns>Processed list of scheduling shifts</returns>
+    public Task<List<SchedulingShift>> GetValidShiftsList(string viewType, DateTime startDate, DateTime endDate, List<SchedulingShift> schedulingShifts)
     {
+        var result = new List<SchedulingShift>();
 
+        if (viewType.ToLower() == "day")
+        {
+            // For day view, just process the single day
+            result = schedulingShifts;
+        }
+        else if (viewType.ToLower() == "week")
+        {
+            // For week view, loop through 7 days
+            for (int i = 0; i < 7; i++)
+            {
+                var currentDate = startDate.AddDays(i);
+                
+                // Process shifts for this day
+                // You can add your logic here to filter/process shifts for each day
+                // For now, we're just iterating through the days
+                
+                // Example: Log or process each day
+                // Console.WriteLine($"Processing shifts for {currentDate:yyyy-MM-dd}");
+            }
+            result = schedulingShifts;
+        }
+        else if (viewType.ToLower() == "month")
+        {
+            // For month view, calculate number of days between start and end date
+            int numberOfDays = (endDate - startDate).Days + 1;
+            
+            // Loop through each day in the month view
+            for (int i = 0; i < numberOfDays; i++)
+            {
+                var currentDate = startDate.AddDays(i);
+                
+                // Process shifts for this day
+                // You can add your logic here to filter/process shifts for each day
+                // For now, we're just iterating through the days
+                
+                // Example: Log or process each day
+                // Console.WriteLine($"Processing shifts for {currentDate:yyyy-MM-dd}");
+            }
+            result = schedulingShifts;
+        }
 
-        return Task.FromResult(schedulingShifts);
+        return Task.FromResult(result);
     }
 
     #endregion

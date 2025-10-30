@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Text.Json;
@@ -12,15 +13,18 @@ namespace TimeManagement.Application.Processors;
 public class ColumnProcessor : BaseProcessor
 {
     private readonly ColumnRepository _columnRepository;
-    private readonly ShiftProcessor _shiftProcessor;
+    private readonly IServiceProvider _serviceProvider;
     private readonly ScheduleProcessor _scheduleProcessor;
+    private ShiftProcessor _shiftProcessor;
 
-    public ColumnProcessor(ScheduleProcessor scheduleProcessor, ColumnRepository columnRepository, ShiftProcessor shiftProcessor)
+    public ColumnProcessor(ScheduleProcessor scheduleProcessor, ColumnRepository columnRepository, IServiceProvider serviceProvider)
     {
         _columnRepository = columnRepository;
         _scheduleProcessor = scheduleProcessor;
-        _shiftProcessor = shiftProcessor;
+        _serviceProvider = serviceProvider;
     }
+
+    private ShiftProcessor ShiftProcessor => _shiftProcessor ??= _serviceProvider.GetRequiredService<ShiftProcessor>();
 
     /// <summary>
     /// Common method to process requests with ServiceName, MethodName, and JsonData
@@ -63,10 +67,10 @@ public class ColumnProcessor : BaseProcessor
     {
         try
         {
-            _shiftProcessor.SetCurrentUser(this.CurrentUser);
+            ShiftProcessor.SetCurrentUser(this.CurrentUser);
             var result = await _columnRepository.GetColumns(CurrentUser.TenantID, request.LayoutId);
             var columns = JsonConvert.DeserializeObject<List<Column>>(result);
-            var schedulingShifts = await _shiftProcessor.GetSchedulingShiftsList();
+            var schedulingShifts = await ShiftProcessor.GetSchedulingShiftsList();
 
             foreach (var column in columns)
             {
