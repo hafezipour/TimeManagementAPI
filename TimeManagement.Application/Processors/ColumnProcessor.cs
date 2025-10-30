@@ -55,6 +55,45 @@ public class ColumnProcessor : BaseProcessor
         }
     }
 
+
+    /// <summary>
+    /// Get all columns
+    /// </summary>
+    public async Task<List<Column>> GetColumnRequestData(GetColumnsRequest request)
+    {
+        try
+        {
+            _shiftProcessor.SetCurrentUser(this.CurrentUser);
+            var result = await _columnRepository.GetColumns(CurrentUser.TenantID, request.LayoutId);
+            var columns = JsonConvert.DeserializeObject<List<Column>>(result);
+            var schedulingShifts = await _shiftProcessor.GetSchedulingShiftsList();
+
+            foreach (var column in columns)
+            {
+                var ids = column.ColumnShifts?.Select(c => c.ShiftId).ToList() ?? new List<int>();
+                var shiftsInColumn = schedulingShifts.Where(c => ids.Contains(c.Id)).ToList();
+
+                // Sort shifts by DisplayOrder from ColumnShifts
+                if (column.ColumnShifts != null && column.ColumnShifts.Count > 0)
+                {
+                    // Create a dictionary for quick lookup of display order by shift ID
+                    var displayOrderMap = column.ColumnShifts.ToDictionary(cs => cs.ShiftId, cs => cs.DisplayOrder);
+
+                    // Sort shifts by display order
+                    shiftsInColumn = shiftsInColumn
+                        .OrderBy(shift => displayOrderMap.ContainsKey(shift.Id) ? displayOrderMap[shift.Id] : int.MaxValue)
+                        .ToList();
+                }
+                column.SchedulingShifts = shiftsInColumn ?? new List<SchedulingShift>();
+            }
+            return columns;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
     /// <summary>
     /// Get all columns
     /// </summary>
@@ -62,33 +101,7 @@ public class ColumnProcessor : BaseProcessor
     {
         try
         {
-            _shiftProcessor.SetCurrentUser(this.CurrentUser);
-            var result = await _columnRepository.GetColumns(CurrentUser.TenantID, request.LayoutId);
-            var columns = JsonConvert.DeserializeObject<List<Column>>(result);
-
-            //var schiftIds = columns.Where(c => c.ColumnShifts?.Count > 0).SelectMany(c => c.ColumnShifts).Select(cs => cs.ShiftId).ToList();
-            var schedulingShifts = await _shiftProcessor.GetSchedulingShiftsList();
-
-            foreach (var column in columns)
-            {
-                var ids = column.ColumnShifts?.Select(c => c.ShiftId).ToList() ?? new List<int>();
-                var shiftsInColumn = schedulingShifts.Where(c => ids.Contains(c.Id)).ToList();
-                
-                // Sort shifts by DisplayOrder from ColumnShifts
-                if (column.ColumnShifts != null && column.ColumnShifts.Count > 0)
-                {
-                    // Create a dictionary for quick lookup of display order by shift ID
-                    var displayOrderMap = column.ColumnShifts.ToDictionary(cs => cs.ShiftId, cs => cs.DisplayOrder);
-                    
-                    // Sort shifts by display order
-                    shiftsInColumn = shiftsInColumn
-                        .OrderBy(shift => displayOrderMap.ContainsKey(shift.Id) ? displayOrderMap[shift.Id] : int.MaxValue)
-                        .ToList();
-                }
-                
-                column.SchedulingShifts = shiftsInColumn;
-            }
-
+            var columns = await GetColumnRequestData(request);
             return columns.ToJson();
         }
         catch (Exception ex)

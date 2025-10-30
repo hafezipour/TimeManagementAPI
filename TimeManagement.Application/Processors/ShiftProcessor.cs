@@ -14,14 +14,13 @@ public class ShiftProcessor : BaseProcessor
 {
     private readonly ShiftsRepository _shiftsRepository;
     private readonly ScheduleProcessor _scheduleProcessor;
+    private readonly ColumnProcessor _columnProcessor;
 
-    public ShiftProcessor(ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor)
+    public ShiftProcessor(ColumnProcessor columnProcessor, ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor)
     {
         _shiftsRepository = shiftsRepository;
-
-        _scheduleProcessor = scheduleProcessor;
-
-
+        _shiftsRepository = shiftsRepository;
+        _columnProcessor = columnProcessor;
     }
 
     /// <summary>
@@ -273,8 +272,7 @@ public class ShiftProcessor : BaseProcessor
 
             if (request.ViewType == "day")
             {
-                var shifts = await GetSchedulingShiftsList();
-
+                var columns = await _columnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
 
             }
             else
