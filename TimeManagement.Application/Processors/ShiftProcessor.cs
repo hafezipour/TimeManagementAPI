@@ -275,7 +275,7 @@ public class ShiftProcessor : BaseProcessor
 
             // Set current user for schedule processor
             _scheduleProcessor.SetCurrentUser(this.CurrentUser);
-            ColumnProcessor.SetCurrentUser(this.CurrentUser);
+            _columnProcessor.SetCurrentUser(this.CurrentUser);
 
             List<CalendarDay> calendarDays = new List<CalendarDay>();
             if (request.ViewType == "day")

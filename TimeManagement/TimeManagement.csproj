@@ -8,15 +8,15 @@
 
 
 	<ItemGroup>
-		<PackageReference Include="Swashbuckle.AspNetCore" Version="6.6.2" />
-		<PackageReference Include="log4net" Version="2.0.15" />
+		<PackageReference Include="Swashbuckle.AspNetCore" Version="9.0.6" />
+		<PackageReference Include="log4net" Version="3.2.0" />
 
-		<PackageReference Include="Grpc.AspNetCore" Version="2.57.0" />
+		<PackageReference Include="Grpc.AspNetCore" Version="2.71.0" />
 
-		<PackageReference Include="AzureFileManager" Version="1.0.0.5" />
+		<PackageReference Include="AzureFileManager" Version="1.0.0.7" />
 		<PackageReference Include="DbOperations" Version="1.0.0.4" />
 		<PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.14.0" />
-		<PackageReference Include="WebPortalSecurityManager" Version="1.0.6.3" />
+		<PackageReference Include="WebPortalSecurityManager" Version="1.0.6.5" />
 
 	</ItemGroup>
 

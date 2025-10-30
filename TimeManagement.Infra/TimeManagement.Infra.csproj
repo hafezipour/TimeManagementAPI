@@ -7,11 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.2.0" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-    <PackageReference Include="log4net" Version="2.0.15" />
+    <PackageReference Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.10" />
+    <PackageReference Include="log4net" Version="3.2.0" />
     <PackageReference Include="DbOperations" Version="1.0.0.4" />
-    <PackageReference Include="WebPortalSecurityManager" Version="1.0.6.3" />
+    <PackageReference Include="WebPortalSecurityManager" Version="1.0.6.5" />
   </ItemGroup>
 
   <ItemGroup>
