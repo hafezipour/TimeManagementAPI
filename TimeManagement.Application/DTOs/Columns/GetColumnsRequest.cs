@@ -8,6 +8,5 @@ namespace TimeManagement.Application.DTOs.Columns;
 public class GetColumnsRequest
 {
     public int? LayoutId { get; set; }
-    public bool? OnlyScheduledShifts { get; set; }
 }
 

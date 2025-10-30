@@ -217,33 +217,29 @@ public class ShiftProcessor : BaseProcessor
     /// <summary>
     /// Get scheduling shifts for a tenant
     /// </summary>
-    public async Task<List<SchedulingShift>> GetSchedulingShifts(GetColumnsRequest request, List<int> schiftIds)
+    public async Task<List<SchedulingShift>> GetSchedulingShifts(GetColumnsRequest request)
     {
         try
         {
             _scheduleProcessor.SetCurrentUser(CurrentUser);
             var result = await GetSchedulingShifts();
-            var data = JsonConvert.DeserializeObject<List<SchedulingShift>>(result);
+            var shifts = JsonConvert.DeserializeObject<List<SchedulingShift>>(result);
 
             List<DTOs.Schedules.ScheduleResponse> schList = new List<DTOs.Schedules.ScheduleResponse>();
-            if (request.OnlyScheduledShifts == true)
+            var schedules = await _scheduleProcessor.GetBySource(new DTOs.Schedules.GetScheduleRequest()
             {
-                var schedules = await _scheduleProcessor.GetBySource(new DTOs.Schedules.GetScheduleRequest()
-                {
-                    SourceTypes = ((int)ScheduleSourceTypes.Shift).ToString(),
-                    SourceIds = string.Join(",", data.Select(c => c.Id).Distinct().ToList())
-                    //SourceIds = string.Join(",", schiftIds)
-                });
-                schList = JsonConvert.DeserializeObject<List<DTOs.Schedules.ScheduleResponse>>(schedules);
-                foreach (var shift in data)
-                {
-                    shift.Schedules = schList.Where(s => s.SourceId == shift.Id && s.SourceType == (int)ScheduleSourceTypes.Shift).FirstOrDefault();
-
-                    //Check here and if schedule is valid then only proceed 
-                }
+                SourceTypes = ((int)ScheduleSourceTypes.Shift).ToString(),
+                SourceIds = string.Join(",", shifts.Select(c => c.Id).Distinct().ToList())
+            });
+            schList = JsonConvert.DeserializeObject<List<DTOs.Schedules.ScheduleResponse>>(schedules);
+            foreach (var shift in shifts)
+            {
+                shift.Schedules = schList.Where(s => s.SourceId == shift.Id && s.SourceType == (int)ScheduleSourceTypes.Shift).FirstOrDefault();
             }
 
-            return data;
+
+
+            return shifts;
         }
         catch (Exception ex)
         {
@@ -282,10 +278,19 @@ public class ShiftProcessor : BaseProcessor
             {
                 //TO DO, get here the columns data
                 //columns will have shifts data with schedules and proceed it common next for sch eval
+
+
+                var data = await GetSchedulingShifts(new GetColumnsRequest() { LayoutId = request.LayoutId });
+
+
             }
             else
             {
                 //TO DO, get here the shifts data with schedules and proceed it common next for sch eval
+
+
+
+
             }
 
             return "";
