@@ -271,7 +271,7 @@ public class ShiftProcessor : BaseProcessor
 
             // Set current user for schedule processor
             _scheduleProcessor.SetCurrentUser(this.CurrentUser);
-
+            _columnProcessor.SetCurrentUser(this.CurrentUser);
             if (request.ViewType == "day")
             {
                 var columns = await _columnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
