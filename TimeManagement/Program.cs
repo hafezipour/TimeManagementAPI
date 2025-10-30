@@ -1,20 +1,16 @@
 using DbOperations;
-using log4net;
-using log4net.Config;
-using Microsoft.Extensions.Logging;
-using System.Reflection;
-using TimeManagement.Application.Services;
+using WebPortalSecurityManager;
 using TimeManagement.Infra.Extensions;
 using TimeManagement.Infra.Logging;
-using WebPortalSecurityManager;
+using Microsoft.Extensions.Logging;
+using log4net;
+using log4net.Config;
+using System.Reflection;
 
 var builder = WebApplication.CreateBuilder(args);
 var services = builder.Services;
 
 IConfiguration configuration = builder.Configuration;
-
-var examples = new ScheduleEvaluatorExamples();
-examples.RunAllExamples();
 
 #region ConfigureServices
 
