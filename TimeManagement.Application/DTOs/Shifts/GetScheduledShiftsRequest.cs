@@ -22,3 +22,6 @@ public class GetScheduledShiftsRequest
     public int? EmployeeId { get; set; }
 }
 
+
+
+
