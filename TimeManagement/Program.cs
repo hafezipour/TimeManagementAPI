@@ -37,6 +37,9 @@ builder.Services.AddScoped<TimeManagement.Application.Processors.LayoutProcessor
 builder.Services.AddScoped<TimeManagement.Application.Processors.ColumnProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.EmployeeJobCodeAssignmentProcessor>();
 
+// Register services
+builder.Services.AddScoped<TimeManagement.Application.Services.ScheduleEvaluator>();
+
 // Register repositories for dependency injection
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.HolidaysRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.HolidayAssignmentRepository>();
@@ -52,7 +55,19 @@ builder.Services.AddScoped<WebPortal.EF.Repository.DataBaseRepo.EfDbOperationsRe
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+    {
+        Title = "Time Management API",
+        Version = "v1",
+        Description = "API for managing time management operations including shifts, schedules, columns, and layouts",
+        Contact = new Microsoft.OpenApi.Models.OpenApiContact
+        {
+            Name = "Time Management Team"
+        }
+    });
+});
 
 var app = builder.Build();
 
@@ -158,8 +173,14 @@ if (configs.Count() > 0)
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwagger(c =>
+    {
+    });
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Time Management API v1");
+        c.RoutePrefix = "swagger";
+    });
 }
 
 app.UseHttpsRedirection();
