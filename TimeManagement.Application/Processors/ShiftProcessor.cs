@@ -286,6 +286,7 @@ public class ShiftProcessor : BaseProcessor
                     var shifts = await GetValidShiftsList(request.StartDate, item.SchedulingShifts);
                     item.SchedulingShifts = shifts;
                 }
+                return columns.ToJson();
             }
             else if (request.ViewType == "week")
             {
@@ -300,6 +301,7 @@ public class ShiftProcessor : BaseProcessor
                         SchedulingShifts = shifts
                     });
                 }
+                return calendarDays.ToJson();
             }
             else if (request.ViewType == "month")
             {
@@ -317,6 +319,7 @@ public class ShiftProcessor : BaseProcessor
                         SchedulingShifts = shifts
                     });
                 }
+                return calendarDays.ToJson();
             }
 
             return "";
@@ -327,7 +330,7 @@ public class ShiftProcessor : BaseProcessor
         }
     }
 
-    public Task<List<SchedulingShift>> GetValidShiftsList(DateTime date,List<SchedulingShift> schedulingShifts)
+    public Task<List<SchedulingShift>> GetValidShiftsList(DateTime date, List<SchedulingShift> schedulingShifts)
     {
         var result = new List<SchedulingShift>();
 
