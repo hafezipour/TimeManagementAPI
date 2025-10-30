@@ -7,398 +7,244 @@ using TimeManagement.Application.Enums;
 namespace TimeManagement.Application.Services
 {
     /// <summary>
-    /// Evaluates schedules and generates valid occurrence dates based on schedule rules
+    /// Simple schedule evaluator - checks if a given date is valid for a schedule
     /// </summary>
     public class ScheduleEvaluator
     {
         /// <summary>
-        /// Evaluates a schedule and returns all valid occurrence dates within the specified date range
+        /// Check if a specific date is valid for the given schedule
+        /// StartTime and EndTime from ScheduleResponse define the shift times
         /// </summary>
         /// <param name="schedule">The schedule to evaluate</param>
-        /// <param name="rangeStart">Start date of the evaluation range</param>
-        /// <param name="rangeEnd">End date of the evaluation range</param>
-        /// <returns>List of dates when the schedule is valid</returns>
-        public List<DateTime> EvaluateSchedule(ScheduleResponse schedule, DateTime rangeStart, DateTime rangeEnd)
+        /// <param name="date">The date to check</param>
+        /// <returns>True if the date is valid for this schedule</returns>
+        public bool IsDateValid(ScheduleResponse schedule, DateTime date)
         {
-            if (schedule == null)
-                throw new ArgumentNullException(nameof(schedule));
+            if (schedule == null || !schedule.IsActive.GetValueOrDefault(true))
+                return false;
 
-            if (rangeEnd < rangeStart)
-                throw new ArgumentException("Range end must be greater than or equal to range start");
-
-            var validDates = new List<DateTime>();
-
-            // Get schedule start date
             if (!schedule.StartFrom.HasValue)
-                return validDates; // No start date, no valid occurrences
+                return false;
 
-            var scheduleStartDate = schedule.StartFrom.Value.Date;
+            var checkDate = date.Date;
+            var startDate = schedule.StartFrom.Value.Date;
 
-            // If schedule starts after range end, no occurrences
-            if (scheduleStartDate > rangeEnd)
-                return validDates;
+            // Date must be on or after schedule start
+            if (checkDate < startDate)
+                return false;
 
-            // Get schedule end date based on EndType
-            DateTime? scheduleEndDate = GetScheduleEndDate(schedule);
+            // Check if schedule has ended
+            var endDate = GetScheduleEndDate(schedule);
+            if (endDate.HasValue && checkDate > endDate.Value)
+                return false;
 
-            // If schedule ended before range start, no occurrences
-            if (scheduleEndDate.HasValue && scheduleEndDate.Value < rangeStart)
-                return validDates;
-
-            // Determine which schedule type to evaluate
-            var scheduleType = schedule.ScheduleType.HasValue ? (ScheduleType)schedule.ScheduleType.Value : ScheduleType.DoesNotRepeat;
-
-            switch (scheduleType)
+            // Check max occurrences if specified
+            if (!string.IsNullOrEmpty(schedule.EndType) && 
+                schedule.EndType.ToLower() == "afteroccurrences" && 
+                schedule.MaxOccurrences.HasValue)
             {
-                case ScheduleType.DoesNotRepeat:
-                    validDates = EvaluateDoesNotRepeat(scheduleStartDate, rangeStart, rangeEnd);
-                    break;
-
-                case ScheduleType.Daily:
-                    validDates = EvaluateDaily(schedule, scheduleStartDate, rangeStart, rangeEnd, scheduleEndDate);
-                    break;
-
-                case ScheduleType.Weekly:
-                    validDates = EvaluateWeekly(schedule, scheduleStartDate, rangeStart, rangeEnd, scheduleEndDate);
-                    break;
-
-                case ScheduleType.Monthly:
-                    validDates = EvaluateMonthly(schedule, scheduleStartDate, rangeStart, rangeEnd, scheduleEndDate);
-                    break;
-
-                case ScheduleType.DaysOnOff:
-                    validDates = EvaluateDaysOnOff(schedule, scheduleStartDate, rangeStart, rangeEnd, scheduleEndDate);
-                    break;
-
-                default:
-                    break;
+                var occurrenceCount = CountOccurrencesUntilDate(schedule, checkDate);
+                if (occurrenceCount > schedule.MaxOccurrences.Value)
+                    return false;
             }
 
-            // Apply max occurrences limit if specified
-            if (schedule.MaxOccurrences.HasValue && validDates.Count > schedule.MaxOccurrences.Value)
-            {
-                validDates = validDates.Take(schedule.MaxOccurrences.Value).ToList();
-            }
+            // Evaluate based on schedule type
+            var scheduleType = schedule.ScheduleType.HasValue 
+                ? (ScheduleType)schedule.ScheduleType.Value 
+                : ScheduleType.DoesNotRepeat;
 
-            return validDates;
+            return scheduleType switch
+            {
+                ScheduleType.DoesNotRepeat => checkDate == startDate,
+                ScheduleType.Daily => IsValidDaily(schedule, checkDate, startDate),
+                ScheduleType.Weekly => IsValidWeekly(schedule, checkDate, startDate),
+                ScheduleType.Monthly => IsValidMonthly(schedule, checkDate, startDate),
+                ScheduleType.DaysOnOff => IsValidDaysOnOff(schedule, checkDate, startDate),
+                _ => false
+            };
         }
 
-        /// <summary>
-        /// Gets the end date of the schedule based on EndType
-        /// </summary>
         private DateTime? GetScheduleEndDate(ScheduleResponse schedule)
         {
             if (string.IsNullOrEmpty(schedule.EndType))
                 return null;
 
-            var endType = ParseEndType(schedule.EndType);
-
-            switch (endType)
-            {
-                case EndType.Never:
-                    return null; // No end date
-
-                case EndType.OnDate:
-                    return schedule.ValidUntil?.Date;
-
-                case EndType.AfterOccurrences:
-                    // For max occurrences, we don't set an end date here
-                    // It will be handled after generating dates
-                    return null;
-
-                default:
-                    return null;
-            }
-        }
-
-        /// <summary>
-        /// Parses EndType from string value
-        /// </summary>
-        private EndType ParseEndType(string endTypeStr)
-        {
-            if (string.IsNullOrEmpty(endTypeStr))
-                return EndType.Never;
-
-            var lower = endTypeStr.ToLower();
+            var endType = schedule.EndType.ToLower();
             
-            if (lower == "never" || lower == "1")
-                return EndType.Never;
-            else if (lower == "ondate" || lower == "2")
-                return EndType.OnDate;
-            else if (lower == "afteroccurrences" || lower == "3")
-                return EndType.AfterOccurrences;
+            if (endType == "ondate" || endType == "2")
+                return schedule.ValidUntil?.Date;
             
-            return EndType.Never;
+            return null; // Never or AfterOccurrences handled separately
         }
 
-        /// <summary>
-        /// Evaluates DoesNotRepeat schedule - returns single occurrence on start date
-        /// </summary>
-        private List<DateTime> EvaluateDoesNotRepeat(DateTime scheduleStart, DateTime rangeStart, DateTime rangeEnd)
+        private bool IsValidDaily(ScheduleResponse schedule, DateTime checkDate, DateTime startDate)
         {
-            var validDates = new List<DateTime>();
-
-            if (scheduleStart >= rangeStart && scheduleStart <= rangeEnd)
-            {
-                validDates.Add(scheduleStart);
-            }
-
-            return validDates;
-        }
-
-        /// <summary>
-        /// Evaluates Daily schedule - repeats every N days
-        /// </summary>
-        private List<DateTime> EvaluateDaily(ScheduleResponse schedule, DateTime scheduleStart, 
-            DateTime rangeStart, DateTime rangeEnd, DateTime? scheduleEndDate)
-        {
-            var validDates = new List<DateTime>();
             var repeatEvery = schedule.RepeatEvery ?? 1;
-
             if (repeatEvery < 1) repeatEvery = 1;
 
-            var currentDate = scheduleStart;
-
-            // Adjust current date to the first occurrence within or after range start
-            if (currentDate < rangeStart)
-            {
-                var daysDiff = (rangeStart - currentDate).Days;
-                var occurrences = (int)Math.Ceiling((double)daysDiff / repeatEvery);
-                currentDate = currentDate.AddDays(occurrences * repeatEvery);
-            }
-
-            while (currentDate <= rangeEnd)
-            {
-                if (scheduleEndDate.HasValue && currentDate > scheduleEndDate.Value)
-                    break;
-
-                if (currentDate >= rangeStart)
-                {
-                    validDates.Add(currentDate);
-                }
-
-                currentDate = currentDate.AddDays(repeatEvery);
-            }
-
-            return validDates;
+            var daysSinceStart = (checkDate - startDate).Days;
+            return daysSinceStart % repeatEvery == 0;
         }
 
-        /// <summary>
-        /// Evaluates Weekly schedule - repeats on specific days of week every N weeks
-        /// </summary>
-        private List<DateTime> EvaluateWeekly(ScheduleResponse schedule, DateTime scheduleStart, 
-            DateTime rangeStart, DateTime rangeEnd, DateTime? scheduleEndDate)
+        private bool IsValidWeekly(ScheduleResponse schedule, DateTime checkDate, DateTime startDate)
         {
-            var validDates = new List<DateTime>();
             var repeatEvery = schedule.RepeatEvery ?? 1;
-
             if (repeatEvery < 1) repeatEvery = 1;
 
-            // Get selected days of week from frequency (0 = Sunday, 6 = Saturday)
-            var selectedDaysOfWeek = schedule.Frequency?
+            // Get selected days of week (0=Sunday, 6=Saturday)
+            var selectedDays = schedule.Frequency?
                 .Where(f => f.Day.HasValue && f.Day.Value >= 0 && f.Day.Value <= 6)
                 .Select(f => f.Day.Value)
-                .Distinct()
-                .OrderBy(d => d)
                 .ToList() ?? new List<int>();
 
-            if (selectedDaysOfWeek.Count == 0)
-                return validDates; // No days selected
+            if (selectedDays.Count == 0)
+                return false;
 
-            // Start from the beginning of the week containing scheduleStart
-            var startOfFirstWeek = scheduleStart.AddDays(-(int)scheduleStart.DayOfWeek);
-            var currentWeekStart = startOfFirstWeek;
+            // Check if this day of week is selected
+            var dayOfWeek = (int)checkDate.DayOfWeek;
+            if (!selectedDays.Contains(dayOfWeek))
+                return false;
 
-            // Move to first week that overlaps with range start
-            while (currentWeekStart.AddDays(6) < rangeStart)
-            {
-                currentWeekStart = currentWeekStart.AddDays(7 * repeatEvery);
-            }
+            // If repeat every week, any selected weekday is valid
+            if (repeatEvery == 1)
+                return true;
 
-            // Generate occurrences
-            while (currentWeekStart <= rangeEnd)
-            {
-                foreach (var dayOfWeek in selectedDaysOfWeek)
-                {
-                    var occurrenceDate = currentWeekStart.AddDays(dayOfWeek);
-
-                    // Check if occurrence is within all bounds
-                    if (occurrenceDate >= scheduleStart && 
-                        occurrenceDate >= rangeStart && 
-                        occurrenceDate <= rangeEnd &&
-                        (!scheduleEndDate.HasValue || occurrenceDate <= scheduleEndDate.Value))
-                    {
-                        validDates.Add(occurrenceDate);
-                    }
-                }
-
-                currentWeekStart = currentWeekStart.AddDays(7 * repeatEvery);
-
-                if (scheduleEndDate.HasValue && currentWeekStart > scheduleEndDate.Value)
-                    break;
-            }
-
-            return validDates.OrderBy(d => d).ToList();
+            // For repeatEvery > 1, calculate week cycle from start of weeks
+            var startOfStartWeek = startDate.AddDays(-(int)startDate.DayOfWeek); // Sunday of start week
+            var startOfCheckWeek = checkDate.AddDays(-(int)checkDate.DayOfWeek); // Sunday of check week
+            var weeksSinceStart = (int)((startOfCheckWeek - startOfStartWeek).TotalDays / 7);
+            
+            return weeksSinceStart % repeatEvery == 0;
         }
 
-        /// <summary>
-        /// Evaluates Monthly schedule - repeats on specific days of month every N months
-        /// </summary>
-        private List<DateTime> EvaluateMonthly(ScheduleResponse schedule, DateTime scheduleStart, 
-            DateTime rangeStart, DateTime rangeEnd, DateTime? scheduleEndDate)
+        private bool IsValidMonthly(ScheduleResponse schedule, DateTime checkDate, DateTime startDate)
         {
-            var validDates = new List<DateTime>();
             var repeatEvery = schedule.RepeatEvery ?? 1;
-
             if (repeatEvery < 1) repeatEvery = 1;
 
-            // Get selected days of month from frequency (1-31)
-            var selectedDaysOfMonth = schedule.Frequency?
+            // Get selected days of month (1-31)
+            var selectedDays = schedule.Frequency?
                 .Where(f => f.Day.HasValue && f.Day.Value >= 1 && f.Day.Value <= 31)
                 .Select(f => f.Day.Value)
-                .Distinct()
-                .OrderBy(d => d)
                 .ToList() ?? new List<int>();
 
-            if (selectedDaysOfMonth.Count == 0)
-                return validDates; // No days selected
+            if (selectedDays.Count == 0)
+                return false;
 
-            // Start from the month containing scheduleStart
-            var currentMonth = new DateTime(scheduleStart.Year, scheduleStart.Month, 1);
+            // Check if this day of month is selected
+            if (!selectedDays.Contains(checkDate.Day))
+                return false;
 
-            // Move to first month that could contain range start
-            while (currentMonth.AddMonths(1).AddDays(-1) < rangeStart)
-            {
-                currentMonth = currentMonth.AddMonths(repeatEvery);
-            }
-
-            // Generate occurrences
-            while (currentMonth <= rangeEnd)
-            {
-                var daysInMonth = DateTime.DaysInMonth(currentMonth.Year, currentMonth.Month);
-
-                foreach (var dayOfMonth in selectedDaysOfMonth)
-                {
-                    // Skip if day doesn't exist in this month (e.g., Feb 30)
-                    if (dayOfMonth > daysInMonth)
-                        continue;
-
-                    var occurrenceDate = new DateTime(currentMonth.Year, currentMonth.Month, dayOfMonth);
-
-                    // Check if occurrence is within all bounds
-                    if (occurrenceDate >= scheduleStart && 
-                        occurrenceDate >= rangeStart && 
-                        occurrenceDate <= rangeEnd &&
-                        (!scheduleEndDate.HasValue || occurrenceDate <= scheduleEndDate.Value))
-                    {
-                        validDates.Add(occurrenceDate);
-                    }
-                }
-
-                currentMonth = currentMonth.AddMonths(repeatEvery);
-
-                if (scheduleEndDate.HasValue && currentMonth > scheduleEndDate.Value)
-                    break;
-            }
-
-            return validDates.OrderBy(d => d).ToList();
+            // Check if we're in the right month cycle
+            var monthsSinceStart = ((checkDate.Year - startDate.Year) * 12) + (checkDate.Month - startDate.Month);
+            return monthsSinceStart % repeatEvery == 0;
         }
 
-        /// <summary>
-        /// Evaluates DaysOnOff schedule - pattern of N days on, M days off
-        /// </summary>
-        private List<DateTime> EvaluateDaysOnOff(ScheduleResponse schedule, DateTime scheduleStart, 
-            DateTime rangeStart, DateTime rangeEnd, DateTime? scheduleEndDate)
+        private bool IsValidDaysOnOff(ScheduleResponse schedule, DateTime checkDate, DateTime startDate)
         {
-            var validDates = new List<DateTime>();
-
-            // Get pattern from frequency (day = number of days, dayType = 0 for Off, 1 for On)
             var pattern = schedule.Frequency?
                 .Where(f => f.Day.HasValue && f.Day.Value > 0 && f.DayType.HasValue)
-                .OrderBy(f => f.Id) // Maintain order as entered by user
+                .OrderBy(f => f.Id)
                 .ToList();
 
             if (pattern == null || pattern.Count == 0)
-                return validDates; // No pattern defined
+                return false;
 
-            // Calculate total days in pattern
             var totalPatternDays = pattern.Sum(p => p.Day.Value);
-            var currentDate = scheduleStart;
+            var daysSinceStart = (checkDate - startDate).Days;
+            var positionInPattern = daysSinceStart % totalPatternDays;
 
-            // Fast-forward to range start if needed
-            if (currentDate < rangeStart)
+            var accumulatedDays = 0;
+            foreach (var segment in pattern)
             {
-                var daysDiff = (rangeStart - currentDate).Days;
-                var fullCycles = daysDiff / totalPatternDays;
-                currentDate = currentDate.AddDays(fullCycles * totalPatternDays);
-            }
+                var segmentStart = accumulatedDays;
+                var segmentEnd = accumulatedDays + segment.Day.Value - 1;
 
-            // Generate occurrences
-            while (currentDate <= rangeEnd)
-            {
-                if (scheduleEndDate.HasValue && currentDate > scheduleEndDate.Value)
-                    break;
-
-                // Calculate position in pattern
-                var daysSinceStart = (currentDate - scheduleStart).Days;
-                var positionInPattern = daysSinceStart % totalPatternDays;
-
-                // Find which segment of pattern we're in
-                var accumulatedDays = 0;
-                foreach (var segment in pattern)
+                if (positionInPattern >= segmentStart && positionInPattern <= segmentEnd)
                 {
-                    var segmentStart = accumulatedDays;
-                    var segmentEnd = accumulatedDays + segment.Day.Value - 1;
-
-                    if (positionInPattern >= segmentStart && positionInPattern <= segmentEnd)
-                    {
-                        // Check if this segment is "On" (dayType = 1)
-                        if (segment.DayType.Value == (int)DayType.On && currentDate >= rangeStart)
-                        {
-                            validDates.Add(currentDate);
-                        }
-                        break;
-                    }
-
-                    accumulatedDays += segment.Day.Value;
+                    return segment.DayType.Value == (int)DayType.On;
                 }
 
-                currentDate = currentDate.AddDays(1);
+                accumulatedDays += segment.Day.Value;
             }
 
-            return validDates;
+            return false;
         }
 
-        /// <summary>
-        /// Checks if a specific date is valid for the given schedule
-        /// </summary>
-        public bool IsDateValid(ScheduleResponse schedule, DateTime date)
+        private int CountOccurrencesUntilDate(ScheduleResponse schedule, DateTime untilDate)
         {
-            var validDates = EvaluateSchedule(schedule, date.Date, date.Date);
-            return validDates.Any();
+            if (!schedule.StartFrom.HasValue)
+                return 0;
+
+            var startDate = schedule.StartFrom.Value.Date;
+            var scheduleType = schedule.ScheduleType.HasValue 
+                ? (ScheduleType)schedule.ScheduleType.Value 
+                : ScheduleType.DoesNotRepeat;
+
+            if (scheduleType == ScheduleType.DoesNotRepeat)
+                return untilDate >= startDate ? 1 : 0;
+
+            if (scheduleType == ScheduleType.Daily)
+            {
+                var repeatEvery = schedule.RepeatEvery ?? 1;
+                if (repeatEvery < 1) repeatEvery = 1;
+                var daysSinceStart = (untilDate - startDate).Days;
+                if (daysSinceStart < 0) return 0;
+                return (daysSinceStart / repeatEvery) + 1;
+            }
+
+            // For Weekly, Monthly, DaysOnOff - count by checking each day
+            // This is simpler than complex math and works for all patterns
+            var count = 0;
+            var currentDate = startDate;
+            var maxDays = Math.Min((untilDate - startDate).Days + 1, 3650); // Max 10 years
+            
+            for (int i = 0; i < maxDays; i++)
+            {
+                // Temporarily skip the max occurrence check to avoid recursion
+                if (IsDateValidInternal(schedule, currentDate))
+                    count++;
+                    
+                currentDate = currentDate.AddDays(1);
+                if (currentDate > untilDate)
+                    break;
+            }
+            
+            return count;
         }
 
-        /// <summary>
-        /// Gets the next valid occurrence after a given date
-        /// </summary>
-        public DateTime? GetNextOccurrence(ScheduleResponse schedule, DateTime afterDate)
+        // Internal method that skips max occurrence check to avoid recursion
+        private bool IsDateValidInternal(ScheduleResponse schedule, DateTime date)
         {
-            // Look ahead up to 2 years
-            var lookAheadDate = afterDate.AddYears(2);
-            var validDates = EvaluateSchedule(schedule, afterDate.AddDays(1), lookAheadDate);
-            return validDates.FirstOrDefault();
-        }
+            if (schedule == null || !schedule.IsActive.GetValueOrDefault(true))
+                return false;
 
-        /// <summary>
-        /// Gets the previous valid occurrence before a given date
-        /// </summary>
-        public DateTime? GetPreviousOccurrence(ScheduleResponse schedule, DateTime beforeDate)
-        {
-            // Look back up to 2 years
-            var lookBackDate = beforeDate.AddYears(-2);
-            var validDates = EvaluateSchedule(schedule, lookBackDate, beforeDate.AddDays(-1));
-            return validDates.LastOrDefault();
+            if (!schedule.StartFrom.HasValue)
+                return false;
+
+            var checkDate = date.Date;
+            var startDate = schedule.StartFrom.Value.Date;
+
+            if (checkDate < startDate)
+                return false;
+
+            var endDate = GetScheduleEndDate(schedule);
+            if (endDate.HasValue && checkDate > endDate.Value)
+                return false;
+
+            var scheduleType = schedule.ScheduleType.HasValue 
+                ? (ScheduleType)schedule.ScheduleType.Value 
+                : ScheduleType.DoesNotRepeat;
+
+            return scheduleType switch
+            {
+                ScheduleType.DoesNotRepeat => checkDate == startDate,
+                ScheduleType.Daily => IsValidDaily(schedule, checkDate, startDate),
+                ScheduleType.Weekly => IsValidWeekly(schedule, checkDate, startDate),
+                ScheduleType.Monthly => IsValidMonthly(schedule, checkDate, startDate),
+                ScheduleType.DaysOnOff => IsValidDaysOnOff(schedule, checkDate, startDate),
+                _ => false
+            };
         }
     }
 }
-
