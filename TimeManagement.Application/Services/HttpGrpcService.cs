@@ -19,6 +19,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly ColumnProcessor _columnProcessor;
     private readonly ValidateToken _validateToken;
     private readonly EmployeeJobCodeAssignmentProcessor _employeeJobCodeAssignmentProcessor;
+    private readonly GroupsProcessor _groupsProcessor;
 
     public HttpGrpcService(
         JobCodeProcessor jobCodeProcessor, 
@@ -29,7 +30,8 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         ScheduleProcessor scheduleProcessor,
         LayoutProcessor layoutProcessor,
         ColumnProcessor columnProcessor,
-        EmployeeJobCodeAssignmentProcessor employeeJobCodeAssignmentProcessor)
+        EmployeeJobCodeAssignmentProcessor employeeJobCodeAssignmentProcessor,
+        GroupsProcessor groupsProcessor)
     {
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
@@ -41,6 +43,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _columnProcessor = columnProcessor;
         _validateToken = new ValidateToken();
         _employeeJobCodeAssignmentProcessor = employeeJobCodeAssignmentProcessor;
+        _groupsProcessor = groupsProcessor;
     }
 
     public override async Task<HttpResponse> Get(HttpRequest request, ServerCallContext context)
@@ -184,6 +187,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "employeejobcodeassignment":
                     _employeeJobCodeAssignmentProcessor.SetCurrentUser(authResult.User);
                     result = await _employeeJobCodeAssignmentProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "groups":
+                    _groupsProcessor.SetCurrentUser(authResult.User);
+                    result = await _groupsProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);
