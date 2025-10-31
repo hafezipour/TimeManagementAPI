@@ -23,6 +23,7 @@ public class GroupsProcessor : BaseProcessor
                 "delete" => await Delete(jsonData.FromJson<DeleteGroupRequest>()),
                 "get" => await GetGroups(jsonData.FromJson<GetGroupRequest>()),
                 "getshortlist" => await GetGroupsShortList(),
+                "assigntoshift" => await AssignGroupsToShift(jsonData.FromJson<AssignGroupsToShiftRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -95,6 +96,19 @@ public class GroupsProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving groups short list: {ex.Message}" }.ToJson();
+        }
+    }
+
+    public async Task<string> AssignGroupsToShift(AssignGroupsToShiftRequest request)
+    {
+        try
+        {
+            var result = await _groupsRepository.AssignGroupsToShift(request.ShiftId, request.GroupIds, CurrentUser.LoginId, CurrentUser.TenantID);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error assigning groups to shift: {ex.Message}" }.ToJson();
         }
     }
 }

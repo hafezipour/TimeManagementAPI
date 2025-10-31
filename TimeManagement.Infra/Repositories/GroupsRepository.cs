@@ -87,5 +87,24 @@ public class GroupsRepository
             throw ex;
         }
     }
+
+    public async Task<string> AssignGroupsToShift(int shiftId, string groupIds, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "ShiftId", Value = shiftId},
+                new SqlParameterModel(){ Name = "GroupIds", Value = groupIds},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_ShiftGroups_AssignToShift", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
