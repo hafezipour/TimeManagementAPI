@@ -20,6 +20,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly ValidateToken _validateToken;
     private readonly EmployeeJobCodeAssignmentProcessor _employeeJobCodeAssignmentProcessor;
     private readonly GroupsProcessor _groupsProcessor;
+    private readonly LabelsProcessor _labelsProcessor;
 
     public HttpGrpcService(
         JobCodeProcessor jobCodeProcessor, 
@@ -31,7 +32,8 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         LayoutProcessor layoutProcessor,
         ColumnProcessor columnProcessor,
         EmployeeJobCodeAssignmentProcessor employeeJobCodeAssignmentProcessor,
-        GroupsProcessor groupsProcessor)
+        GroupsProcessor groupsProcessor,
+        LabelsProcessor labelsProcessor)
     {
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
@@ -44,6 +46,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _validateToken = new ValidateToken();
         _employeeJobCodeAssignmentProcessor = employeeJobCodeAssignmentProcessor;
         _groupsProcessor = groupsProcessor;
+        _labelsProcessor = labelsProcessor;
     }
 
     public override async Task<HttpResponse> Get(HttpRequest request, ServerCallContext context)
@@ -195,6 +198,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "groups":
                     _groupsProcessor.SetCurrentUser(authResult.User);
                     result = await _groupsProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "labels":
+                    _labelsProcessor.SetCurrentUser(authResult.User);
+                    result = await _labelsProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);
