@@ -112,8 +112,6 @@ BEGIN
     SET NOCOUNT ON;
 
     BEGIN TRY
-        BEGIN TRANSACTION;
-
         DECLARE @Id INT;
         DECLARE @LabelName VARCHAR(100);
         DECLARE @LabelCode VARCHAR(55);
@@ -142,12 +140,12 @@ BEGIN
             IsActive BIT
         );
 
-        -- Validate required fields
+        -- Validate required fields (BEFORE starting transaction)
         IF @LabelName IS NULL OR LTRIM(RTRIM(@LabelName)) = ''
         BEGIN
             SELECT
-                0 AS Success,
-                'Label name is required.' AS Message
+                CAST(0 AS BIT) AS success,
+                'Label name is required.' AS message
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
             RETURN;
         END
@@ -155,8 +153,8 @@ BEGIN
         IF @LabelCode IS NULL OR LTRIM(RTRIM(@LabelCode)) = ''
         BEGIN
             SELECT
-                0 AS Success,
-                'Label code is required.' AS Message
+                CAST(0 AS BIT) AS success,
+                'Label code is required.' AS message
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
             RETURN;
         END
@@ -170,10 +168,9 @@ BEGIN
                 AND (@Id IS NULL OR Id != @Id)
         )
         BEGIN
-            ROLLBACK TRANSACTION;
             SELECT
-                0 AS Success,
-                'A label with this name already exists.' AS Message
+                CAST(0 AS BIT) AS success,
+                'A label with this name already exists.' AS message
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
             RETURN;
         END
@@ -187,13 +184,15 @@ BEGIN
                 AND (@Id IS NULL OR Id != @Id)
         )
         BEGIN
-            ROLLBACK TRANSACTION;
             SELECT
-                0 AS Success,
-                'A label with this code already exists.' AS Message
+                CAST(0 AS BIT) AS success,
+                'A label with this code already exists.' AS message
             FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
             RETURN;
         END
+
+        -- All validations passed, now start transaction
+        BEGIN TRANSACTION;
 
         -- Insert or Update
         IF @Id IS NULL OR @Id = 0
@@ -223,8 +222,8 @@ BEGIN
             BEGIN
                 ROLLBACK TRANSACTION;
                 SELECT
-                    0 AS Success,
-                    'Label not found or unauthorized.' AS Message
+                    CAST(0 AS BIT) AS success,
+                    'Label not found or unauthorized.' AS message
                 FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
                 RETURN;
             END
@@ -234,9 +233,9 @@ BEGIN
 
         -- Return success with the label Id
         SELECT
-            @Id AS Id,
-            1 AS Success,
-            'Label saved successfully.' AS Message
+            @Id AS id,
+            CAST(1 AS BIT) AS success,
+            'Label saved successfully.' AS message
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
 
     END TRY
@@ -246,8 +245,8 @@ BEGIN
 
         -- Return error
         SELECT
-            0 AS Success,
-            ERROR_MESSAGE() AS Message
+            CAST(0 AS BIT) AS success,
+            ERROR_MESSAGE() AS message
         FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
     END CATCH
 END
