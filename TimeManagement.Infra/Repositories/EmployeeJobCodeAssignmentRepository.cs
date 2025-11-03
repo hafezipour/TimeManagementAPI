@@ -16,9 +16,9 @@ public class EmployeeJobCodeAssignmentRepository
     }
 
     /// <summary>
-    /// Get Employee Job Code Assignments with filters (client-side pagination)
+    /// Get Employee Job Code Assignments with filters, server-side pagination, and sorting
     /// </summary>
-    public async Task<string> GetEmployeeJobCodeAssignments(int? jobCodeId, int? userId, string? searchStr, int tenantId)
+    public async Task<string> GetEmployeeJobCodeAssignments(int? jobCodeId, int? userId, string? searchStr, int tenantId, int pageNumber, int pageSize, string? sortColumn, string? sortDirection)
     {
         try
         {
@@ -27,7 +27,11 @@ public class EmployeeJobCodeAssignmentRepository
                 new SqlParameterModel(){ Name = "JobCodeId", Value = jobCodeId ?? 0},
                 new SqlParameterModel(){ Name = "UserId", Value = userId ?? 0},
                 new SqlParameterModel(){ Name = "SearchStr", Value = searchStr ?? ""},
-                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId},
+                new SqlParameterModel(){ Name = "PageNumber", Value = pageNumber},
+                new SqlParameterModel(){ Name = "PageSize", Value = pageSize},
+                new SqlParameterModel(){ Name = "SortColumn", Value = sortColumn ?? "effectiveDate"},
+                new SqlParameterModel(){ Name = "SortDirection", Value = sortDirection ?? "desc"}
             };
             return await _dbOperations.ExecuteDataSetAsync("usp_EmployeeJobCodeAssignment_Get", param);
         }

@@ -44,7 +44,7 @@ public class EmployeeJobCodeAssignmentProcessor : BaseProcessor
     }
 
     /// <summary>
-    /// Get Employee Job Code Assignments with filters (client-side pagination)
+    /// Get Employee Job Code Assignments with filters, server-side pagination, and sorting
     /// </summary>
     public async Task<string> GetEmployeeJobCodeAssignments(GetEmployeeJobCodeAssignmentRequest request)
     {
@@ -54,7 +54,11 @@ public class EmployeeJobCodeAssignmentProcessor : BaseProcessor
                 request.JobCodeId,
                 request.UserId,
                 request.SearchStr,
-                CurrentUser.TenantID
+                CurrentUser.TenantID,
+                request.PageNumber,
+                request.PageSize,
+                request.SortColumn,
+                request.SortDirection
             );
 
             return result;
