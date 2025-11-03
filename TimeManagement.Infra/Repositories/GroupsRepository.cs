@@ -27,7 +27,7 @@ public class GroupsRepository
                 new SqlParameterModel(){ Name = "SortDirection", Value = sortDirection},
                 new SqlParameterModel(){ Name = "SearchTerm", Value = searchTerm}
             };
-            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftGroups_Get", param);
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_Groups_Get", param);
             return result;
         }
         catch (Exception ex)
@@ -46,7 +46,7 @@ public class GroupsRepository
                 new SqlParameterModel(){ Name = "UserId", Value = userId},
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
-            return await _dbOperations.ExecuteDataSetAsync("usp_ShiftGroups_Save", param);
+            return await _dbOperations.ExecuteDataSetAsync("usp_Groups_Save", param);
         }
         catch (Exception ex)
         {
@@ -64,7 +64,7 @@ public class GroupsRepository
                 new SqlParameterModel(){ Name = "UserId", Value = userId},
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
-            return await _dbOperations.ExecuteDataSetAsync("usp_ShiftGroups_Delete", param);
+            return await _dbOperations.ExecuteDataSetAsync("usp_Groups_Delete", param);
         }
         catch (Exception ex)
         {
@@ -80,7 +80,7 @@ public class GroupsRepository
             {
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
-            return await _dbOperations.ExecuteDataSetAsync("usp_ShiftGroups_GetShortList", param);
+            return await _dbOperations.ExecuteDataSetAsync("usp_Groups_GetShortList", param);
         }
         catch (Exception ex)
         {

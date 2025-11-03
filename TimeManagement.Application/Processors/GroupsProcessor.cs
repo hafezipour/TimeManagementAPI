@@ -19,9 +19,9 @@ public class GroupsProcessor : BaseProcessor
         {
             return methodName.ToLower() switch
             {
-                "save" => await Save(jsonData.FromJson<SaveGroupRequest>()),
-                "delete" => await Delete(jsonData.FromJson<DeleteGroupRequest>()),
-                "get" => await GetGroups(jsonData.FromJson<GetGroupRequest>()),
+                "save" => await SaveGroup(jsonData.FromJson<SaveGroupRequest>()),
+                "delete" => await DeleteGroup(jsonData.FromJson<DeleteGroupRequest>()),
+                "get" => await GetGroupsList(jsonData.FromJson<GetGroupRequest>()),
                 "getshortlist" => await GetGroupsShortList(),
                 "assigntoshift" => await AssignGroupsToShift(jsonData.FromJson<AssignGroupsToShiftRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
@@ -37,7 +37,7 @@ public class GroupsProcessor : BaseProcessor
         }
     }
 
-    public async Task<string> Save(SaveGroupRequest groupDto)
+    public async Task<string> SaveGroup(SaveGroupRequest groupDto)
     {
         try
         {
@@ -51,7 +51,7 @@ public class GroupsProcessor : BaseProcessor
         }
     }
 
-    public async Task<string> Delete(DeleteGroupRequest request)
+    public async Task<string> DeleteGroup(DeleteGroupRequest request)
     {
         try
         {
@@ -64,7 +64,7 @@ public class GroupsProcessor : BaseProcessor
         }
     }
 
-    public async Task<string> GetGroups(GetGroupRequest request)
+    public async Task<string> GetGroupsList(GetGroupRequest request)
     {
         try
         {

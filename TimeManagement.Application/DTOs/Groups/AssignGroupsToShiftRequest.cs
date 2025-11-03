@@ -6,3 +6,4 @@ public class AssignGroupsToShiftRequest
     public string GroupIds { get; set; }
 }
 
+
