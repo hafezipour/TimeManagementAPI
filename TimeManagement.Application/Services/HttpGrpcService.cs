@@ -9,7 +9,7 @@ namespace TimeManagement.Application.Services;
 public class HttpGrpcService : HttpService.HttpServiceBase
 {
 
-      private readonly JobCodeProcessor _jobCodeProcessor;
+    private readonly JobCodeProcessor _jobCodeProcessor;
     private readonly WorkCodeProcessor _workCodeProcessor;
     private readonly HolidayProcessor _holidayProcessor;
     private readonly HolidayAssignmentProcessor _holidayAssignmentProcessor;
@@ -133,16 +133,16 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "jobcode":
                     _jobCodeProcessor.SetCurrentUser(authResult.User);
                     result = await _jobCodeProcessor.ProcessRequest(
-                        request.ServiceName, 
-                        request.MethodName, 
+                        request.ServiceName,
+                        request.MethodName,
                         request.JsonData);
                     break;
 
                 case "holidays":
                     _holidayProcessor.SetCurrentUser(authResult.User);
                     result = await _holidayProcessor.ProcessRequest(
-                        request.ServiceName, 
-                        request.MethodName, 
+                        request.ServiceName,
+                        request.MethodName,
                         request.JsonData);
                     break;
 
@@ -181,16 +181,16 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "layouts":
                     _layoutProcessor.SetCurrentUser(authResult.User);
                     result = await _layoutProcessor.ProcessRequest(
-                        request.ServiceName, 
-                        request.MethodName, 
+                        request.ServiceName,
+                        request.MethodName,
                         request.JsonData);
                     break;
 
                 case "columns":
                     _columnProcessor.SetCurrentUser(authResult.User);
                     result = await _columnProcessor.ProcessRequest(
-                        request.ServiceName, 
-                        request.MethodName, 
+                        request.ServiceName,
+                        request.MethodName,
                         request.JsonData);
                     break;
                 case "employeejobcodeassignment":
