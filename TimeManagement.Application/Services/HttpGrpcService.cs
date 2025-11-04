@@ -19,6 +19,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly ColumnProcessor _columnProcessor;
     private readonly ValidateToken _validateToken;
     private readonly EmployeeJobCodeAssignmentProcessor _employeeJobCodeAssignmentProcessor;
+    private readonly EmployeeLabelAssignmentProcessor _employeeLabelAssignmentProcessor;
     private readonly GroupsProcessor _groupsProcessor;
     private readonly LabelsProcessor _labelsProcessor;
     private readonly TradeBoardSettingsProcessor _tradeBoardSettingsProcessor;
@@ -33,6 +34,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         LayoutProcessor layoutProcessor,
         ColumnProcessor columnProcessor,
         EmployeeJobCodeAssignmentProcessor employeeJobCodeAssignmentProcessor,
+        EmployeeLabelAssignmentProcessor employeeLabelAssignmentProcessor,
         GroupsProcessor groupsProcessor,
         LabelsProcessor labelsProcessor,
         TradeBoardSettingsProcessor tradeBoardSettingsProcessor)
@@ -47,6 +49,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _columnProcessor = columnProcessor;
         _validateToken = new ValidateToken();
         _employeeJobCodeAssignmentProcessor = employeeJobCodeAssignmentProcessor;
+        _employeeLabelAssignmentProcessor = employeeLabelAssignmentProcessor;
         _groupsProcessor = groupsProcessor;
         _labelsProcessor = labelsProcessor;
         _tradeBoardSettingsProcessor = tradeBoardSettingsProcessor;
@@ -193,6 +196,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "employeejobcodeassignment":
                     _employeeJobCodeAssignmentProcessor.SetCurrentUser(authResult.User);
                     result = await _employeeJobCodeAssignmentProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "employeelabelassignment":
+                    _employeeLabelAssignmentProcessor.SetCurrentUser(authResult.User);
+                    result = await _employeeLabelAssignmentProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);
