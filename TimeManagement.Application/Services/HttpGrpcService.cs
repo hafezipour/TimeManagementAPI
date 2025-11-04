@@ -21,11 +21,12 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly EmployeeJobCodeAssignmentProcessor _employeeJobCodeAssignmentProcessor;
     private readonly GroupsProcessor _groupsProcessor;
     private readonly LabelsProcessor _labelsProcessor;
+    private readonly TradeBoardSettingsProcessor _tradeBoardSettingsProcessor;
 
     public HttpGrpcService(
-        JobCodeProcessor jobCodeProcessor, 
-        WorkCodeProcessor workCodeProcessor, 
-        HolidayProcessor holidayProcessor, 
+        JobCodeProcessor jobCodeProcessor,
+        WorkCodeProcessor workCodeProcessor,
+        HolidayProcessor holidayProcessor,
         HolidayAssignmentProcessor holidayAssignmentProcessor,
         ShiftProcessor shiftProcessor,
         ScheduleProcessor scheduleProcessor,
@@ -33,7 +34,8 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         ColumnProcessor columnProcessor,
         EmployeeJobCodeAssignmentProcessor employeeJobCodeAssignmentProcessor,
         GroupsProcessor groupsProcessor,
-        LabelsProcessor labelsProcessor)
+        LabelsProcessor labelsProcessor,
+        TradeBoardSettingsProcessor tradeBoardSettingsProcessor)
     {
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
@@ -47,6 +49,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _employeeJobCodeAssignmentProcessor = employeeJobCodeAssignmentProcessor;
         _groupsProcessor = groupsProcessor;
         _labelsProcessor = labelsProcessor;
+        _tradeBoardSettingsProcessor = tradeBoardSettingsProcessor;
     }
 
     public override async Task<HttpResponse> Get(HttpRequest request, ServerCallContext context)
@@ -206,6 +209,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "labels":
                     _labelsProcessor.SetCurrentUser(authResult.User);
                     result = await _labelsProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "tradeboardsettings":
+                    _tradeBoardSettingsProcessor.SetCurrentUser(authResult.User);
+                    result = await _tradeBoardSettingsProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);
