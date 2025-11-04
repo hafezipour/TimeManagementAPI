@@ -5,8 +5,6 @@ namespace TimeManagement.Application.DTOs;
 /// </summary>
 public class GetTradeBoardSettingsListRequest
 {
-    public int TenantId { get; set; }
-    public int UserId { get; set; }
     public int PageNumber { get; set; } = 1;
     public int PageSize { get; set; } = 10;
     public string SortColumn { get; set; } = "dateCreated";
