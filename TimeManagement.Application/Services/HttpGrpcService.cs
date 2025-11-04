@@ -22,6 +22,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly EmployeeLabelAssignmentProcessor _employeeLabelAssignmentProcessor;
     private readonly GroupsProcessor _groupsProcessor;
     private readonly LabelsProcessor _labelsProcessor;
+    private readonly AssistantQualifiersProcessor _assistantQualifiersProcessor;
     private readonly TradeBoardSettingsProcessor _tradeBoardSettingsProcessor;
 
     public HttpGrpcService(
@@ -37,6 +38,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         EmployeeLabelAssignmentProcessor employeeLabelAssignmentProcessor,
         GroupsProcessor groupsProcessor,
         LabelsProcessor labelsProcessor,
+        AssistantQualifiersProcessor assistantQualifiersProcessor,
         TradeBoardSettingsProcessor tradeBoardSettingsProcessor)
     {
         _jobCodeProcessor = jobCodeProcessor;
@@ -52,6 +54,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _employeeLabelAssignmentProcessor = employeeLabelAssignmentProcessor;
         _groupsProcessor = groupsProcessor;
         _labelsProcessor = labelsProcessor;
+        _assistantQualifiersProcessor = assistantQualifiersProcessor;
         _tradeBoardSettingsProcessor = tradeBoardSettingsProcessor;
     }
 
@@ -220,6 +223,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "labels":
                     _labelsProcessor.SetCurrentUser(authResult.User);
                     result = await _labelsProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "assistantqualifiers":
+                    _assistantQualifiersProcessor.SetCurrentUser(authResult.User);
+                    result = await _assistantQualifiersProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);

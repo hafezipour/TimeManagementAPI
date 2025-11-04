@@ -39,6 +39,7 @@ builder.Services.AddScoped<TimeManagement.Application.Processors.EmployeeJobCode
 builder.Services.AddScoped<TimeManagement.Application.Processors.EmployeeLabelAssignmentProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.GroupsProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.LabelsProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Processors.AssistantQualifiersProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.TradeBoardSettingsProcessor>();
 
 // Register services
@@ -57,6 +58,7 @@ builder.Services.AddScoped<TimeManagement.Infra.Repositories.EmployeeJobCodeAssi
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.EmployeeLabelAssignmentRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.GroupsRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.LabelsRepository>();
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.AssistantQualifiersRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.TradeBoardSettingsRepository>();
 builder.Services.AddScoped<WebPortal.EF.Repository.DataBaseRepo.EfDbOperationsRepository>();
 
