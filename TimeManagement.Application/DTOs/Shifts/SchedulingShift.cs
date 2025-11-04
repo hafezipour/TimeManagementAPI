@@ -9,9 +9,9 @@ namespace TimeManagement.Domain.Models
     /// </summary>
     public class SchedulingShift
     {
-        public int? ColumnId { get; set; }
+        //public int? ColumnId { get; set; }
 
-        public int? ColumnShiftId { get; set; }
+        //public int? ColumnShiftId { get; set; }
 
         public int Id { get; set; }
 
@@ -49,5 +49,18 @@ namespace TimeManagement.Domain.Models
 
         public int? DisplayOrder { get; set; }
         public ScheduleResponse Schedules { get; set; }
+        public string labelName { get; set; }
+        public string labelCode { get; set; }
+        public string colorCode { get; set; }
+        public List<ShiftGroupAssignment> ShiftGroupAssignments { get; set; }
+
+    }
+    public class ShiftGroupAssignment
+    {
+        public int id { get; set; }
+        public int shiftId { get; set; }
+        public int groupId { get; set; }
+        public string groupName { get; set; }
+        public string colorCode { get; set; }
     }
 }
