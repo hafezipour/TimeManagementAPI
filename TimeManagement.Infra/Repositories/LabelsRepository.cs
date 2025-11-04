@@ -87,5 +87,24 @@ public class LabelsRepository
             throw ex;
         }
     }
+
+    public async Task<string> AssignShiftLabel(int shiftId, int labelId, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "ShiftId", Value = shiftId},
+                new SqlParameterModel(){ Name = "LabelId", Value = labelId},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_Shifts_AssignLabel", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 

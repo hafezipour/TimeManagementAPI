@@ -23,6 +23,7 @@ public class LabelsProcessor : BaseProcessor
                 "delete" => await DeleteLabel(jsonData.FromJson<DeleteLabelRequest>()),
                 "get" => await GetLabelsList(jsonData.FromJson<GetLabelRequest>()),
                 "getshortlist" => await GetLabelsShortList(),
+                "assignlabel" => await AssignShiftLabel(jsonData.FromJson<AssignShiftLabelRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -95,6 +96,19 @@ public class LabelsProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving labels short list: {ex.Message}" }.ToJson();
+        }
+    }
+
+    public async Task<string> AssignShiftLabel(AssignShiftLabelRequest request)
+    {
+        try
+        {
+            var result = await _labelsRepository.AssignShiftLabel(request.ShiftId, request.LabelId, CurrentUser.LoginId, CurrentUser.TenantID);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error assigning label to shift: {ex.Message}" }.ToJson();
         }
     }
 }
