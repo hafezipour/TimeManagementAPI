@@ -183,5 +183,27 @@ public class ShiftsRepository
         }
     }
 
+    /// <summary>
+    /// Update shift slot positions (increase/decrease minimumPositions)
+    /// </summary>
+    public async Task<string> UpdateSlotPositions(int shiftId, string action, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "ShiftId", Value = shiftId},
+                new SqlParameterModel(){ Name = "Action", Value = action},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_Shifts_UpdateSlotPositions", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
 }
 

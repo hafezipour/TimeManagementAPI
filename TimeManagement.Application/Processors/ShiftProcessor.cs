@@ -52,6 +52,7 @@ public class ShiftProcessor : BaseProcessor
                 "getunassigned" => await GetUnassignedShifts(jsonData.FromJson<GetUnassignedShiftsRequest>()),
                 "getschedulingshifts" => await GetSchedulingShifts(),
                 "getscheduledshifts" => await GetScheduledShifts(jsonData.FromJson<GetScheduledShiftsRequest>()),
+                "updateslotpositions" => await UpdateSlotPositions(jsonData.FromJson<UpdateSlotPositionsRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -368,7 +369,38 @@ public class ShiftProcessor : BaseProcessor
 
     #endregion
 
+    /// <summary>
+    /// Update shift slot positions (increase/decrease minimumPositions)
+    /// </summary>
+    public async Task<string> UpdateSlotPositions(UpdateSlotPositionsRequest request)
+    {
+        try
+        {
+            // Validate request
+            if (request.ShiftId <= 0)
+            {
+                return new { success = false, message = "Invalid ShiftId" }.ToJson();
+            }
 
+            if (string.IsNullOrEmpty(request.Action) || 
+                (request.Action.ToLower() != "increase" && request.Action.ToLower() != "decrease"))
+            {
+                return new { success = false, message = "Action must be 'increase' or 'decrease'" }.ToJson();
+            }
 
+            var result = await _shiftsRepository.UpdateSlotPositions(
+                request.ShiftId, 
+                request.Action.ToLower(), 
+                CurrentUser.LoginId, 
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error updating slot positions: {ex.Message}" }.ToJson();
+        }
+    }
 
 }
