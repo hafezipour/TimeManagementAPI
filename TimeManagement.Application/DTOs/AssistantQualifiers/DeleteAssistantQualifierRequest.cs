@@ -5,3 +5,4 @@ public class DeleteAssistantQualifierRequest
     public int Id { get; set; }
 }
 
+

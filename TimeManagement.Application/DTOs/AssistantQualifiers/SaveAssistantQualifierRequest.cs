@@ -11,3 +11,4 @@ public class SaveAssistantQualifierRequest
     public bool? IsActive { get; set; }
 }
 
+
