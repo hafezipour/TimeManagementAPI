@@ -26,68 +26,22 @@ BEGIN
     SET NOCOUNT ON;
 
     BEGIN TRY
-        -- If Common = 1 and UserIds provided, return work codes common to ALL selected users (intersection)
-        IF @Common = 1 AND @UserIds IS NOT NULL AND LEN(@UserIds) > 0
-        BEGIN
-            -- Get count of total users
-            DECLARE @UserCount INT = (SELECT COUNT(*) FROM STRING_SPLIT(@UserIds, ',') WHERE RTRIM(value) != '')
-            
-            -- Return work codes that are assigned to ALL users (intersection)
-            SELECT 
-                wc.Id,
-                wc.WorkCodeName,
-                wc.WorkCode,
-                wc.ColorCode,
-                wc.IsActive
-            FROM WorkCodes wc
-            WHERE wc.TenantId = @TenantId
-                AND wc.IsActive = 1
-                AND wc.Id IN (
-                    SELECT ewca.WorkCodeId
-                    FROM EmployeeWorkCodeAssignment ewca
-                    WHERE ewca.TenantId = @TenantId
-                        AND ewca.IsActive = 1
-                        AND ewca.UserId IN (
-                            SELECT CAST(value AS INT)
-                            FROM STRING_SPLIT(@UserIds, ',')
-                            WHERE RTRIM(value) != ''
-                        )
-                    GROUP BY ewca.WorkCodeId
-                    HAVING COUNT(DISTINCT ewca.UserId) = @UserCount -- All users must have this work code
-                )
-            ORDER BY wc.WorkCodeName ASC
-            FOR JSON PATH;
-        END
-        -- If UserId provided, return work codes for that specific user
-        ELSE IF @UserId IS NOT NULL
-        BEGIN
-            SELECT 
-                wc.Id,
-                wc.WorkCodeName,
-                wc.WorkCode,
-                wc.ColorCode,
-                wc.IsActive
-            FROM WorkCodes wc
-            INNER JOIN EmployeeWorkCodeAssignment ewca ON wc.Id = ewca.WorkCodeId
-            WHERE ewca.UserId = @UserId
-                AND ewca.TenantId = @TenantId
-                AND ewca.IsActive = 1
-                AND wc.IsActive = 1
-            ORDER BY wc.WorkCodeName ASC
-            FOR JSON PATH;
-        END
-        -- Otherwise, return empty array
-        ELSE
-        BEGIN
-            SELECT 
-                Id = NULL,
-                WorkCodeName = NULL,
-                WorkCode = NULL,
-                ColorCode = NULL,
-                IsActive = NULL
-            WHERE 1 = 0
-            FOR JSON PATH;
-        END
+        SELECT 
+            ewca.Id AS id,
+            ewca.UserId AS userId,
+            wc.Id AS workCodeId,
+            wc.WorkCodeName AS workCodeName,
+            wc.WorkCode AS workCode,
+            wc.ColorCode AS colorCode,
+            wc.IsActive AS isActive
+        FROM WorkCodes wc
+        INNER JOIN EmployeeWorkCodeAssignment ewca ON wc.Id = ewca.WorkCodeId
+        WHERE ewca.UserId = ISNULL(@UserId, 0)
+            AND ewca.TenantId = @TenantId
+            AND ewca.IsActive = 1
+            AND wc.IsActive = 1
+        ORDER BY wc.WorkCodeName ASC
+        FOR JSON PATH;
 
     END TRY
     BEGIN CATCH
