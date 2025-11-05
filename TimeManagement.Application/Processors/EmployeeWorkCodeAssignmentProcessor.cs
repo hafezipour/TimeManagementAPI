@@ -46,7 +46,7 @@ public class EmployeeWorkCodeAssignmentProcessor : BaseProcessor
     /// </summary>
     private async Task<string> GetShortList(GetEmployeeWorkCodeShortListRequest request)
     {
-        return await _repository.GetShortList(request.UserId, request.Common ?? false, request.UserIds, CurrentUser.TenantId);
+        return await _repository.GetShortList(request.UserId, request.Common ?? false, request.UserIds, CurrentUser.TenantID);
     }
 }
 
