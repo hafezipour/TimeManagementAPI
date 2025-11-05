@@ -22,6 +22,7 @@ public class EmployeeLabelAssignmentProcessor : BaseProcessor
                 "save" => await Save(jsonData.FromJson<SaveEmployeeLabelAssignmentRequest>()),
                 "delete" => await Delete(jsonData.FromJson<DeleteEmployeeLabelAssignmentRequest>()),
                 "get" => await Get(jsonData.FromJson<GetEmployeeLabelAssignmentRequest>()),
+                "getshortlist" => await GetShortList(jsonData.FromJson<GetEmployeeLabelShortListRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -81,6 +82,28 @@ public class EmployeeLabelAssignmentProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving employee label assignments: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Get short list of labels for an employee (for dropdowns/tags)
+    /// </summary>
+    public async Task<string> GetShortList(GetEmployeeLabelShortListRequest request)
+    {
+        try
+        {
+            var result = await _repository.GetShortList(
+                request.UserId,
+                request.Common ?? false,
+                request.UserIds,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving employee labels short list: {ex.Message}" }.ToJson();
         }
     }
 }

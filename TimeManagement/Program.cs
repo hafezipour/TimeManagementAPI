@@ -36,6 +36,7 @@ builder.Services.AddScoped<TimeManagement.Application.Processors.ScheduleProcess
 builder.Services.AddScoped<TimeManagement.Application.Processors.LayoutProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.ColumnProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.EmployeeJobCodeAssignmentProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Processors.EmployeeWorkCodeAssignmentProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.EmployeeLabelAssignmentProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.GroupsProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.LabelsProcessor>();
@@ -55,6 +56,7 @@ builder.Services.AddScoped<TimeManagement.Infra.Repositories.ShiftsRepository>()
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.LayoutRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.ColumnRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.EmployeeJobCodeAssignmentRepository>();
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.EmployeeWorkCodeAssignmentRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.EmployeeLabelAssignmentRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.GroupsRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.LabelsRepository>();
