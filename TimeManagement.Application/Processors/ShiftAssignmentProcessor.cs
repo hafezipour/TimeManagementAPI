@@ -1,6 +1,8 @@
 using TimeManagement.Application.DTOs.ShiftAssignments;
+using TimeManagement.Application.DTOs.Schedules;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Infra.Repositories;
+using Newtonsoft.Json;
 
 namespace TimeManagement.Application.Processors;
 
@@ -31,6 +33,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
             return methodName.ToLower() switch
             {
                 "scheduleemployee" => await ScheduleEmployee(jsonData.FromJson<ScheduleEmployeeRequest>()),
+                "getbyuserid" => await GetByUserId(jsonData.FromJson<GetShiftAssignmentByUserIdRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -52,7 +55,37 @@ public class ShiftAssignmentProcessor : BaseProcessor
         try
         {
             _scheduleProcessor.SetCurrentUser(this.CurrentUser);
-            
+
+            #region Existing Assignments and validation of duplicating scheduling
+
+            // BEFORE SAVING: Fetch existing assignments for the user
+            var existingAssignmentsJson = await _shiftAssignmentRepository.GetByUserId(request.UserId, CurrentUser.TenantID);
+            var existingAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(existingAssignmentsJson);
+
+            // Fetch schedules for all existing assignments
+            if (existingAssignments != null && existingAssignments.Any())
+            {
+                // Build comma-separated lists of assignment IDs
+                var assignmentIds = string.Join(",", existingAssignments.Select(a => a.Id));
+                var sourceTypes = string.Join(",", existingAssignments.Select(a => "3")); // All are ShiftAssignment type
+
+                // Fetch schedules for these assignments
+                var schedulesJson = await _scheduleProcessor.GetBySource(new GetScheduleRequest
+                {
+                    SourceIds = assignmentIds,
+                    SourceTypes = sourceTypes
+                });
+
+                // Deserialize schedules into List<ScheduleResponse>
+                var schedules = JsonConvert.DeserializeObject<List<ScheduleResponse>>(schedulesJson);
+
+                // Log for debugging (for now)
+                Console.WriteLine($"Found {existingAssignments.Count} existing assignments with {schedules?.Count ?? 0} schedules");
+            }
+
+
+            #endregion
+            // Now proceed with saving the new/updated assignment
             var json = request.ToJson();
             var result = await _shiftAssignmentRepository.ScheduleEmployee(json, CurrentUser.LoginId, CurrentUser.TenantID);
             
@@ -69,6 +102,22 @@ public class ShiftAssignmentProcessor : BaseProcessor
                 var scheduleResult = await _scheduleProcessor.Save(schedule);
             }
             
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    /// <summary>
+    /// Get all shift assignments for a specific user
+    /// </summary>
+    public async Task<string> GetByUserId(GetShiftAssignmentByUserIdRequest request)
+    {
+        try
+        {
+            var result = await _shiftAssignmentRepository.GetByUserId(request.UserId, CurrentUser.TenantID);
             return result;
         }
         catch (Exception ex)

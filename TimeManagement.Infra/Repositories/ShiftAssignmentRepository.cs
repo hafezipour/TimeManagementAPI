@@ -35,5 +35,26 @@ public class ShiftAssignmentRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Get all shift assignments for a specific user
+    /// </summary>
+    public async Task<string> GetByUserId(int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel() { Name = "UserId", Value = userId },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
+            };
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftAssignment_GetByUserId", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
