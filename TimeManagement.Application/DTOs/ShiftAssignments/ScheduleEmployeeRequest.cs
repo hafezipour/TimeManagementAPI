@@ -4,6 +4,7 @@ namespace TimeManagement.Application.DTOs.ShiftAssignments;
 
 public class ScheduleEmployeeRequest
 {
+    public int? Id { get; set; } // Optional: Assignment ID for updates
     public int ShiftId { get; set; }
     public int UserId { get; set; }
     public string? WorkCodeIds { get; set; } // Comma-separated work code IDs
