@@ -423,7 +423,7 @@ public class ShiftProcessor : BaseProcessor
                 foreach (var assignment in shiftAssignments)
                 {
                     // Find the schedule for this assignment
-                    var assignmentSchedule = allSchedules?.FirstOrDefault(s => s.SourceId == assignment.Id && s.SourceType == 3);
+                    var assignmentSchedule = allSchedules?.FirstOrDefault(s => s.SourceId == assignment.Id && s.SourceType == (int)ScheduleSourceTypes.StaffAvailability);
 
                     if (assignmentSchedule != null)
                     {
