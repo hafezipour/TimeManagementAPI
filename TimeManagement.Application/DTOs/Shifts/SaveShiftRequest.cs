@@ -30,6 +30,7 @@ namespace TimeManagement.Application.DTOs.Shifts
 
         // Comma-separated IDs
         public string? WorkCodeIds { get; set; }
+        public string? JobCodeIds { get; set; }
         public string? AdminIds { get; set; }
 
         // Schedule data

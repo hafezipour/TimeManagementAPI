@@ -30,6 +30,7 @@ public class EmployeeJobCodeAssignmentProcessor : BaseProcessor
                 "get" => await GetEmployeeJobCodeAssignments(jsonData.FromJson<GetEmployeeJobCodeAssignmentRequest>()),
                 "save" => await Save(jsonData.FromJson<SaveEmployeeJobCodeAssignmentRequest>()),
                 "delete" => await Delete(jsonData.FromJson<DeleteEmployeeJobCodeAssignmentRequest>()),
+                "getshortlist" => await GetShortList(jsonData.FromJson<GetEmployeeJobCodeShortListRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -101,6 +102,28 @@ public class EmployeeJobCodeAssignmentProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error deleting employee job code assignment: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Get short list of job codes for an employee (for dropdowns/tags)
+    /// </summary>
+    public async Task<string> GetShortList(GetEmployeeJobCodeShortListRequest request)
+    {
+        try
+        {
+            var result = await _employeeJobCodeAssignmentRepository.GetShortList(
+                request.UserId,
+                request.Common ?? false,
+                request.UserIds,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving employee job codes short list: {ex.Message}" }.ToJson();
         }
     }
 }

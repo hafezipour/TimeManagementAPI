@@ -71,5 +71,27 @@ public class EmployeeLabelAssignmentRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Get short list of labels for an employee or common labels for multiple employees
+    /// </summary>
+    public async Task<string> GetShortList(int? userId, bool common, string? userIds, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "Common", Value = common},
+                new SqlParameterModel(){ Name = "UserIds", Value = userIds},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_EmployeeLabelAssignment_GetShortList", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 

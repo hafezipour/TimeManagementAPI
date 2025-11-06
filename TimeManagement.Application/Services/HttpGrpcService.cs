@@ -19,6 +19,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly ColumnProcessor _columnProcessor;
     private readonly ValidateToken _validateToken;
     private readonly EmployeeJobCodeAssignmentProcessor _employeeJobCodeAssignmentProcessor;
+    private readonly EmployeeWorkCodeAssignmentProcessor _employeeWorkCodeAssignmentProcessor;
     private readonly EmployeeLabelAssignmentProcessor _employeeLabelAssignmentProcessor;
     private readonly GroupsProcessor _groupsProcessor;
     private readonly LabelsProcessor _labelsProcessor;
@@ -35,6 +36,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         LayoutProcessor layoutProcessor,
         ColumnProcessor columnProcessor,
         EmployeeJobCodeAssignmentProcessor employeeJobCodeAssignmentProcessor,
+        EmployeeWorkCodeAssignmentProcessor employeeWorkCodeAssignmentProcessor,
         EmployeeLabelAssignmentProcessor employeeLabelAssignmentProcessor,
         GroupsProcessor groupsProcessor,
         LabelsProcessor labelsProcessor,
@@ -51,6 +53,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _columnProcessor = columnProcessor;
         _validateToken = new ValidateToken();
         _employeeJobCodeAssignmentProcessor = employeeJobCodeAssignmentProcessor;
+        _employeeWorkCodeAssignmentProcessor = employeeWorkCodeAssignmentProcessor;
         _employeeLabelAssignmentProcessor = employeeLabelAssignmentProcessor;
         _groupsProcessor = groupsProcessor;
         _labelsProcessor = labelsProcessor;
@@ -199,6 +202,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "employeejobcodeassignment":
                     _employeeJobCodeAssignmentProcessor.SetCurrentUser(authResult.User);
                     result = await _employeeJobCodeAssignmentProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "employeeworkcodeassignment":
+                    _employeeWorkCodeAssignmentProcessor.SetCurrentUser(authResult.User);
+                    result = await _employeeWorkCodeAssignmentProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);

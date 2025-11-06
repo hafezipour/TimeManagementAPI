@@ -82,4 +82,26 @@ public class EmployeeJobCodeAssignmentRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Get short list of job codes for an employee or common job codes for multiple employees
+    /// </summary>
+    public async Task<string> GetShortList(int? userId, bool common, string? userIds, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "Common", Value = common},
+                new SqlParameterModel(){ Name = "UserIds", Value = userIds},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+            return await _dbOperations.ExecuteDataSetAsync("usp_EmployeeJobCodeAssignment_GetShortList", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
