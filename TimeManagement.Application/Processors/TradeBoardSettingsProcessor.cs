@@ -27,7 +27,7 @@ public class TradeBoardSettingsProcessor : BaseProcessor
         {
             return methodName.ToLower() switch
             {
-                "getlist" => await GetTradeBoardSettingsList(),
+                "get" => await GetTradeBoardSettings(),
                 "save" => await SaveTradeBoardSettings(jsonData),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
@@ -43,13 +43,13 @@ public class TradeBoardSettingsProcessor : BaseProcessor
     }
 
     /// <summary>
-    /// Get list of all Trade Board Settings with pagination and sorting
+    /// Get Trade Board Settings (single record per tenant)
     /// </summary>
-    public async Task<string> GetTradeBoardSettingsList()
+    public async Task<string> GetTradeBoardSettings()
     {
         try
         {
-            var result = await _tradeBoardSettingsRepository.GetTradeBoardSettingsList(
+            var result = await _tradeBoardSettingsRepository.GetTradeBoardSettings(
                 CurrentUser.TenantID,
                 CurrentUser.LoginId
             );
