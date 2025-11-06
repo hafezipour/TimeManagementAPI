@@ -431,13 +431,53 @@ public class ShiftProcessor : BaseProcessor
 
                         if (isAssignmentValidForDate)
                         {
-                            validAssignmentsForDate.Add(assignment);
+                            // Validate if assignment times fall within shift times on the evaluation date
+                            bool timesAreValid = IsAssignmentTimeWithinShiftTime(
+                                assignmentSchedule, 
+                                shift.Schedules, 
+                                (DateTime)shift.EvaluationDate
+                            );
+                            
+                            if (timesAreValid)
+                            {
+                                validAssignmentsForDate.Add(assignment);
+                            }
                         }
                     }
                 }
                 shift.UserAssignments = validAssignmentsForDate;
             }
         }
+    }
+
+    /// <summary>
+    /// Validates if assignment times fall within shift times on the evaluation date
+    /// </summary>
+    /// <param name="assignmentSchedule">The assignment's schedule</param>
+    /// <param name="shiftSchedule">The shift's schedule</param>
+    /// <param name="evaluationDate">The date to evaluate</param>
+    /// <returns>True if assignment times are within shift times, otherwise false</returns>
+    private bool IsAssignmentTimeWithinShiftTime(
+        DTOs.Schedules.ScheduleResponse assignmentSchedule, 
+        DTOs.Schedules.ScheduleResponse shiftSchedule, 
+        DateTime evaluationDate)
+    {
+        // If either schedule doesn't have times, skip time validation
+        if (!assignmentSchedule.StartTime.HasValue || !assignmentSchedule.EndTime.HasValue ||
+            !shiftSchedule.StartTime.HasValue || !shiftSchedule.EndTime.HasValue)
+        {
+            return true; // No time restriction
+        }
+
+        // Combine evaluation date with times to create full DateTimes
+        var assignmentStart = evaluationDate.Date.Add(assignmentSchedule.StartTime.Value);
+        var assignmentEnd = evaluationDate.Date.Add(assignmentSchedule.EndTime.Value);
+        
+        var shiftStart = evaluationDate.Date.Add(shiftSchedule.StartTime.Value);
+        var shiftEnd = evaluationDate.Date.Add(shiftSchedule.EndTime.Value);
+        
+        // Validate: Assignment times must fall within shift times
+        return assignmentStart >= shiftStart && assignmentEnd <= shiftEnd;
     }
 
     #endregion
