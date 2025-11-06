@@ -25,6 +25,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly LabelsProcessor _labelsProcessor;
     private readonly AssistantQualifiersProcessor _assistantQualifiersProcessor;
     private readonly TradeBoardSettingsProcessor _tradeBoardSettingsProcessor;
+    private readonly ShiftAssignmentProcessor _shiftAssignmentProcessor;
 
     public HttpGrpcService(
         JobCodeProcessor jobCodeProcessor,
@@ -41,7 +42,8 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         GroupsProcessor groupsProcessor,
         LabelsProcessor labelsProcessor,
         AssistantQualifiersProcessor assistantQualifiersProcessor,
-        TradeBoardSettingsProcessor tradeBoardSettingsProcessor)
+        TradeBoardSettingsProcessor tradeBoardSettingsProcessor,
+        ShiftAssignmentProcessor shiftAssignmentProcessor)
     {
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
@@ -59,6 +61,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _labelsProcessor = labelsProcessor;
         _assistantQualifiersProcessor = assistantQualifiersProcessor;
         _tradeBoardSettingsProcessor = tradeBoardSettingsProcessor;
+        _shiftAssignmentProcessor = shiftAssignmentProcessor;
     }
 
     public override async Task<HttpResponse> Get(HttpRequest request, ServerCallContext context)
@@ -250,6 +253,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "tradeboardsettings":
                     _tradeBoardSettingsProcessor.SetCurrentUser(authResult.User);
                     result = await _tradeBoardSettingsProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "shiftassignment":
+                    _shiftAssignmentProcessor.SetCurrentUser(authResult.User);
+                    result = await _shiftAssignmentProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);

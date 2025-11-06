@@ -16,7 +16,7 @@ namespace TimeManagement.Application.DTOs.Shifts
         public int? Id { get; set; }
         public string ShiftName { get; set; } = string.Empty;
         public string ShiftCode { get; set; } = string.Empty;
-        public bool? IsNoAssignmentTime { get; set; }
+        //public bool? IsNoAssignmentTime { get; set; }
         public int? MinimumPositions { get; set; }
         public int? MaxTimeOffs { get; set; }
         public string? Location { get; set; }

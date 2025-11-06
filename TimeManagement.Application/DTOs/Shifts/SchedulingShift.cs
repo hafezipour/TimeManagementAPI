@@ -53,6 +53,8 @@ namespace TimeManagement.Domain.Models
         public string labelCode { get; set; }
         public string colorCode { get; set; }
         public List<ShiftGroupAssignment> ShiftGroupAssignments { get; set; }
+        public List<ShiftWorkCode> WorkCodes { get; set; }
+        public List<ShiftJobCode> JobCodes { get; set; }
 
     }
     public class ShiftGroupAssignment
@@ -62,5 +64,22 @@ namespace TimeManagement.Domain.Models
         public int groupId { get; set; }
         public string groupName { get; set; }
         public string colorCode { get; set; }
+    }
+
+    public class ShiftWorkCode
+    {
+        public int id { get; set; }
+        public string workCodeName { get; set; }
+        public string workCode { get; set; }
+        public string colorCode { get; set; }
+        public bool isActive { get; set; }
+    }
+
+    public class ShiftJobCode
+    {
+        public int id { get; set; }
+        public string jobTitle { get; set; }
+        public string jobCode { get; set; }
+        public bool isActive { get; set; }
     }
 }
