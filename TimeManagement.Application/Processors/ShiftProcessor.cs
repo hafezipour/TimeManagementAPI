@@ -369,6 +369,7 @@ public class ShiftProcessor : BaseProcessor
             {
                 // This shift occurs on this date
                 // The schedule.StartTime and schedule.EndTime define the shift times
+                shift.EvaluationDate = date;
                 result.Add(shift);
             }
         }
@@ -396,7 +397,7 @@ public class ShiftProcessor : BaseProcessor
         if (allAssignments != null && allAssignments.Any())
         {
             var assignmentIds = string.Join(",", allAssignments.Select(a => a.Id));
-            var sourceTypes = ((int)ScheduleSourceTypes.StaffAvailability).ToString();
+            var sourceTypes = ((int)ScheduleSourceTypes.ShiftAssignment).ToString();
 
             var schedulesJson = await _scheduleProcessor.GetBySource(new DTOs.Schedules.GetScheduleRequest
             {
@@ -406,8 +407,6 @@ public class ShiftProcessor : BaseProcessor
 
             allSchedules = JsonConvert.DeserializeObject<List<DTOs.Schedules.ScheduleResponse>>(schedulesJson);
         }
-
-
 
         foreach (var shift in schedulingShiftsAll)
         {
@@ -423,7 +422,7 @@ public class ShiftProcessor : BaseProcessor
                 foreach (var assignment in shiftAssignments)
                 {
                     // Find the schedule for this assignment
-                    var assignmentSchedule = allSchedules?.FirstOrDefault(s => s.SourceId == assignment.Id && s.SourceType == (int)ScheduleSourceTypes.StaffAvailability);
+                    var assignmentSchedule = allSchedules?.FirstOrDefault(s => s.SourceId == assignment.Id && s.SourceType == (int)ScheduleSourceTypes.ShiftAssignment);
 
                     if (assignmentSchedule != null)
                     {
