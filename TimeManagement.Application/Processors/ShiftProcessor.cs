@@ -10,7 +10,6 @@ using TimeManagement.Application.Extensions;
 using TimeManagement.Application.Services;
 using TimeManagement.Domain.Models;
 using TimeManagement.Infra.Repositories;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TimeManagement.Application.Processors;
 
@@ -295,6 +294,7 @@ public class ShiftProcessor : BaseProcessor
                     var shifts = await GetValidShiftsList(request.StartDate, item.SchedulingShifts);
                     item.SchedulingShifts = shifts;
                 }
+                await SetEmployeeAssignmentsForShiftsAsync(columns.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
                 return columns.ToJson();
             }
             else if (request.ViewType == "week")
@@ -310,6 +310,7 @@ public class ShiftProcessor : BaseProcessor
                         SchedulingShifts = shifts
                     });
                 }
+                await SetEmployeeAssignmentsForShiftsAsync(calendarDays.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
                 return calendarDays.ToJson();
             }
             else if (request.ViewType == "month")
@@ -330,7 +331,7 @@ public class ShiftProcessor : BaseProcessor
                     });
 
                 }
-
+                await SetEmployeeAssignmentsForShiftsAsync(calendarDays.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
                 return calendarDays.ToJson();
             }
 
@@ -341,20 +342,61 @@ public class ShiftProcessor : BaseProcessor
             return new { success = false, message = $"Error retrieving scheduled shifts: {ex.Message}" }.ToJson();
         }
     }
+
+    /// <summary>
+    /// Get valid shifts for a specific date based on their schedule patterns
+    /// </summary>
+    /// <param name="date">The date to check</param>
+    /// <param name="schedulingShifts">List of shifts with their schedules</param>
+    /// <returns>List of shifts that are valid for the given date</returns>
+    public Task<List<SchedulingShift>> GetValidShiftsList(DateTime date, List<SchedulingShift> schedulingShifts)
+    {
+        var result = new List<SchedulingShift>();
+
+        foreach (var shift in schedulingShifts)
+        {
+            // Check if shift has a schedule
+            if (shift.Schedules == null)
+            {
+                // No schedule defined - skip this shift
+                continue;
+            }
+
+            // Use ScheduleEvaluator to check if this date is valid for the shift's schedule
+            bool isValidForDate = _scheduleEvaluator.IsDateValid(shift.Schedules, date);
+
+            if (isValidForDate)
+            {
+                // This shift occurs on this date
+                // The schedule.StartTime and schedule.EndTime define the shift times
+                result.Add(shift);
+            }
+        }
+
+        return Task.FromResult(result);
+    }
+
+    /// <summary>
+    /// set the employees assigned onto the shifts
+    /// </summary>
+    /// <param name="schedulingShiftsAll"></param>
+    /// <returns></returns>
     private async Task SetEmployeeAssignmentsForShiftsAsync(List<SchedulingShift> schedulingShiftsAll)
     {
-        // Fetch ALL employee assignments at once (if employeeId filter is provided)
+        // Fetch ALL employee assignments at once
         List<ShiftAssignmentDetailDto> allAssignments = null;
         List<DTOs.Schedules.ScheduleResponse> allSchedules = null;
 
-        string a = schedulingShiftsAll.Select(c => c.Id).ToList().ToCommaSeparatedString();
-        var assignmentsJson = await _shiftAssignmentRepository.Get(null, , CurrentUser.TenantID);
+        // Get comma-separated shift IDs using extension method
+        string shiftIds = schedulingShiftsAll.Select(c => c.Id).ToCommaSeparatedString();
+
+        var assignmentsJson = await _shiftAssignmentRepository.Get(null, shiftIds, CurrentUser.TenantID);
         allAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(assignmentsJson);
 
         if (allAssignments != null && allAssignments.Any())
         {
             var assignmentIds = string.Join(",", allAssignments.Select(a => a.Id));
-            var sourceTypes = string.Join(",", allAssignments.Select(a => "3"));
+            var sourceTypes = ((int)ScheduleSourceTypes.StaffAvailability).ToString();
 
             var schedulesJson = await _scheduleProcessor.GetBySource(new DTOs.Schedules.GetScheduleRequest
             {
@@ -397,39 +439,6 @@ public class ShiftProcessor : BaseProcessor
                 shift.UserAssignments = validAssignmentsForDate;
             }
         }
-    }
-
-    /// <summary>
-    /// Get valid shifts for a specific date based on their schedule patterns
-    /// </summary>
-    /// <param name="date">The date to check</param>
-    /// <param name="schedulingShifts">List of shifts with their schedules</param>
-    /// <returns>List of shifts that are valid for the given date</returns>
-    public Task<List<SchedulingShift>> GetValidShiftsList(DateTime date, List<SchedulingShift> schedulingShifts)
-    {
-        var result = new List<SchedulingShift>();
-
-        foreach (var shift in schedulingShifts)
-        {
-            // Check if shift has a schedule
-            if (shift.Schedules == null)
-            {
-                // No schedule defined - skip this shift
-                continue;
-            }
-
-            // Use ScheduleEvaluator to check if this date is valid for the shift's schedule
-            bool isValidForDate = _scheduleEvaluator.IsDateValid(shift.Schedules, date);
-
-            if (isValidForDate)
-            {
-                // This shift occurs on this date
-                // The schedule.StartTime and schedule.EndTime define the shift times
-                result.Add(shift);
-            }
-        }
-
-        return Task.FromResult(result);
     }
 
     #endregion

@@ -4,6 +4,12 @@ namespace TimeManagement.Application.Extensions;
 
 public static class Extensions
 {
+    /// <summary>
+    /// for nullable structs
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="source"></param>
+    /// <returns></returns>
     public static string ToCommaSeparatedString<T>(this IEnumerable<T?> source)
         where T : struct
     {
@@ -11,6 +17,21 @@ public static class Extensions
             return string.Empty;
 
         return string.Join(",", source.Where(x => x.HasValue).Select(x => x.Value));
+    }
+
+    /// <summary>
+    /// for non-nullable structs
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="source"></param>
+    /// <returns></returns>
+    public static string ToCommaSeparatedString<T>(this IEnumerable<T> source)
+       where T : struct
+    {
+        if (source == null)
+            return string.Empty;
+
+        return string.Join(",", source.Select(x => x));
     }
 
     private static readonly JsonSerializerOptions DefaultOptions = new()
