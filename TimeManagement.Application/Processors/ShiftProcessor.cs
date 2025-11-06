@@ -3,12 +3,14 @@ using Newtonsoft.Json;
 using System.Text.Json;
 using TimeManagement.Application.DTOs;
 using TimeManagement.Application.DTOs.Columns;
+using TimeManagement.Application.DTOs.ShiftAssignments;
 using TimeManagement.Application.DTOs.Shifts;
 using TimeManagement.Application.Enums;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Application.Services;
 using TimeManagement.Domain.Models;
 using TimeManagement.Infra.Repositories;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace TimeManagement.Application.Processors;
 
@@ -18,14 +20,16 @@ public class ShiftProcessor : BaseProcessor
     private readonly ScheduleProcessor _scheduleProcessor;
     private readonly ScheduleEvaluator _scheduleEvaluator;
     private readonly IServiceProvider _serviceProvider;
+    private readonly ShiftAssignmentRepository _shiftAssignmentRepository;
     private ColumnProcessor _columnProcessor;
 
-    public ShiftProcessor(IServiceProvider serviceProvider, ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor, ScheduleEvaluator scheduleEvaluator)
+    public ShiftProcessor(IServiceProvider serviceProvider, ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor, ScheduleEvaluator scheduleEvaluator, ShiftAssignmentRepository shiftAssignmentRepository)
     {
         _shiftsRepository = shiftsRepository;
         _scheduleProcessor = scheduleProcessor;
         _scheduleEvaluator = scheduleEvaluator;
         _serviceProvider = serviceProvider;
+        _shiftAssignmentRepository = shiftAssignmentRepository;
     }
 
     private ColumnProcessor ColumnProcessor => _columnProcessor ??= _serviceProvider.GetRequiredService<ColumnProcessor>();
@@ -282,6 +286,7 @@ public class ShiftProcessor : BaseProcessor
             ColumnProcessor.SetCurrentUser(this.CurrentUser);
 
             List<CalendarDay> calendarDays = new List<CalendarDay>();
+
             if (request.ViewType == "day")
             {
                 var columns = await ColumnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
@@ -317,12 +322,15 @@ public class ShiftProcessor : BaseProcessor
                 {
                     var date = request.StartDate.AddDays(i);
                     var shifts = await GetValidShiftsList(date, schedulingShifts);
+                    //SetEmployeeAssignmentsForShifts(allAssignments, shifts,);
                     calendarDays.Add(new CalendarDay
                     {
                         DayNo = date.Day,
                         SchedulingShifts = shifts
                     });
+
                 }
+
                 return calendarDays.ToJson();
             }
 
@@ -331,6 +339,63 @@ public class ShiftProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving scheduled shifts: {ex.Message}" }.ToJson();
+        }
+    }
+    private async Task SetEmployeeAssignmentsForShiftsAsync(List<SchedulingShift> schedulingShiftsAll)
+    {
+        // Fetch ALL employee assignments at once (if employeeId filter is provided)
+        List<ShiftAssignmentDetailDto> allAssignments = null;
+        List<DTOs.Schedules.ScheduleResponse> allSchedules = null;
+
+        string a = schedulingShiftsAll.Select(c => c.Id).ToList().ToCommaSeparatedString();
+        var assignmentsJson = await _shiftAssignmentRepository.Get(null, , CurrentUser.TenantID);
+        allAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(assignmentsJson);
+
+        if (allAssignments != null && allAssignments.Any())
+        {
+            var assignmentIds = string.Join(",", allAssignments.Select(a => a.Id));
+            var sourceTypes = string.Join(",", allAssignments.Select(a => "3"));
+
+            var schedulesJson = await _scheduleProcessor.GetBySource(new DTOs.Schedules.GetScheduleRequest
+            {
+                SourceIds = assignmentIds,
+                SourceTypes = sourceTypes
+            });
+
+            allSchedules = JsonConvert.DeserializeObject<List<DTOs.Schedules.ScheduleResponse>>(schedulesJson);
+        }
+
+
+
+        foreach (var shift in schedulingShiftsAll)
+        {
+            // Check for assigned users to this shift for this date
+            if (allAssignments != null && allSchedules != null && allAssignments.Any())
+            {
+                // Get assignments for this specific shift
+                var shiftAssignments = allAssignments.Where(a => a.ShiftId == shift.Id).ToList();
+
+                // Filter assignments that are valid for this date
+                var validAssignmentsForDate = new List<ShiftAssignmentDetailDto>();
+
+                foreach (var assignment in shiftAssignments)
+                {
+                    // Find the schedule for this assignment
+                    var assignmentSchedule = allSchedules?.FirstOrDefault(s => s.SourceId == assignment.Id && s.SourceType == 3);
+
+                    if (assignmentSchedule != null)
+                    {
+                        // Check if this assignment's schedule is valid for this date
+                        bool isAssignmentValidForDate = _scheduleEvaluator.IsDateValid(assignmentSchedule, (DateTime)shift.EvaluationDate);
+
+                        if (isAssignmentValidForDate)
+                        {
+                            validAssignmentsForDate.Add(assignment);
+                        }
+                    }
+                }
+                shift.UserAssignments = validAssignmentsForDate;
+            }
         }
     }
 
@@ -343,7 +408,7 @@ public class ShiftProcessor : BaseProcessor
     public Task<List<SchedulingShift>> GetValidShiftsList(DateTime date, List<SchedulingShift> schedulingShifts)
     {
         var result = new List<SchedulingShift>();
-        
+
         foreach (var shift in schedulingShifts)
         {
             // Check if shift has a schedule
@@ -382,16 +447,16 @@ public class ShiftProcessor : BaseProcessor
                 return new { success = false, message = "Invalid ShiftId" }.ToJson();
             }
 
-            if (string.IsNullOrEmpty(request.Action) || 
+            if (string.IsNullOrEmpty(request.Action) ||
                 (request.Action.ToLower() != "increase" && request.Action.ToLower() != "decrease"))
             {
                 return new { success = false, message = "Action must be 'increase' or 'decrease'" }.ToJson();
             }
 
             var result = await _shiftsRepository.UpdateSlotPositions(
-                request.ShiftId, 
-                request.Action.ToLower(), 
-                CurrentUser.LoginId, 
+                request.ShiftId,
+                request.Action.ToLower(),
+                CurrentUser.LoginId,
                 CurrentUser.TenantID
             );
 

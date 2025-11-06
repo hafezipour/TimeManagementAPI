@@ -1,29 +1,19 @@
 -- =============================================
 -- Author:      Time Management Team
 -- Create date: 2025-01-06
--- Description: Get all shift assignments for a specific user
+-- Description: Get shift assignments by userIds or shiftIds
 -- =============================================
 
-CREATE OR ALTER PROCEDURE [dbo].[usp_ShiftAssignment_GetByUserId]
-    @UserId INT,
+CREATE OR ALTER PROCEDURE [dbo].[usp_ShiftAssignment_Get]
+    @UserIds NVARCHAR(MAX) = NULL,
+    @ShiftIds NVARCHAR(MAX) = NULL,
     @TenantId INT
 AS
 BEGIN
     SET NOCOUNT ON;
 
     BEGIN TRY
-        -- Validate required fields
-        IF @UserId IS NULL
-        BEGIN
-            SELECT 
-                success = CAST(0 AS BIT),
-                message = 'UserId is required',
-                data = NULL
-            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
-            RETURN;
-        END
-
-        -- Get all shift assignments for the user with related data
+        -- Get all shift assignments matching the criteria
         SELECT 
             sa.Id as id,
             sa.ShiftId as shiftId,
@@ -86,8 +76,12 @@ BEGIN
             ) as labels
         FROM ShiftAssignment sa
         INNER JOIN Shifts s ON s.Id = sa.ShiftId
-        WHERE sa.UserId = @UserId 
-            AND sa.TenantId = @TenantId
+        WHERE sa.TenantId = @TenantId
+            AND (
+                (@UserIds IS NULL OR sa.UserId IN (SELECT CAST(value AS INT) FROM STRING_SPLIT(@UserIds, ',')))
+                OR
+                (@ShiftIds IS NULL OR sa.ShiftId IN (SELECT CAST(value AS INT) FROM STRING_SPLIT(@ShiftIds, ',')))
+            )
         ORDER BY sa.AssignedAt DESC, sa.DateCreated DESC
         FOR JSON PATH;
 

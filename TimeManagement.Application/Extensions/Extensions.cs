@@ -2,8 +2,17 @@ using System.Text.Json;
 
 namespace TimeManagement.Application.Extensions;
 
-public static class JsonExtensions
+public static class Extensions
 {
+    public static string ToCommaSeparatedString<T>(this IEnumerable<T?> source)
+        where T : struct
+    {
+        if (source == null)
+            return string.Empty;
+
+        return string.Join(",", source.Where(x => x.HasValue).Select(x => x.Value));
+    }
+
     private static readonly JsonSerializerOptions DefaultOptions = new()
     {
         PropertyNameCaseInsensitive = true,

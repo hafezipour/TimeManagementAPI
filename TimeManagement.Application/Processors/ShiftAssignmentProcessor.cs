@@ -33,7 +33,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
             return methodName.ToLower() switch
             {
                 "scheduleemployee" => await ScheduleEmployee(jsonData.FromJson<ScheduleEmployeeRequest>()),
-                "getbyuserid" => await GetByUserId(jsonData.FromJson<GetShiftAssignmentByUserIdRequest>()),
+                "get" => await Get(jsonData.FromJson<GetShiftAssignmentRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -59,7 +59,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
             #region Existing Assignments and validation of duplicating scheduling
 
             // BEFORE SAVING: Fetch existing assignments for the user
-            var existingAssignmentsJson = await _shiftAssignmentRepository.GetByUserId(request.UserId, CurrentUser.TenantID);
+            var existingAssignmentsJson = await _shiftAssignmentRepository.Get(request.UserId.ToString(), null, CurrentUser.TenantID);
             var existingAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(existingAssignmentsJson);
 
             // Fetch schedules for all existing assignments
@@ -111,13 +111,13 @@ public class ShiftAssignmentProcessor : BaseProcessor
     }
 
     /// <summary>
-    /// Get all shift assignments for a specific user
+    /// Get shift assignments by userIds or shiftIds
     /// </summary>
-    public async Task<string> GetByUserId(GetShiftAssignmentByUserIdRequest request)
+    public async Task<string> Get(GetShiftAssignmentRequest request)
     {
         try
         {
-            var result = await _shiftAssignmentRepository.GetByUserId(request.UserId, CurrentUser.TenantID);
+            var result = await _shiftAssignmentRepository.Get(request.UserIds, request.ShiftIds, CurrentUser.TenantID);
             return result;
         }
         catch (Exception ex)

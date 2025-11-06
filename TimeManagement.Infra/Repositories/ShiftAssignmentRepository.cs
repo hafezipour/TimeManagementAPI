@@ -37,18 +37,19 @@ public class ShiftAssignmentRepository
     }
 
     /// <summary>
-    /// Get all shift assignments for a specific user
+    /// Get shift assignments by userIds or shiftIds
     /// </summary>
-    public async Task<string> GetByUserId(int userId, int tenantId)
+    public async Task<string> Get(string userIds, string shiftIds, int tenantId)
     {
         try
         {
             List<SqlParameterModel> param = new List<SqlParameterModel>()
             {
-                new SqlParameterModel() { Name = "UserId", Value = userId },
+                new SqlParameterModel() { Name = "UserIds", Value = userIds },
+                new SqlParameterModel() { Name = "ShiftIds", Value = shiftIds },
                 new SqlParameterModel() { Name = "TenantId", Value = tenantId }
             };
-            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftAssignment_GetByUserId", param);
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftAssignment_Get", param);
             return result;
         }
         catch (Exception ex)

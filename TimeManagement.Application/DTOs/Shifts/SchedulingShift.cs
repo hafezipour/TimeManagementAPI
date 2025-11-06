@@ -1,5 +1,6 @@
 ﻿using System;
 using TimeManagement.Application.DTOs.Schedules;
+using TimeManagement.Application.DTOs.ShiftAssignments;
 
 namespace TimeManagement.Domain.Models
 {
@@ -53,8 +54,12 @@ namespace TimeManagement.Domain.Models
         public string labelCode { get; set; }
         public string colorCode { get; set; }
         public List<ShiftGroupAssignment> ShiftGroupAssignments { get; set; }
+        public List<ShiftAssignmentDetailDto> UserAssignments { get; set; }
         public List<ShiftWorkCode> WorkCodes { get; set; }
         public List<ShiftJobCode> JobCodes { get; set; }
+
+        // Additional properties can be added as needed
+        public DateTime? EvaluationDate { get; set; }
 
     }
     public class ShiftGroupAssignment
