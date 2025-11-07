@@ -93,16 +93,23 @@ public class ShiftAssignmentProcessor : BaseProcessor
             var assignmentResponse = result.FromJson<ScheduleEmployeeResponse>();
             
             // Process schedules if provided and assignment was successful
-            if (assignmentResponse.Success && request.Schedules != null && request.Schedules.Any())
+            if (assignmentResponse?.Success == true && request.Schedules != null && request.Schedules.Any())
             {
                 var schedule = request.Schedules[0];
                 schedule.SourceType = 3; // ShiftAssignment
                 schedule.SourceId = assignmentResponse.Id ?? 0; // Use the returned assignment ID
                 
                 var scheduleResult = await _scheduleProcessor.Save(schedule);
+                var scheduleSaveResult = scheduleResult.FromJson<ScheduleSaveResult>();
+
+                var updateResultJson = await _shiftAssignmentRepository.UpdateScheduleId(
+                    assignmentResponse.Id.Value,
+                    scheduleSaveResult.Id.Value,
+                    CurrentUser.LoginId,
+                    CurrentUser.TenantID);
             }
-            //TO DO, save the schedule id in the ShiftAssignment table
-            return result;
+            
+            return assignmentResponse?.ToJson() ?? result;
         }
         catch (Exception ex)
         {

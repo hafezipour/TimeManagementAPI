@@ -37,6 +37,30 @@ public class ShiftAssignmentRepository
     }
 
     /// <summary>
+    /// Updates the ScheduleId associated with a shift assignment.
+    /// </summary>
+    public async Task<string> UpdateScheduleId(int assignmentId, int scheduleId, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel() { Name = "AssignmentId", Value = assignmentId },
+                new SqlParameterModel() { Name = "ScheduleId", Value = scheduleId },
+                new SqlParameterModel() { Name = "UserId", Value = userId },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftAssignment_UpdateScheduleId", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    /// <summary>
     /// Get shift assignments by userIds or shiftIds
     /// </summary>
     public async Task<string> Get(string userIds, string shiftIds, int tenantId)
