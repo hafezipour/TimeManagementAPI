@@ -286,16 +286,17 @@ public class ShiftProcessor : BaseProcessor
 
             List<CalendarDay> calendarDays = new List<CalendarDay>();
 
+            List<Column> columns = new List<Column>();
             if (request.ViewType == "day")
             {
-                var columns = await ColumnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
+                columns = await ColumnProcessor.GetColumnRequestData(new GetColumnsRequest() { LayoutId = request.LayoutId });
                 foreach (var item in columns)
                 {
                     var shifts = await GetValidShiftsList(request.StartDate, item.SchedulingShifts);
                     item.SchedulingShifts = shifts;
                 }
                 await SetEmployeeAssignmentsForShiftsAsync(columns.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
-                return columns.ToJson();
+                //return columns.ToJson();
             }
             else if (request.ViewType == "week")
             {
@@ -311,7 +312,7 @@ public class ShiftProcessor : BaseProcessor
                     });
                 }
                 await SetEmployeeAssignmentsForShiftsAsync(calendarDays.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
-                return calendarDays.ToJson();
+                //return calendarDays.ToJson();
             }
             else if (request.ViewType == "month")
             {
@@ -332,10 +333,34 @@ public class ShiftProcessor : BaseProcessor
 
                 }
                 await SetEmployeeAssignmentsForShiftsAsync(calendarDays.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
-                return calendarDays.ToJson();
+                //return calendarDays.ToJson();
             }
 
-            return "";
+            var data = new GetScheduledShiftsResponse
+            {
+                Success = true,
+                Message = "Scheduled shifts retrieved successfully",
+                Data = calendarDays,
+                Columns = columns,
+                UserIds = calendarDays != null && calendarDays.Count > 0 ? 
+                                      (
+                                           calendarDays.SelectMany(cd => cd.SchedulingShifts)
+                                          .Where(ss => ss.UserAssignments != null)
+                                          .SelectMany(ss => ss.UserAssignments)
+                                          .Select(ua => ua.UserId)
+                                          .Distinct()
+                                          .ToList()
+                                      ) :
+                                      (
+                                           columns.SelectMany(cd => cd.SchedulingShifts)
+                                          .Where(ss => ss.UserAssignments != null)
+                                          .SelectMany(ss => ss.UserAssignments)
+                                          .Select(ua => ua.UserId)
+                                          .Distinct().ToList()
+                                      )
+            };
+
+            return data.ToJson();
         }
         catch (Exception ex)
         {
@@ -433,11 +458,11 @@ public class ShiftProcessor : BaseProcessor
                         {
                             // Validate if assignment times fall within shift times on the evaluation date
                             bool timesAreValid = IsAssignmentTimeWithinShiftTime(
-                                assignmentSchedule, 
-                                shift.Schedules, 
+                                assignmentSchedule,
+                                shift.Schedules,
                                 (DateTime)shift.EvaluationDate
                             );
-                            
+
                             if (timesAreValid)
                             {
                                 validAssignmentsForDate.Add(assignment);
@@ -458,8 +483,8 @@ public class ShiftProcessor : BaseProcessor
     /// <param name="evaluationDate">The date to evaluate</param>
     /// <returns>True if assignment times are within shift times, otherwise false</returns>
     private bool IsAssignmentTimeWithinShiftTime(
-        DTOs.Schedules.ScheduleResponse assignmentSchedule, 
-        DTOs.Schedules.ScheduleResponse shiftSchedule, 
+        DTOs.Schedules.ScheduleResponse assignmentSchedule,
+        DTOs.Schedules.ScheduleResponse shiftSchedule,
         DateTime evaluationDate)
     {
         // If either schedule doesn't have times, skip time validation
@@ -472,10 +497,10 @@ public class ShiftProcessor : BaseProcessor
         // Combine evaluation date with times to create full DateTimes
         var assignmentStart = evaluationDate.Date.Add(assignmentSchedule.StartTime.Value);
         var assignmentEnd = evaluationDate.Date.Add(assignmentSchedule.EndTime.Value);
-        
+
         var shiftStart = evaluationDate.Date.Add(shiftSchedule.StartTime.Value);
         var shiftEnd = evaluationDate.Date.Add(shiftSchedule.EndTime.Value);
-        
+
         // Validate: Assignment times must fall within shift times
         return assignmentStart >= shiftStart && assignmentEnd <= shiftEnd;
     }
