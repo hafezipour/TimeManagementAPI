@@ -101,7 +101,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
                 
                 var scheduleResult = await _scheduleProcessor.Save(schedule);
             }
-            
+            //TO DO, save the schedule id in the ShiftAssignment table
             return result;
         }
         catch (Exception ex)
