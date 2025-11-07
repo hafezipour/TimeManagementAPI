@@ -392,10 +392,18 @@ public class ShiftProcessor : BaseProcessor
 
             if (isValidForDate)
             {
+                // Create a copy so the original reference isn't mutated when EvaluationDate is set
+                var shiftCopy = JsonConvert.DeserializeObject<SchedulingShift>(JsonConvert.SerializeObject(shift));
+
+                if (shiftCopy == null)
+                {
+                    continue;
+                }
+
                 // This shift occurs on this date
                 // The schedule.StartTime and schedule.EndTime define the shift times
-                shift.EvaluationDate = date;
-                result.Add(shift);
+                shiftCopy.EvaluationDate = date;
+                result.Add(shiftCopy);
             }
         }
 
@@ -414,7 +422,9 @@ public class ShiftProcessor : BaseProcessor
         List<DTOs.Schedules.ScheduleResponse> allSchedules = null;
 
         // Get comma-separated shift IDs using extension method
-        string shiftIds = schedulingShiftsAll.Select(c => c.Id).ToCommaSeparatedString();
+        string shiftIds = schedulingShiftsAll.Select(c => c.Id).Distinct().ToCommaSeparatedString();
+
+        
 
         var assignmentsJson = await _shiftAssignmentRepository.Get(null, shiftIds, CurrentUser.TenantID);
         allAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(assignmentsJson);
