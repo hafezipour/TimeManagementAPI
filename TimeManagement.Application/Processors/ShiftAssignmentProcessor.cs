@@ -96,7 +96,6 @@ public class ShiftAssignmentProcessor : BaseProcessor
             if (assignmentResponse?.Success == true && request.Schedules != null && request.Schedules.Any())
             {
                 var schedule = request.Schedules[0];
-                schedule.SourceType = 3; // ShiftAssignment
                 schedule.SourceId = assignmentResponse.Id ?? 0; // Use the returned assignment ID
                 
                 var scheduleResult = await _scheduleProcessor.Save(schedule);
