@@ -17,8 +17,8 @@ namespace TimeManagement.Application.DTOs.Schedules
         public int? SourceId { get; set; }
         public DateTime StartFrom { get; set; }
         public bool ScheduleWithoutTimes { get; set; }
-        public DateTime? StartTime { get; set; }
-        public DateTime? EndTime { get; set; }
+        public string? StartTime { get; set; }
+        public string? EndTime { get; set; }
         public int ScheduleType { get; set; }  // 1=Daily, 2=Weekly, 3=Monthly, 4=DoesNotRepeat, 5=DaysOnOff
         public int RepeatEvery { get; set; }
         public List<ScheduleFrequencyRequest>? Frequency { get; set; }
