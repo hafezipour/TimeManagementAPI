@@ -11,8 +11,8 @@ public class ShiftAssignmentDetailDto
     public string? Notes { get; set; }
     public DateTimeOffset? AssignedAt { get; set; }
     public int? AssignedBy { get; set; }
-    public TimeSpan? StartTime { get; set; }
-    public TimeSpan? EndTime { get; set; }
+    //public TimeSpan? StartTime { get; set; }
+    //public TimeSpan? EndTime { get; set; }
     public int? ScheduleId { get; set; }
     public int CreatedBy { get; set; }
     public int? UpdatedBy { get; set; }
@@ -28,6 +28,7 @@ public class ShiftAssignmentDetailDto
     public List<AssignmentWorkCode>? WorkCodes { get; set; }
     public List<AssignmentJobCode>? JobCodes { get; set; }
     public List<AssignmentLabel>? Labels { get; set; }
+    public ScheduleResponse Schedules { get; set; }
 }
 
 public class AssignmentWorkCode

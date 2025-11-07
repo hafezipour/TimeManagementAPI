@@ -342,7 +342,7 @@ public class ShiftProcessor : BaseProcessor
                 Message = "Scheduled shifts retrieved successfully",
                 Data = calendarDays,
                 Columns = columns,
-                UserIds = calendarDays != null && calendarDays.Count > 0 ? 
+                UserIds = calendarDays != null && calendarDays.Count > 0 ?
                                       (
                                            calendarDays.SelectMany(cd => cd.SchedulingShifts)
                                           .Where(ss => ss.UserAssignments != null)
@@ -424,7 +424,7 @@ public class ShiftProcessor : BaseProcessor
         // Get comma-separated shift IDs using extension method
         string shiftIds = schedulingShiftsAll.Select(c => c.Id).Distinct().ToCommaSeparatedString();
 
-        
+
 
         var assignmentsJson = await _shiftAssignmentRepository.Get(null, shiftIds, CurrentUser.TenantID);
         allAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(assignmentsJson);
@@ -456,8 +456,9 @@ public class ShiftProcessor : BaseProcessor
 
                 foreach (var assignment in shiftAssignments)
                 {
+                    var assignmentCopy = JsonConvert.DeserializeObject<ShiftAssignmentDetailDto>(JsonConvert.SerializeObject(assignment));
                     // Find the schedule for this assignment
-                    var assignmentSchedule = allSchedules?.FirstOrDefault(s => s.SourceId == assignment.Id && s.SourceType == (int)ScheduleSourceTypes.ShiftAssignment);
+                    var assignmentSchedule = allSchedules?.FirstOrDefault(s => s.SourceId == assignmentCopy.Id && s.SourceType == (int)ScheduleSourceTypes.ShiftAssignment);
 
                     if (assignmentSchedule != null)
                     {
@@ -475,7 +476,8 @@ public class ShiftProcessor : BaseProcessor
 
                             if (timesAreValid)
                             {
-                                validAssignmentsForDate.Add(assignment);
+                                assignmentCopy.Schedules = assignmentSchedule;
+                                validAssignmentsForDate.Add(assignmentCopy);
                             }
                         }
                     }
