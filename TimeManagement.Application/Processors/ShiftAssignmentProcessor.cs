@@ -1,8 +1,9 @@
-using TimeManagement.Application.DTOs.ShiftAssignments;
+using Newtonsoft.Json;
 using TimeManagement.Application.DTOs.Schedules;
+using TimeManagement.Application.DTOs.ShiftAssignments;
+using TimeManagement.Application.Enums;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Infra.Repositories;
-using Newtonsoft.Json;
 
 namespace TimeManagement.Application.Processors;
 
@@ -67,7 +68,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
             {
                 // Build comma-separated lists of assignment IDs
                 var assignmentIds = string.Join(",", existingAssignments.Select(a => a.Id));
-                var sourceTypes = string.Join(",", existingAssignments.Select(a => "3")); // All are ShiftAssignment type
+                var sourceTypes = Convert.ToString(((int)ScheduleSourceTypes.ShiftAssignment)); // All are ShiftAssignment type
 
                 // Fetch schedules for these assignments
                 var schedulesJson = await _scheduleProcessor.GetBySource(new GetScheduleRequest
@@ -88,16 +89,16 @@ public class ShiftAssignmentProcessor : BaseProcessor
             // Now proceed with saving the new/updated assignment
             var json = request.ToJson();
             var result = await _shiftAssignmentRepository.ScheduleEmployee(json, CurrentUser.LoginId, CurrentUser.TenantID);
-            
+
             // Deserialize the result to get the assignment ID
             var assignmentResponse = result.FromJson<ScheduleEmployeeResponse>();
-            
+
             // Process schedules if provided and assignment was successful
             if (assignmentResponse?.Success == true && request.Schedules != null && request.Schedules.Any())
             {
                 var schedule = request.Schedules[0];
                 schedule.SourceId = assignmentResponse.Id ?? 0; // Use the returned assignment ID
-                
+
                 var scheduleResult = await _scheduleProcessor.Save(schedule);
                 var scheduleSaveResult = scheduleResult.FromJson<ScheduleSaveResult>();
 
@@ -107,7 +108,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
                     CurrentUser.LoginId,
                     CurrentUser.TenantID);
             }
-            
+
             return assignmentResponse?.ToJson() ?? result;
         }
         catch (Exception ex)
