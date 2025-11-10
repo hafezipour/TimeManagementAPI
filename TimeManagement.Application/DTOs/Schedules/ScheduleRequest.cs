@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using TimeManagement.Application.Enums;
 
 namespace TimeManagement.Application.DTOs.Schedules
 {
@@ -26,5 +28,68 @@ namespace TimeManagement.Application.DTOs.Schedules
         public DateTime? ValidUntil { get; set; }
         public int? MaxOccurrences { get; set; }
         public bool IsActive { get; set; }
+
+        private TimeSpan? ParseTime(string? value)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return null;
+            }
+
+            if (TimeSpan.TryParse(value, CultureInfo.InvariantCulture, out var timeSpan))
+            {
+                return timeSpan;
+            }
+
+            if (DateTime.TryParse(value, CultureInfo.InvariantCulture, DateTimeStyles.None, out var dateTime))
+            {
+                return dateTime.TimeOfDay;
+            }
+
+            return null;
+        }
+        public ScheduleResponse? ConvertToScheduleResponse(ScheduleRequest request)
+        {
+            if (request == null)
+            {
+                return null;
+            }
+
+            var schedule = new ScheduleResponse
+            {
+                Id = request.Id ?? 0,
+                SourceType = request.SourceType ?? (int)ScheduleSourceTypes.ShiftAssignment,
+                SourceId = request.SourceId ?? 0,
+                StartFrom = request.StartFrom,
+                ScheduleWithoutTimes = request.ScheduleWithoutTimes,
+                ScheduleType = request.ScheduleType,
+                RepeatEvery = request.RepeatEvery,
+                EndType = Enum.IsDefined(typeof(EndType), request.EndType)
+                    ? Enum.GetName(typeof(EndType), request.EndType)
+                    : request.EndType.ToString(CultureInfo.InvariantCulture),
+                ValidUntil = request.ValidUntil.HasValue ? new DateTimeOffset(request.ValidUntil.Value) : null,
+                MaxOccurrences = request.MaxOccurrences,
+                IsActive = request.IsActive,
+                Frequency = request.Frequency?.Select(f => new ScheduleFrequencyResponse
+                {
+                    Day = f.Day,
+                    DayType = f.DayType
+                }).ToList()
+            };
+
+            var startTime = ParseTime(request.StartTime);
+            var endTime = ParseTime(request.EndTime);
+
+            schedule.StartTime = startTime;
+            schedule.EndTime = endTime;
+
+            if (startTime == null || endTime == null)
+            {
+                schedule.ScheduleWithoutTimes = true;
+            }
+
+            return schedule;
+        }
+
     }
 }
