@@ -46,6 +46,8 @@ builder.Services.AddScoped<TimeManagement.Application.Processors.ShiftAssignment
 
 // Register services
 builder.Services.AddScoped<TimeManagement.Application.Services.ScheduleEvaluator>();
+builder.Services.AddScoped<TimeManagement.Application.Services.ShiftAssignmentConflictService>();
+builder.Services.AddScoped<TimeManagement.Application.Services.ShiftAssignmentConflictExamples>();
 
 // Register repositories for dependency injection
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.HolidaysRepository>();
