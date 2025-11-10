@@ -153,3 +153,4 @@ public class ShiftAssignmentProcessor : BaseProcessor
             throw ex;
         }
     }
+}
