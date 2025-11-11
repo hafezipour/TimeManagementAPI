@@ -423,9 +423,6 @@ public class ShiftProcessor : BaseProcessor
 
         // Get comma-separated shift IDs using extension method
         string shiftIds = schedulingShiftsAll.Select(c => c.Id).Distinct().ToCommaSeparatedString();
-
-
-
         var assignmentsJson = await _shiftAssignmentRepository.Get(null, shiftIds, CurrentUser.TenantID);
         allAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(assignmentsJson);
 
