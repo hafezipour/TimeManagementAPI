@@ -66,7 +66,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
 
             #region Conflicts Checking and validations
 
-            #region Assignment Conflicts
+            #region Conflicts data gathering
 
             // BEFORE SAVING: Fetch existing assignments for the user
             var existingAssignmentsJson = await _shiftAssignmentRepository.Get(request.UserId.ToString(), null, CurrentUser.TenantID);
@@ -110,25 +110,6 @@ public class ShiftAssignmentProcessor : BaseProcessor
                 schedules = JsonConvert.DeserializeObject<List<ScheduleResponse>>(schedulesJson);
             }
 
-            // Filter schedules down to shift assignments for conflict detection (availability schedules fetched but unused for now)
-            var shiftAssignmentSchedules = schedules?
-                .Where(s => s.SourceType == (int)ScheduleSourceTypes.ShiftAssignment)
-                .ToList();
-
-            // Validate that the new schedule does not conflict with existing assignments
-            var conflicts = _conflictService.DetectConflicts(request, existingAssignments, shiftAssignmentSchedules);
-            if (conflicts != null && conflicts.Any())
-            {
-                return new
-                {
-                    success = false,
-                    message = "Conflicting schedules detected.",
-                    userId = request.UserId,
-                    shiftId = request.ShiftId,
-                    conflicts
-                }.ToJson();
-            }
-
             #endregion
 
             #region Availability Conflicts
@@ -161,6 +142,30 @@ public class ShiftAssignmentProcessor : BaseProcessor
             }
 
             #endregion
+
+            #region Assignment Conflicts
+
+            // Filter schedules down to shift assignments for conflict detection (availability schedules fetched but unused for now)
+            var shiftAssignmentSchedules = schedules?
+                .Where(s => s.SourceType == (int)ScheduleSourceTypes.ShiftAssignment)
+                .ToList();
+
+            // Validate that the new schedule does not conflict with existing assignments
+            var conflicts = _conflictService.DetectConflicts(request, existingAssignments, shiftAssignmentSchedules);
+            if (conflicts != null && conflicts.Any())
+            {
+                return new
+                {
+                    success = false,
+                    message = "Conflicting schedules detected.",
+                    userId = request.UserId,
+                    shiftId = request.ShiftId,
+                    conflicts
+                }.ToJson();
+            }
+
+            #endregion
+            
 
             #endregion
 
