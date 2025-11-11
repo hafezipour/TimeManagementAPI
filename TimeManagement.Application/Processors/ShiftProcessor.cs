@@ -308,6 +308,7 @@ public class ShiftProcessor : BaseProcessor
                     calendarDays.Add(new CalendarDay
                     {
                         DayNo = date.Day,
+                        MonthNo = date.Month,
                         SchedulingShifts = shifts
                     });
                 }
@@ -328,6 +329,7 @@ public class ShiftProcessor : BaseProcessor
                     calendarDays.Add(new CalendarDay
                     {
                         DayNo = date.Day,
+                        MonthNo = date.Month,
                         SchedulingShifts = shifts
                     });
 
@@ -459,6 +461,10 @@ public class ShiftProcessor : BaseProcessor
 
                     if (assignmentSchedule != null)
                     {
+                        if (assignmentSchedule.Id == 14 && shift.EvaluationDate?.Day == 30 && shift.EvaluationDate?.Month == 10)
+                        {
+
+                        }
                         // Check if this assignment's schedule is valid for this date
                         bool isAssignmentValidForDate = _scheduleEvaluator.IsDateValid(assignmentSchedule, (DateTime)shift.EvaluationDate);
 

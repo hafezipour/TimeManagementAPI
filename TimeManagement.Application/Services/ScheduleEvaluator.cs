@@ -38,22 +38,12 @@ namespace TimeManagement.Application.Services
             if (endDate.HasValue && checkDate > endDate.Value)
                 return false;
 
-            // Check max occurrences if specified
-            if (!string.IsNullOrEmpty(schedule.EndType) && 
-                schedule.EndType.ToLower() == "afteroccurrences" && 
-                schedule.MaxOccurrences.HasValue)
-            {
-                var occurrenceCount = CountOccurrencesUntilDate(schedule, checkDate);
-                if (occurrenceCount > schedule.MaxOccurrences.Value)
-                    return false;
-            }
-
-            // Evaluate based on schedule type
-            var scheduleType = schedule.ScheduleType.HasValue 
-                ? (ScheduleType)schedule.ScheduleType.Value 
+            var scheduleType = schedule.ScheduleType.HasValue
+                ? (ScheduleType)schedule.ScheduleType.Value
                 : ScheduleType.DoesNotRepeat;
 
-            return scheduleType switch
+            // Evaluate base pattern
+            var isValid = scheduleType switch
             {
                 ScheduleType.DoesNotRepeat => checkDate == startDate,
                 ScheduleType.Daily => IsValidDaily(schedule, checkDate, startDate),
@@ -62,6 +52,23 @@ namespace TimeManagement.Application.Services
                 ScheduleType.DaysOnOff => IsValidDaysOnOff(schedule, checkDate, startDate),
                 _ => false
             };
+
+            if (!isValid)
+                return false;
+
+            var endTypeValue = schedule.EndType?.Trim().ToLowerInvariant();
+
+            // Check max occurrences if specified
+            if (!string.IsNullOrEmpty(endTypeValue) &&
+                (endTypeValue == "afteroccurrences" || endTypeValue == "3") &&
+                schedule.MaxOccurrences.HasValue)
+            {
+                var occurrenceCount = CountOccurrencesUntilDate(schedule, checkDate);
+                if (occurrenceCount > schedule.MaxOccurrences.Value)
+                    return false;
+            }
+
+            return true;
         }
 
         private DateTime? GetScheduleEndDate(ScheduleResponse schedule)
@@ -69,11 +76,11 @@ namespace TimeManagement.Application.Services
             if (string.IsNullOrEmpty(schedule.EndType))
                 return null;
 
-            var endType = schedule.EndType.ToLower();
-            
+            var endType = schedule.EndType.Trim().ToLowerInvariant();
+
             if (endType == "ondate" || endType == "2")
                 return schedule.ValidUntil?.Date;
-            
+
             return null; // Never or AfterOccurrences handled separately
         }
 
@@ -177,40 +184,62 @@ namespace TimeManagement.Application.Services
                 return 0;
 
             var startDate = schedule.StartFrom.Value.Date;
-            var scheduleType = schedule.ScheduleType.HasValue 
-                ? (ScheduleType)schedule.ScheduleType.Value 
+            var scheduleType = schedule.ScheduleType.HasValue
+                ? (ScheduleType)schedule.ScheduleType.Value
                 : ScheduleType.DoesNotRepeat;
 
-            if (scheduleType == ScheduleType.DoesNotRepeat)
-                return untilDate >= startDate ? 1 : 0;
-
-            if (scheduleType == ScheduleType.Daily)
+            switch (scheduleType)
             {
-                var repeatEvery = schedule.RepeatEvery ?? 1;
-                if (repeatEvery < 1) repeatEvery = 1;
-                var daysSinceStart = (untilDate - startDate).Days;
-                if (daysSinceStart < 0) return 0;
-                return (daysSinceStart / repeatEvery) + 1;
-            }
+                case ScheduleType.DoesNotRepeat:
+                    return untilDate >= startDate ? 1 : 0;
+                case ScheduleType.Daily:
+                {
+                    var repeatEvery = schedule.RepeatEvery ?? 1;
+                    if (repeatEvery < 1) repeatEvery = 1;
+                    var daysSinceStart = (untilDate - startDate).Days;
+                    if (daysSinceStart < 0) return 0;
+                    return (daysSinceStart / repeatEvery) + 1;
+                }
+                case ScheduleType.Weekly:
+                {
+                    var repeatEvery = schedule.RepeatEvery ?? 1;
+                    if (repeatEvery < 1) repeatEvery = 1;
 
-            // For Weekly, Monthly, DaysOnOff - count by checking each day
-            // This is simpler than complex math and works for all patterns
-            var count = 0;
-            var currentDate = startDate;
-            var maxDays = Math.Min((untilDate - startDate).Days + 1, 3650); // Max 10 years
-            
-            for (int i = 0; i < maxDays; i++)
-            {
-                // Temporarily skip the max occurrence check to avoid recursion
-                if (IsDateValidInternal(schedule, currentDate))
-                    count++;
-                    
-                currentDate = currentDate.AddDays(1);
-                if (currentDate > untilDate)
-                    break;
+                    var startOfStartWeek = startDate.AddDays(-(int)startDate.DayOfWeek);
+                    var startOfUntilWeek = untilDate.AddDays(-(int)untilDate.DayOfWeek);
+                    var weeksSinceStart = (int)((startOfUntilWeek - startOfStartWeek).TotalDays / 7);
+                    if (weeksSinceStart < 0) return 0;
+                    return (weeksSinceStart / repeatEvery) + 1;
+                }
+                case ScheduleType.Monthly:
+                {
+                    var repeatEvery = schedule.RepeatEvery ?? 1;
+                    if (repeatEvery < 1) repeatEvery = 1;
+
+                    var monthsSinceStart = ((untilDate.Year - startDate.Year) * 12) + (untilDate.Month - startDate.Month);
+                    if (monthsSinceStart < 0) return 0;
+                    return (monthsSinceStart / repeatEvery) + 1;
+                }
+                case ScheduleType.DaysOnOff:
+                {
+                    var pattern = schedule.Frequency?
+                        .Where(f => f.Day.HasValue && f.Day.Value > 0 && f.DayType.HasValue)
+                        .OrderBy(f => f.Id)
+                        .ToList();
+
+                    if (pattern == null || pattern.Count == 0)
+                        return 0;
+
+                    var totalPatternDays = pattern.Sum(p => p.Day.Value);
+                    var daysSinceStart = (untilDate - startDate).Days;
+                    if (daysSinceStart < 0) return 0;
+
+                    var cyclesCompleted = daysSinceStart / totalPatternDays;
+                    return cyclesCompleted + 1;
+                }
+                default:
+                    return 0;
             }
-            
-            return count;
         }
 
         // Internal method that skips max occurrence check to avoid recursion

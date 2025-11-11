@@ -10,6 +10,7 @@ namespace TimeManagement.Application.DTOs.Shifts
     public class CalendarDay
     {
         public int DayNo { get; set; }
+        public int MonthNo { get; set; }
         public List<SchedulingShift> SchedulingShifts { get; set; }
     }
 }
