@@ -16,6 +16,7 @@ public class ShiftAssignmentConflictService
     private readonly ScheduleEvaluator _scheduleEvaluator;
     private const int MaxOccurrenceHorizonYears = 5;
     private const int MaxOccurrenceIterationDays = 2000;
+    private const int MaxAvailabilityConflictEntries = 10;
 
     public ShiftAssignmentConflictService(ScheduleEvaluator scheduleEvaluator)
     {
@@ -144,6 +145,79 @@ public class ShiftAssignmentConflictService
                         Reason = "Schedule overlap detected."
                     });
                 }
+            }
+        }
+
+        return conflicts.Count > 0 ? conflicts : null;
+    }
+
+    public List<ScheduleConflictDetail>? DetectAvailabilityConflicts(
+        ScheduleEmployeeRequest request,
+        List<AvailabilityDto>? availabilityWindows)
+    {
+        if (request?.Schedules == null || request.Schedules.Count == 0)
+        {
+            return null;
+        }
+
+        var newScheduleRequest = request.Schedules.First();
+        var newSchedule = ConvertToScheduleResponse(newScheduleRequest);
+
+        if (newSchedule == null || !newSchedule.StartFrom.HasValue)
+        {
+            return new List<ScheduleConflictDetail>
+            {
+                new ScheduleConflictDetail
+                {
+                    UserId = request.UserId,
+                    RequestedScheduleId = newSchedule?.Id,
+                    Reason = "Requested schedule is missing a valid start date."
+                }
+            };
+        }
+
+        var rangeStart = newSchedule.StartFrom.Value.Date;
+        var rangeEnd = DetermineRangeEnd(newSchedule, rangeStart);
+        var newOccurrences = GenerateOccurrences(newSchedule, rangeStart, rangeEnd);
+
+        if (!newOccurrences.Any())
+        {
+            return null;
+        }
+
+        if (availabilityWindows == null || availabilityWindows.Count == 0)
+        {
+            return newOccurrences
+                .Take(MaxAvailabilityConflictEntries)
+                .Select(occurrence => BuildAvailabilityConflictDetail(
+                    request.UserId,
+                    newSchedule,
+                    occurrence,
+                    null,
+                    "No staff availability defined for this user."))
+                .ToList();
+        }
+
+        var conflicts = new List<ScheduleConflictDetail>();
+
+        foreach (var occurrence in newOccurrences)
+        {
+            var coveringAvailability = availabilityWindows
+                .FirstOrDefault(a => AvailabilityCoversOccurrence(a, occurrence));
+
+            if (coveringAvailability == null)
+            {
+                conflicts.Add(BuildAvailabilityConflictDetail(
+                    request.UserId,
+                    newSchedule,
+                    occurrence,
+                    null,
+                    "Scheduled time falls outside staff availability."));
+            }
+
+            if (conflicts.Count >= MaxAvailabilityConflictEntries)
+            {
+                break;
             }
         }
 
@@ -501,6 +575,100 @@ public class ShiftAssignmentConflictService
             End = end,
             IsAllDay = false
         };
+    }
+
+    private ScheduleConflictDetail BuildAvailabilityConflictDetail(
+        int userId,
+        ScheduleResponse newSchedule,
+        ScheduleOccurrence occurrence,
+        AvailabilityDto? availability,
+        string reason)
+    {
+        var requestedWindow = new TimeWindow
+        {
+            Start = occurrence.Window.Start,
+            End = occurrence.Window.End,
+            IsAllDay = occurrence.Window.IsAllDay
+        };
+
+        TimeWindow availabilityWindow;
+
+        if (availability == null || !availability.StartTime.HasValue || !availability.EndTime.HasValue)
+        {
+            availabilityWindow = new TimeWindow();
+        }
+        else
+        {
+            var start = occurrence.Date.Date.Add(availability.StartTime.Value);
+            var end = occurrence.Date.Date.Add(availability.EndTime.Value);
+            if (end <= start)
+            {
+                end = end.AddDays(1);
+            }
+
+            availabilityWindow = new TimeWindow
+            {
+                Start = start,
+                End = end,
+                IsAllDay = false
+            };
+        }
+
+        return new ScheduleConflictDetail
+        {
+            UserId = userId,
+            RequestedScheduleId = newSchedule.Id,
+            ExistingScheduleId = availability?.Id,
+            ExistingShiftName = availability != null ? "Staff Availability" : "No Availability",
+            Date = occurrence.Date,
+            RequestedWindow = requestedWindow,
+            ExistingWindow = availabilityWindow,
+            Reason = reason
+        };
+    }
+
+    private bool AvailabilityCoversOccurrence(AvailabilityDto availability, ScheduleOccurrence occurrence)
+    {
+        if (availability.StartFrom.HasValue && occurrence.Date < availability.StartFrom.Value.Date)
+        {
+            return false;
+        }
+
+        if (availability.ValidUntil.HasValue && occurrence.Date > availability.ValidUntil.Value.Date)
+        {
+            return false;
+        }
+
+        if (!availability.StartTime.HasValue)
+        {
+            // No time bounds; availability is all day for the valid range
+            return true;
+        }
+
+        var availabilityStart = occurrence.Date.Date.Add(availability.StartTime.Value);
+        DateTime availabilityEnd;
+
+        if (availability.EndTime.HasValue)
+        {
+            availabilityEnd = occurrence.Date.Date.Add(availability.EndTime.Value);
+            if (availabilityEnd <= availabilityStart)
+            {
+                availabilityEnd = availabilityEnd.AddDays(1);
+            }
+        }
+        else
+        {
+            // No end time; treat as open-ended from the start time forward
+            availabilityEnd = DateTime.MaxValue;
+        }
+
+        if (!occurrence.Window.Start.HasValue || !occurrence.Window.End.HasValue)
+        {
+            return false;
+        }
+
+        return occurrence.Window.Start.Value >= availabilityStart &&
+               occurrence.Window.End.Value <= availabilityEnd;
     }
 
     #endregion

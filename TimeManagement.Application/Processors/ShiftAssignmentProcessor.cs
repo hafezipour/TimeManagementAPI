@@ -131,20 +131,28 @@ public class ShiftAssignmentProcessor : BaseProcessor
                 .Where(s => s.SourceType == (int)ScheduleSourceTypes.StaffAvailability)
                 .ToList();
 
-            var a = availabilitySchedules.Select(s => new AvailabilityDto
+            var availabilityDtos = availabilitySchedules?.Select(s => new AvailabilityDto
             {
-                s.Id,
-                s.StartFrom,
-                s.EndType,
-                s.ValidUntil,
-                s.MaxOccurrences,
-                s.ScheduleType,
-                s.RepeatEvery,
-                s.StartTime,
-                s.EndTime,
-                s.ScheduleWithoutTimes,
-                s.Frequency
+                Id = s.Id,
+                UserId = s.SourceId,
+                StartFrom = s.StartFrom,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                ValidUntil = s.ValidUntil
             }).ToList();
+
+            var availabilityConflicts = _conflictService.DetectAvailabilityConflicts(request, availabilityDtos);
+            if (availabilityConflicts != null && availabilityConflicts.Any())
+            {
+                return new
+                {
+                    success = false,
+                    message = "Conflicting staff availability detected.",
+                    userId = request.UserId,
+                    shiftId = request.ShiftId,
+                    conflicts = availabilityConflicts
+                }.ToJson();
+            }
 
 
             #endregion
