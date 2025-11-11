@@ -71,42 +71,84 @@ public class ShiftAssignmentProcessor : BaseProcessor
             var existingAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(existingAssignmentsJson);
 
             // Fetch schedules for all existing assignments
-            if (existingAssignments != null && existingAssignments.Any())
-            {
-                // Build comma-separated lists of assignment IDs
-                var assignmentIds = string.Join(",", existingAssignments.Select(a => a.Id));
-                var sourceTypes = Convert.ToString(((int)ScheduleSourceTypes.ShiftAssignment)); // All are ShiftAssignment type
+            var assignmentIdList = existingAssignments
+                .Select(a => a.Id)
+                .Distinct()
+                .ToList();
 
-                // Fetch schedules for these assignments
+            var sourceIds = new List<int>();
+            sourceIds.AddRange(assignmentIdList);
+
+            // Include staff availability source ids (using the user id as the availability source for now)
+            if (request.UserId > 0)
+            {
+                sourceIds.Add(request.UserId);
+            }
+
+            var sourceTypes = new List<int>();
+            if (assignmentIdList.Any())
+            {
+                sourceTypes.Add((int)ScheduleSourceTypes.ShiftAssignment);
+            }
+            if (request.UserId > 0)
+            {
+                sourceTypes.Add((int)ScheduleSourceTypes.StaffAvailability);
+            }
+
+            List<ScheduleResponse>? schedules = null;
+
+            if (sourceIds.Any() && sourceTypes.Any())
+            {
                 var schedulesJson = await _scheduleProcessor.GetBySource(new GetScheduleRequest
                 {
-                    SourceIds = assignmentIds,
-                    SourceTypes = sourceTypes
+                    SourceIds = string.Join(",", sourceIds.Distinct()),
+                    SourceTypes = string.Join(",", sourceTypes.Distinct())
                 });
 
-                // Deserialize schedules into List<ScheduleResponse>
-                var schedules = JsonConvert.DeserializeObject<List<ScheduleResponse>>(schedulesJson);
-
-                // Validate that the new schedule does not conflict with existing assignments
-                var conflicts = _conflictService.DetectConflicts(request, existingAssignments, schedules);
-                if (conflicts != null && conflicts.Any())
-                {
-                    return new
-                    {
-                        success = false,
-                        message = "Conflicting schedules detected.",
-                        userId = request.UserId,
-                        shiftId = request.ShiftId,
-                        conflicts
-                    }.ToJson();
-                }
-
-                // Log for debugging (for now)
-                Console.WriteLine($"Found {existingAssignments.Count} existing assignments with {schedules?.Count ?? 0} schedules");
+                schedules = JsonConvert.DeserializeObject<List<ScheduleResponse>>(schedulesJson);
             }
+
+            // Filter schedules down to shift assignments for conflict detection (availability schedules fetched but unused for now)
+            var shiftAssignmentSchedules = schedules?
+                .Where(s => s.SourceType == (int)ScheduleSourceTypes.ShiftAssignment)
+                .ToList();
+
+            // Validate that the new schedule does not conflict with existing assignments
+            var conflicts = _conflictService.DetectConflicts(request, existingAssignments, shiftAssignmentSchedules);
+            if (conflicts != null && conflicts.Any())
+            {
+                return new
+                {
+                    success = false,
+                    message = "Conflicting schedules detected.",
+                    userId = request.UserId,
+                    shiftId = request.ShiftId,
+                    conflicts
+                }.ToJson();
+            }
+
+            var availabilitySchedules = schedules?
+                .Where(s => s.SourceType == (int)ScheduleSourceTypes.StaffAvailability)
+                .ToList();
+
+            var a = availabilitySchedules.Select(s => new AvailabilityDto
+            {
+                s.Id,
+                s.StartFrom,
+                s.EndType,
+                s.ValidUntil,
+                s.MaxOccurrences,
+                s.ScheduleType,
+                s.RepeatEvery,
+                s.StartTime,
+                s.EndTime,
+                s.ScheduleWithoutTimes,
+                s.Frequency
+            }).ToList();
 
 
             #endregion
+
             // Now proceed with saving the new/updated assignment
             var json = request.ToJson();
             var result = await _shiftAssignmentRepository.ScheduleEmployee(json, CurrentUser.LoginId, CurrentUser.TenantID);
