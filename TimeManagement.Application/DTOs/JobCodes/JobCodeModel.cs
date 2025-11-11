@@ -32,6 +32,12 @@ public class JobCodeModel
     public string Category { get; set; } = string.Empty;
 
     /// <summary>
+    /// Hex color code associated with the job code
+    /// Maps to: DB.ColorCode -> SP.colorCode
+    /// </summary>
+    public string? ColorCode { get; set; }
+
+    /// <summary>
     /// Maps to: DB.IsExempt -> SP.isExempt
     /// </summary>
     public bool IsExempt { get; set; }

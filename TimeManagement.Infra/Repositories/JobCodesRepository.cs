@@ -53,7 +53,7 @@ public class JobCodesRepository
     /// Add a new Job Code
     /// </summary>
     public async Task<string> AddJobCode(string jobTitle, string code, string description, string category,
-        bool isExempt, decimal payRate, decimal defaultHoursPerWeek, bool isActive, int tenantId, int createdBy)
+        bool isExempt, decimal payRate, decimal defaultHoursPerWeek, bool isActive, int tenantId, int createdBy, string? colorCode)
     {
         var param = new List<SqlParameterModel>
         {
@@ -66,7 +66,8 @@ public class JobCodesRepository
             new SqlParameterModel { Name = "DefaultHoursPerWeek", Value = defaultHoursPerWeek },
             new SqlParameterModel { Name = "IsActive", Value = isActive },
             new SqlParameterModel { Name = "TenantId", Value = tenantId },
-            new SqlParameterModel { Name = "CreatedBy", Value = createdBy }
+            new SqlParameterModel { Name = "CreatedBy", Value = createdBy },
+            new SqlParameterModel { Name = "ColorCode", Value = colorCode }
         };
         return await _dbOperations.ExecuteDataSetAsync("usp_JobCodes_Add", param);
     }
@@ -75,7 +76,7 @@ public class JobCodesRepository
     /// Update an existing Job Code
     /// </summary>
     public async Task<string> UpdateJobCode(int id, string jobTitle, string code, string description, string category,
-        bool isExempt, decimal payRate, decimal defaultHoursPerWeek, bool isActive, int tenantId, int updatedBy)
+        bool isExempt, decimal payRate, decimal defaultHoursPerWeek, bool isActive, int tenantId, int updatedBy, string? colorCode)
     {
         var param = new List<SqlParameterModel>
         {
@@ -89,7 +90,8 @@ public class JobCodesRepository
             new SqlParameterModel { Name = "DefaultHoursPerWeek", Value = defaultHoursPerWeek },
             new SqlParameterModel { Name = "IsActive", Value = isActive },
             new SqlParameterModel { Name = "TenantId", Value = tenantId },
-            new SqlParameterModel { Name = "UpdatedBy", Value = updatedBy }
+            new SqlParameterModel { Name = "ModifiedBy", Value = updatedBy },
+            new SqlParameterModel { Name = "ColorCode", Value = colorCode }
         };
         return await _dbOperations.ExecuteDataSetAsync("usp_JobCodes_Update", param);
     }

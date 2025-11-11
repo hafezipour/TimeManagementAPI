@@ -95,7 +95,8 @@ public class JobCodeProcessor : BaseProcessor
                 jobCodeDto.DefaultHoursPerWeek,
                 jobCodeDto.IsActive,
                 jobCodeDto.TenantId,
-                jobCodeDto.CreatedBy
+                jobCodeDto.CreatedBy,
+                jobCodeDto.ColorCode
             );
 
             return result;
@@ -130,7 +131,8 @@ public class JobCodeProcessor : BaseProcessor
                 jobCodeDto.DefaultHoursPerWeek,
                 jobCodeDto.IsActive,
                 jobCodeDto.TenantId,
-                jobCodeDto.ModifiedBy ?? CurrentUser.LoginId
+                jobCodeDto.ModifiedBy ?? CurrentUser.LoginId,
+                jobCodeDto.ColorCode
             );
 
             return result;
