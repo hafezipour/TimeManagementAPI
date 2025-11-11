@@ -64,7 +64,9 @@ public class ShiftAssignmentProcessor : BaseProcessor
         {
             _scheduleProcessor.SetCurrentUser(this.CurrentUser);
 
-            #region Existing Assignments and validation of duplicating scheduling
+            #region Conflicts Checking and validations
+
+            #region Assignment Conflicts
 
             // BEFORE SAVING: Fetch existing assignments for the user
             var existingAssignmentsJson = await _shiftAssignmentRepository.Get(request.UserId.ToString(), null, CurrentUser.TenantID);
@@ -127,9 +129,13 @@ public class ShiftAssignmentProcessor : BaseProcessor
                 }.ToJson();
             }
 
+            #endregion
+
+            #region Availability Conflicts
+
             var availabilitySchedules = schedules?
-                .Where(s => s.SourceType == (int)ScheduleSourceTypes.StaffAvailability)
-                .ToList();
+            .Where(s => s.SourceType == (int)ScheduleSourceTypes.StaffAvailability)
+            .ToList();
 
             var availabilityDtos = availabilitySchedules?.Select(s => new AvailabilityDto
             {
@@ -154,6 +160,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
                 }.ToJson();
             }
 
+            #endregion
 
             #endregion
 
