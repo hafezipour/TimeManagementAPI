@@ -43,6 +43,7 @@ builder.Services.AddScoped<TimeManagement.Application.Processors.LabelsProcessor
 builder.Services.AddScoped<TimeManagement.Application.Processors.AssistantQualifiersProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.TradeBoardSettingsProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.ShiftAssignmentProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Processors.EmployeeAvailabilityProcessor>();
 
 // Register services
 builder.Services.AddScoped<TimeManagement.Application.Services.ScheduleEvaluator>();
@@ -66,6 +67,7 @@ builder.Services.AddScoped<TimeManagement.Infra.Repositories.LabelsRepository>()
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.AssistantQualifiersRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.TradeBoardSettingsRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.ShiftAssignmentRepository>();
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.EmployeeAvailabilityRepository>();
 builder.Services.AddScoped<WebPortal.EF.Repository.DataBaseRepo.EfDbOperationsRepository>();
 
 builder.Services.AddControllers();

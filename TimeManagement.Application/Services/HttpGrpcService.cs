@@ -26,6 +26,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly AssistantQualifiersProcessor _assistantQualifiersProcessor;
     private readonly TradeBoardSettingsProcessor _tradeBoardSettingsProcessor;
     private readonly ShiftAssignmentProcessor _shiftAssignmentProcessor;
+    private readonly EmployeeAvailabilityProcessor _employeeAvailabilityProcessor;
 
     public HttpGrpcService(
         JobCodeProcessor jobCodeProcessor,
@@ -43,7 +44,8 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         LabelsProcessor labelsProcessor,
         AssistantQualifiersProcessor assistantQualifiersProcessor,
         TradeBoardSettingsProcessor tradeBoardSettingsProcessor,
-        ShiftAssignmentProcessor shiftAssignmentProcessor)
+        ShiftAssignmentProcessor shiftAssignmentProcessor,
+        EmployeeAvailabilityProcessor employeeAvailabilityProcessor)
     {
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
@@ -62,6 +64,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _assistantQualifiersProcessor = assistantQualifiersProcessor;
         _tradeBoardSettingsProcessor = tradeBoardSettingsProcessor;
         _shiftAssignmentProcessor = shiftAssignmentProcessor;
+        _employeeAvailabilityProcessor = employeeAvailabilityProcessor;
     }
 
     public override async Task<HttpResponse> Get(HttpRequest request, ServerCallContext context)
@@ -261,6 +264,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "shiftassignment":
                     _shiftAssignmentProcessor.SetCurrentUser(authResult.User);
                     result = await _shiftAssignmentProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "employeeavailability":
+                    _employeeAvailabilityProcessor.SetCurrentUser(authResult.User);
+                    result = await _employeeAvailabilityProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);
