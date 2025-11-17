@@ -29,6 +29,7 @@ builder.Services.AddGrpc();
 // Register processors for dependency injection
 builder.Services.AddScoped<TimeManagement.Application.Processors.JobCodeProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.WorkCodeProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Processors.AccrualTypesProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayAssignmentProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.ShiftProcessor>();
@@ -43,6 +44,9 @@ builder.Services.AddScoped<TimeManagement.Application.Processors.LabelsProcessor
 builder.Services.AddScoped<TimeManagement.Application.Processors.AssistantQualifiersProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.TradeBoardSettingsProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.ShiftAssignmentProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Processors.CustomTableValuesProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Services.ProcessorRequestRouter>();
+builder.Services.AddScoped<TimeManagement.Application.Security.ValidateToken>();
 
 // Register services
 builder.Services.AddScoped<TimeManagement.Application.Services.ScheduleEvaluator>();
@@ -54,6 +58,7 @@ builder.Services.AddScoped<TimeManagement.Infra.Repositories.HolidaysRepository>
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.HolidayAssignmentRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.JobCodesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.WorkCodesRepository>();
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.AccrualTypesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.SchedulesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.ShiftsRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.LayoutRepository>();
@@ -66,6 +71,7 @@ builder.Services.AddScoped<TimeManagement.Infra.Repositories.LabelsRepository>()
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.AssistantQualifiersRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.TradeBoardSettingsRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.ShiftAssignmentRepository>();
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.CustomTableValuesRepository>();
 builder.Services.AddScoped<WebPortal.EF.Repository.DataBaseRepo.EfDbOperationsRepository>();
 
 builder.Services.AddControllers();

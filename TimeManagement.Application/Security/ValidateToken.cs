@@ -2,9 +2,11 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Grpc.Core;
+using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using TimeManagement.Domain.Models;
 using WebPortalSecurityManager;
+using System.Linq;
 
 namespace TimeManagement.Application.Security;
 
@@ -40,6 +42,89 @@ public class ValidateToken
         {
             Console.WriteLine("THIS TOKEN IS INVALID: " + ex.Message);
             return null;
+        }
+    }
+
+    /// <summary>
+    /// Authenticates a standard HTTP request and extracts the logged in user.
+    /// </summary>
+    public async Task<(bool IsAuthenticated, LoggedInUser? User)> AuthenticateHttpRequest(HttpContext context)
+    {
+        try
+        {
+            var headers = context.Request.Headers;
+
+            if (!headers.TryGetValue("Authorization", out var authorizationValues))
+            {
+                return (false, null);
+            }
+
+            var authHeader = authorizationValues.FirstOrDefault();
+            if (string.IsNullOrWhiteSpace(authHeader))
+            {
+                return (false, null);
+            }
+
+            var token = authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+                ? authHeader.Substring("Bearer ".Length)
+                : authHeader;
+
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                return (false, null);
+            }
+
+            var handler = new JwtSecurityTokenHandler();
+            var jsonToken = handler.ReadToken(token) as JwtSecurityToken;
+            int tenantId = int.Parse(jsonToken?.Claims.FirstOrDefault(c => c.Type == "tenantid")?.Value ?? "0");
+
+            var configurations = await new WebPortalCredentialsHandler().GetConfigurationsModel(tenantId);
+
+            var claimsPrincipal = IsValidToken(configurations.JwtSigningKey, token);
+            if (claimsPrincipal == null)
+            {
+                return (false, null);
+            }
+
+            var updatedIdentity = new ClaimsIdentity(claimsPrincipal.Identity);
+
+            if (headers.TryGetValue("tenant_id", out var tenantOverrideValues))
+            {
+                var tenantOverride = tenantOverrideValues.FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(tenantOverride))
+                {
+                    var existingTenantClaim = updatedIdentity.FindFirst("tenantid");
+                    if (existingTenantClaim != null)
+                    {
+                        updatedIdentity.RemoveClaim(existingTenantClaim);
+                    }
+                    updatedIdentity.AddClaim(new Claim("tenantid", tenantOverride));
+                }
+            }
+
+            if (headers.TryGetValue("login_id", out var loginOverrideValues))
+            {
+                var loginOverride = loginOverrideValues.FirstOrDefault();
+                if (!string.IsNullOrWhiteSpace(loginOverride))
+                {
+                    var existingUserIdClaim = updatedIdentity.FindFirst("userid");
+                    if (existingUserIdClaim != null)
+                    {
+                        updatedIdentity.RemoveClaim(existingUserIdClaim);
+                    }
+                    updatedIdentity.AddClaim(new Claim("userid", loginOverride));
+                }
+            }
+
+            var finalPrincipal = new ClaimsPrincipal(updatedIdentity);
+            var loggedInUser = ExtractLoggedInUser(finalPrincipal.Identity);
+
+            return (loggedInUser != null, loggedInUser);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Authentication error: " + ex.Message);
+            return (false, null);
         }
     }
 
