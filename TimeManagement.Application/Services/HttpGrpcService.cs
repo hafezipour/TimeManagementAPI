@@ -29,6 +29,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly EmployeeAvailabilityProcessor _employeeAvailabilityProcessor;
     private readonly CustomTableValuesProcessor _customTableValuesProcessor;
     private readonly AccrualTypesProcessor _accrualTypesProcessor;
+    private readonly AccrualProfilesProcessor _accrualProfilesProcessor;
 
     public HttpGrpcService(
         JobCodeProcessor jobCodeProcessor,
@@ -49,9 +50,11 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         ShiftAssignmentProcessor shiftAssignmentProcessor,
         EmployeeAvailabilityProcessor employeeAvailabilityProcessor,
         CustomTableValuesProcessor customTableValuesProcessor,
-        AccrualTypesProcessor accrualTypesProcessor)
+        AccrualTypesProcessor accrualTypesProcessor,
+        AccrualProfilesProcessor accrualProfilesProcessor)
     {
         _accrualTypesProcessor = accrualTypesProcessor;
+        _accrualProfilesProcessor = accrualProfilesProcessor;
         _customTableValuesProcessor = customTableValuesProcessor;
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
@@ -294,6 +297,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "accrualtypes":
                     _accrualTypesProcessor.SetCurrentUser(authResult.User);
                     result = await _accrualTypesProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "accrualprofiles":
+                    _accrualProfilesProcessor.SetCurrentUser(authResult.User);
+                    result = await _accrualProfilesProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);

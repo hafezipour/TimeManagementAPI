@@ -30,6 +30,7 @@ builder.Services.AddGrpc();
 builder.Services.AddScoped<TimeManagement.Application.Processors.JobCodeProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.WorkCodeProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.AccrualTypesProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Processors.AccrualProfilesProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayAssignmentProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.ShiftProcessor>();
@@ -61,6 +62,7 @@ builder.Services.AddScoped<TimeManagement.Infra.Repositories.HolidayAssignmentRe
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.JobCodesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.WorkCodesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.AccrualTypesRepository>();
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.AccrualProfilesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.SchedulesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.ShiftsRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.LayoutRepository>();

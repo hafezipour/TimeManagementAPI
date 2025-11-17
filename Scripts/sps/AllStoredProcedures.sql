@@ -276,6 +276,208 @@ BEGIN
 END
 GO
 
+/* ----- dbo.usp_AccrualProfiles_Get.StoredProcedure.sql ----- */
+USE [TimeManagement_DEV]
+GO
+/****** Object:  StoredProcedure [dbo].[usp_AccrualProfiles_Get]    Script Date: 11/14/2025 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:      TimeManagement API
+-- Create date: 11/14/2025
+-- Description: Get Accrual Profiles
+-- =============================================
+CREATE   PROCEDURE [dbo].[usp_AccrualProfiles_Get]
+    @AccrualProfileId INT = NULL,
+    @TenantId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        ap.Id AS id,
+        ap.ProfileName AS profileName,
+        ap.IsBaseOnYearsServed AS isBaseOnYearsServed,
+        ap.FromYears AS fromYears,
+        ap.ToYears AS toYears,
+        ap.Description AS description,
+        ap.CreatedBy AS createdBy,
+        ap.UpdatedBy AS updatedBy,
+        ap.DateCreated AS dateCreated,
+        ap.DateUpdated AS dateUpdated
+    FROM AccrualProfiles ap
+    WHERE ap.TenantId = @TenantId
+      AND (@AccrualProfileId IS NULL OR ap.Id = @AccrualProfileId)
+    ORDER BY ap.ProfileName
+    FOR JSON PATH, INCLUDE_NULL_VALUES
+END
+GO
+
+/* ----- dbo.usp_AccrualProfiles_Save.StoredProcedure.sql ----- */
+USE [TimeManagement_DEV]
+GO
+/****** Object:  StoredProcedure [dbo].[usp_AccrualProfiles_Save]    Script Date: 11/14/2025 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:      TimeManagement API
+-- Create date: 11/14/2025
+-- Description: Insert/Update Accrual Profiles
+-- =============================================
+CREATE   PROCEDURE [dbo].[usp_AccrualProfiles_Save]
+    @Json VARCHAR(MAX),
+    @UserId INT,
+    @TenantId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        BEGIN TRANSACTION;
+
+        DECLARE @Id INT;
+        DECLARE @ProfileName VARCHAR(255);
+        DECLARE @IsBaseOnYearsServed BIT;
+        DECLARE @FromYears DECIMAL(10, 2);
+        DECLARE @ToYears DECIMAL(10, 2);
+        DECLARE @Description NVARCHAR(MAX);
+
+        SELECT
+            @Id = id,
+            @ProfileName = profileName,
+            @IsBaseOnYearsServed = ISNULL(isBaseOnYearsServed, 0),
+            @FromYears = fromYears,
+            @ToYears = toYears,
+            @Description = description
+        FROM OPENJSON(@Json) WITH (
+            id INT,
+            profileName VARCHAR(255),
+            isBaseOnYearsServed BIT,
+            fromYears DECIMAL(10, 2),
+            toYears DECIMAL(10, 2),
+            description NVARCHAR(MAX)
+        );
+
+        IF (@ProfileName IS NULL OR LTRIM(RTRIM(@ProfileName)) = '')
+        BEGIN
+            SELECT CAST(0 AS BIT) AS success, 'Profile Name is required.' AS message
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
+            ROLLBACK TRANSACTION;
+            RETURN;
+        END
+
+        IF EXISTS (SELECT 1 FROM AccrualProfiles WHERE Id = ISNULL(@Id, 0) AND TenantId = @TenantId)
+        BEGIN
+            UPDATE AccrualProfiles
+            SET
+                ProfileName = @ProfileName,
+                IsBaseOnYearsServed = @IsBaseOnYearsServed,
+                FromYears = @FromYears,
+                ToYears = @ToYears,
+                Description = @Description,
+                UpdatedBy = @UserId,
+                DateUpdated = SYSUTCDATETIME()
+            WHERE Id = @Id AND TenantId = @TenantId;
+
+            SELECT @Id AS id, CAST(1 AS BIT) AS success, 'Accrual profile updated successfully.' AS message
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
+        END
+        ELSE
+        BEGIN
+            INSERT INTO AccrualProfiles (
+                TenantId,
+                ProfileName,
+                IsBaseOnYearsServed,
+                FromYears,
+                ToYears,
+                Description,
+                CreatedBy,
+                DateCreated
+            )
+            VALUES (
+                @TenantId,
+                @ProfileName,
+                @IsBaseOnYearsServed,
+                @FromYears,
+                @ToYears,
+                @Description,
+                @UserId,
+                SYSUTCDATETIME()
+            );
+
+            SET @Id = SCOPE_IDENTITY();
+
+            SELECT @Id AS id, CAST(1 AS BIT) AS success, 'Accrual profile created successfully.' AS message
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
+        END
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        SELECT
+            CAST(0 AS BIT) AS success,
+            ERROR_MESSAGE() AS message
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
+    END CATCH
+END
+GO
+
+/* ----- dbo.usp_AccrualProfiles_Delete.StoredProcedure.sql ----- */
+USE [TimeManagement_DEV]
+GO
+/****** Object:  StoredProcedure [dbo].[usp_AccrualProfiles_Delete]    Script Date: 11/14/2025 ******/
+SET ANSI_NULLS ON
+GO
+SET QUOTED_IDENTIFIER ON
+GO
+-- =============================================
+-- Author:      TimeManagement API
+-- Create date: 11/14/2025
+-- Description: Delete Accrual Profile
+-- =============================================
+CREATE   PROCEDURE [dbo].[usp_AccrualProfiles_Delete]
+    @AccrualProfileId INT,
+    @UserId INT,
+    @TenantId INT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    BEGIN TRY
+        DELETE FROM AccrualProfiles
+        WHERE Id = @AccrualProfileId
+          AND TenantId = @TenantId;
+
+        IF @@ROWCOUNT = 0
+        BEGIN
+            SELECT
+                CAST(0 AS BIT) AS success,
+                'Accrual profile not found.' AS message
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
+            RETURN;
+        END
+
+        SELECT
+            CAST(1 AS BIT) AS success,
+            'Accrual profile deleted successfully.' AS message
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
+    END TRY
+    BEGIN CATCH
+        SELECT
+            CAST(0 AS BIT) AS success,
+            ERROR_MESSAGE() AS message
+        FOR JSON PATH, WITHOUT_ARRAY_WRAPPER;
+    END CATCH
+END
+GO
+
 /* ----- dbo.usp_CustomTableValues_GetShortList.StoredProcedure.sql ----- */
 USE [TimeManagement_DEV]
 GO
