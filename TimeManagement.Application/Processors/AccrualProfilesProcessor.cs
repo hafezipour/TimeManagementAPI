@@ -23,6 +23,7 @@ public class AccrualProfilesProcessor : BaseProcessor
                 "save" => await Save(jsonData.FromJson<SaveAccrualProfileRequest>() ?? new SaveAccrualProfileRequest()),
                 "delete" => await Delete(jsonData.FromJson<DeleteAccrualProfileRequest>()),
                 "get" => await GetAccrualProfiles(jsonData.FromJson<GetAccrualProfileRequest>()),
+                "getshortlist" => await GetShortList(),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -78,6 +79,19 @@ public class AccrualProfilesProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving accrual profiles: {ex.Message}" }.ToJson();
+        }
+    }
+
+    private async Task<string> GetShortList()
+    {
+        try
+        {
+            var result = await _accrualProfilesRepository.GetAccrualProfilesShortList(CurrentUser.TenantID);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving accrual profiles short list: {ex.Message}" }.ToJson();
         }
     }
 }

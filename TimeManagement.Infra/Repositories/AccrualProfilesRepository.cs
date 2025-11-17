@@ -68,5 +68,22 @@ public class AccrualProfilesRepository
             throw ex;
         }
     }
+
+    public async Task<string> GetAccrualProfilesShortList(int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new()
+            {
+                new SqlParameterModel { Name = "TenantId", Value = tenantId }
+            };
+
+            return await _dbOperations.ExecuteDataSetAsync("usp_AccrualProfiles_GetShortList", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 

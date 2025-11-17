@@ -88,6 +88,24 @@ public class AccrualTypesRepository
             throw ex;
         }
     }
+
+    public async Task<string> GetAccrualTypesShortList(int tenantId, bool includeInactive = false)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new()
+            {
+                new SqlParameterModel { Name = "TenantId", Value = tenantId },
+                new SqlParameterModel { Name = "IncludeInactive", Value = includeInactive }
+            };
+
+            return await _dbOperations.ExecuteDataSetAsync("usp_AccrualTypes_GetShortList", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
 

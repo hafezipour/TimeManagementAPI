@@ -24,6 +24,7 @@ public class AccrualTypesProcessor : BaseProcessor
                 "delete" => await Delete(jsonData.FromJson<DeleteAccrualTypeRequest>()),
                 "get" => await GetAccrualTypes(jsonData.FromJson<GetAccrualTypeRequest>()),
                 "updateactivestatus" => await UpdateActiveStatus(jsonData.FromJson<UpdateAccrualTypeStatusRequest>()),
+                "getshortlist" => await GetShortList(jsonData.FromJson<GetAccrualTypesShortListRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -97,6 +98,19 @@ public class AccrualTypesProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error updating accrual type status: {ex.Message}" }.ToJson();
+        }
+    }
+
+    private async Task<string> GetShortList(GetAccrualTypesShortListRequest? request)
+    {
+        try
+        {
+            var result = await _accrualTypesRepository.GetAccrualTypesShortList(CurrentUser.TenantID, request?.IncludeInactive ?? false);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving accrual types short list: {ex.Message}" }.ToJson();
         }
     }
 }
