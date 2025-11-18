@@ -37,6 +37,7 @@ BEGIN
                 ars.AccrueUnit AS accrueUnit,
                 ars.AccrueFrequency AS accrueFrequency,
                 ars.AccrueFrequencyValue AS accrueFrequencyValue,
+                ars.WorkCodeId AS workCodeId,
                 ars.SortOrder AS sortOrder,
                 ars.CreatedBy AS createdBy,
                 ars.UpdatedBy AS updatedBy,

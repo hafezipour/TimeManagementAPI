@@ -141,17 +141,19 @@ BEGIN
             AccrueUnit VARCHAR(50),
             AccrueFrequency VARCHAR(50),
             AccrueFrequencyValue INT NULL,
+            WorkCodeId INT NULL,
             SortOrder INT
         );
 
         -- Extract and populate slots directly from JSON using OPENJSON
-        INSERT INTO #IncomingSlots (Id, AccrueAmount, AccrueUnit, AccrueFrequency, AccrueFrequencyValue, SortOrder)
+        INSERT INTO #IncomingSlots (Id, AccrueAmount, AccrueUnit, AccrueFrequency, AccrueFrequencyValue, WorkCodeId, SortOrder)
         SELECT
             CASE WHEN id IS NULL THEN NULL ELSE id END AS id,
             accrueAmount,
             accrueUnit,
             accrueFrequency,
             accrueFrequencyValue,
+            workCodeId,
             ISNULL(sortOrder, 0) AS sortOrder
         FROM OPENJSON(@Json, '$.slots') WITH (
             id INT,
@@ -159,6 +161,7 @@ BEGIN
             accrueUnit VARCHAR(50),
             accrueFrequency VARCHAR(50),
             accrueFrequencyValue INT,
+            workCodeId INT,
             sortOrder INT
         );
 
@@ -184,6 +187,7 @@ BEGIN
                 AccrueUnit = ins.AccrueUnit,
                 AccrueFrequency = ins.AccrueFrequency,
                 AccrueFrequencyValue = ins.AccrueFrequencyValue,
+                WorkCodeId = ins.WorkCodeId,
                 SortOrder = ins.SortOrder,
                 UpdatedBy = @UserId,
                 DateUpdated = SYSUTCDATETIME()
@@ -200,6 +204,7 @@ BEGIN
                 AccrueUnit,
                 AccrueFrequency,
                 AccrueFrequencyValue,
+                WorkCodeId,
                 SortOrder,
                 CreatedBy,
                 DateCreated
@@ -210,6 +215,7 @@ BEGIN
                 ins.AccrueUnit,
                 ins.AccrueFrequency,
                 ins.AccrueFrequencyValue,
+                ins.WorkCodeId,
                 ins.SortOrder,
                 @UserId,
                 SYSUTCDATETIME()
