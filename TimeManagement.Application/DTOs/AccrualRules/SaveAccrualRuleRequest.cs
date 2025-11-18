@@ -17,6 +17,7 @@ public class SaveAccrualRuleSlotRequest
     public decimal AccrueAmount { get; set; }
     public string AccrueUnit { get; set; } = string.Empty;
     public string AccrueFrequency { get; set; } = string.Empty;
+    public int? AccrueFrequencyValue { get; set; }
     public int SortOrder { get; set; }
 }
 

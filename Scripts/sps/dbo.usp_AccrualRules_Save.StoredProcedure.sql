@@ -134,38 +134,48 @@ BEGIN
         END
 
         -- Process slots: Insert, Update, and Delete
-        DECLARE @SlotsJson NVARCHAR(MAX);
-        
-        -- Extract slots array from JSON using JSON_QUERY
-        SET @SlotsJson = JSON_QUERY(@Json, '$.slots');
+        -- Create temporary table to hold incoming slots
+        CREATE TABLE #IncomingSlots (
+            Id INT NULL,
+            AccrueAmount DECIMAL(10, 2),
+            AccrueUnit VARCHAR(50),
+            AccrueFrequency VARCHAR(50),
+            AccrueFrequencyValue INT NULL,
+            SortOrder INT
+        );
 
-        -- Process slots if they exist and are valid JSON
-        IF @SlotsJson IS NOT NULL AND @SlotsJson <> 'null' AND LEN(@SlotsJson) > 0 AND ISJSON(@SlotsJson) = 1
+        -- Extract and populate slots directly from JSON using OPENJSON
+        INSERT INTO #IncomingSlots (Id, AccrueAmount, AccrueUnit, AccrueFrequency, AccrueFrequencyValue, SortOrder)
+        SELECT
+            CASE WHEN id IS NULL THEN NULL ELSE id END AS id,
+            accrueAmount,
+            accrueUnit,
+            accrueFrequency,
+            accrueFrequencyValue,
+            ISNULL(sortOrder, 0) AS sortOrder
+        FROM OPENJSON(@Json, '$.slots') WITH (
+            id INT,
+            accrueAmount DECIMAL(10, 2),
+            accrueUnit VARCHAR(50),
+            accrueFrequency VARCHAR(50),
+            accrueFrequencyValue INT,
+            sortOrder INT
+        );
+
+        -- Process slots if any were found
+        IF EXISTS (SELECT 1 FROM #IncomingSlots)
         BEGIN
-            -- Create temporary table to hold incoming slots
-            CREATE TABLE #IncomingSlots (
-                Id INT NULL,
-                AccrueAmount DECIMAL(10, 2),
-                AccrueUnit VARCHAR(50),
-                AccrueFrequency VARCHAR(50),
-                SortOrder INT
+            -- Capture existing slot IDs BEFORE we insert new ones
+            CREATE TABLE #ExistingSlotIds (
+                Id INT PRIMARY KEY
             );
-
-            -- Populate temporary table with incoming slots
-            INSERT INTO #IncomingSlots (Id, AccrueAmount, AccrueUnit, AccrueFrequency, SortOrder)
-            SELECT
-                id,
-                accrueAmount,
-                accrueUnit,
-                accrueFrequency,
-                ISNULL(sortOrder, 0)
-            FROM OPENJSON(@SlotsJson) WITH (
-                id INT,
-                accrueAmount DECIMAL(10, 2),
-                accrueUnit VARCHAR(50),
-                accrueFrequency VARCHAR(50),
-                sortOrder INT
-            );
+            
+            INSERT INTO #ExistingSlotIds (Id)
+            SELECT Id 
+            FROM AccrualRulesSlots 
+            WHERE AccrualRuleId = @Id 
+              AND Id IS NOT NULL 
+              AND Id > 0;
 
             -- Update existing slots (those with id > 0 that exist in database)
             UPDATE ars
@@ -173,6 +183,7 @@ BEGIN
                 AccrueAmount = ins.AccrueAmount,
                 AccrueUnit = ins.AccrueUnit,
                 AccrueFrequency = ins.AccrueFrequency,
+                AccrueFrequencyValue = ins.AccrueFrequencyValue,
                 SortOrder = ins.SortOrder,
                 UpdatedBy = @UserId,
                 DateUpdated = SYSUTCDATETIME()
@@ -188,6 +199,7 @@ BEGIN
                 AccrueAmount,
                 AccrueUnit,
                 AccrueFrequency,
+                AccrueFrequencyValue,
                 SortOrder,
                 CreatedBy,
                 DateCreated
@@ -197,6 +209,7 @@ BEGIN
                 ins.AccrueAmount,
                 ins.AccrueUnit,
                 ins.AccrueFrequency,
+                ins.AccrueFrequencyValue,
                 ins.SortOrder,
                 @UserId,
                 SYSUTCDATETIME()
@@ -209,24 +222,34 @@ BEGIN
                      AND ars.AccrualRuleId = @Id
                ));
 
-            -- Delete slots that exist in DB but not in incoming list
+            -- Delete slots that existed BEFORE but are not in incoming list
+            -- Only delete slots that were in the database before we started (captured in #ExistingSlotIds)
             DELETE FROM AccrualRulesSlots
             WHERE AccrualRuleId = @Id
+              AND Id IN (SELECT Id FROM #ExistingSlotIds)
               AND Id NOT IN (
                   SELECT Id 
                   FROM #IncomingSlots 
                   WHERE Id IS NOT NULL 
                     AND Id > 0
-              )
-              AND Id IS NOT NULL;
+              );
+            
+            -- Drop temporary table for existing IDs
+            DROP TABLE #ExistingSlotIds;
 
             -- Drop temporary table
             DROP TABLE #IncomingSlots;
         END
         ELSE
         BEGIN
-            -- If no slots provided, delete all existing slots
-            DELETE FROM AccrualRulesSlots WHERE AccrualRuleId = @Id;
+            -- If no slots found in JSON, check if slots array exists and is empty
+            DECLARE @SlotsJson NVARCHAR(MAX) = JSON_QUERY(@Json, '$.slots');
+            IF @SlotsJson IS NOT NULL AND @SlotsJson = '[]'
+            BEGIN
+                -- If slots array is explicitly empty, delete all existing slots
+                DELETE FROM AccrualRulesSlots WHERE AccrualRuleId = @Id;
+            END
+            -- If slots property doesn't exist in JSON, don't modify existing slots
         END
 
         SELECT @Id AS id, CAST(1 AS BIT) AS success, 'Accrual rule saved successfully.' AS message

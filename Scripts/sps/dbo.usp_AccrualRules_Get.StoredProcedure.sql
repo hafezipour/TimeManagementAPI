@@ -36,6 +36,7 @@ BEGIN
                 ars.AccrueAmount AS accrueAmount,
                 ars.AccrueUnit AS accrueUnit,
                 ars.AccrueFrequency AS accrueFrequency,
+                ars.AccrueFrequencyValue AS accrueFrequencyValue,
                 ars.SortOrder AS sortOrder,
                 ars.CreatedBy AS createdBy,
                 ars.UpdatedBy AS updatedBy,
