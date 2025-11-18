@@ -138,8 +138,8 @@ BEGIN
         CREATE TABLE #IncomingSlots (
             Id INT NULL,
             AccrueAmount DECIMAL(10, 2),
-            AccrueUnit VARCHAR(50),
-            AccrueFrequency VARCHAR(50),
+            AccrueUnit INT,
+            AccrueFrequency INT,
             AccrueFrequencyValue INT NULL,
             WorkCodeId INT NULL,
             SortOrder INT
@@ -158,8 +158,8 @@ BEGIN
         FROM OPENJSON(@Json, '$.slots') WITH (
             id INT,
             accrueAmount DECIMAL(10, 2),
-            accrueUnit VARCHAR(50),
-            accrueFrequency VARCHAR(50),
+            accrueUnit INT,
+            accrueFrequency INT,
             accrueFrequencyValue INT,
             workCodeId INT,
             sortOrder INT
@@ -177,6 +177,7 @@ BEGIN
             SELECT Id 
             FROM AccrualRulesSlots 
             WHERE AccrualRuleId = @Id 
+              AND TenantId = @TenantId
               AND Id IS NOT NULL 
               AND Id > 0;
 
@@ -189,11 +190,13 @@ BEGIN
                 AccrueFrequencyValue = ins.AccrueFrequencyValue,
                 WorkCodeId = ins.WorkCodeId,
                 SortOrder = ins.SortOrder,
+                TenantId = @TenantId,
                 UpdatedBy = @UserId,
                 DateUpdated = SYSUTCDATETIME()
             FROM AccrualRulesSlots ars
             INNER JOIN #IncomingSlots ins ON ars.Id = ins.Id
             WHERE ars.AccrualRuleId = @Id
+              AND ars.TenantId = @TenantId
               AND ins.Id IS NOT NULL
               AND ins.Id > 0;
 
@@ -206,6 +209,7 @@ BEGIN
                 AccrueFrequencyValue,
                 WorkCodeId,
                 SortOrder,
+                TenantId,
                 CreatedBy,
                 DateCreated
             )
@@ -217,6 +221,7 @@ BEGIN
                 ins.AccrueFrequencyValue,
                 ins.WorkCodeId,
                 ins.SortOrder,
+                @TenantId,
                 @UserId,
                 SYSUTCDATETIME()
             FROM #IncomingSlots ins
@@ -226,12 +231,14 @@ BEGIN
                    FROM AccrualRulesSlots ars 
                    WHERE ars.Id = ins.Id 
                      AND ars.AccrualRuleId = @Id
+                     AND ars.TenantId = @TenantId
                ));
 
             -- Delete slots that existed BEFORE but are not in incoming list
             -- Only delete slots that were in the database before we started (captured in #ExistingSlotIds)
             DELETE FROM AccrualRulesSlots
             WHERE AccrualRuleId = @Id
+              AND TenantId = @TenantId
               AND Id IN (SELECT Id FROM #ExistingSlotIds)
               AND Id NOT IN (
                   SELECT Id 
@@ -253,7 +260,9 @@ BEGIN
             IF @SlotsJson IS NOT NULL AND @SlotsJson = '[]'
             BEGIN
                 -- If slots array is explicitly empty, delete all existing slots
-                DELETE FROM AccrualRulesSlots WHERE AccrualRuleId = @Id;
+                DELETE FROM AccrualRulesSlots 
+                WHERE AccrualRuleId = @Id 
+                  AND TenantId = @TenantId;
             END
             -- If slots property doesn't exist in JSON, don't modify existing slots
         END
