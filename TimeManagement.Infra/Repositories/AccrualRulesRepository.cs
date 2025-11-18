@@ -43,7 +43,8 @@ public class AccrualRulesRepository
                 new SqlParameterModel { Name = "TenantId", Value = tenantId }
             };
 
-            return await _dbOperations.ExecuteDataSetAsync("usp_AccrualRules_Save", param);
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualRules_Save", param);
+            return result;
         }
         catch (Exception ex)
         {
