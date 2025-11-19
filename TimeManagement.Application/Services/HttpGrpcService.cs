@@ -32,6 +32,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly AccrualProfilesProcessor _accrualProfilesProcessor;
     private readonly AccrualTracksProcessor _accrualTracksProcessor;
     private readonly AccrualRulesProcessor _accrualRulesProcessor;
+    private readonly EmployeeAccrualSettingsProcessor _employeeAccrualSettingsProcessor;
 
     public HttpGrpcService(
         JobCodeProcessor jobCodeProcessor,
@@ -55,12 +56,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         AccrualTypesProcessor accrualTypesProcessor,
         AccrualProfilesProcessor accrualProfilesProcessor,
         AccrualTracksProcessor accrualTracksProcessor,
-        AccrualRulesProcessor accrualRulesProcessor)
+        AccrualRulesProcessor accrualRulesProcessor,
+        EmployeeAccrualSettingsProcessor employeeAccrualSettingsProcessor)
     {
         _accrualTypesProcessor = accrualTypesProcessor;
         _accrualProfilesProcessor = accrualProfilesProcessor;
         _accrualTracksProcessor = accrualTracksProcessor;
         _accrualRulesProcessor = accrualRulesProcessor;
+        _employeeAccrualSettingsProcessor = employeeAccrualSettingsProcessor;
         _customTableValuesProcessor = customTableValuesProcessor;
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
@@ -327,6 +330,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "accrualrules":
                     _accrualRulesProcessor.SetCurrentUser(authResult.User);
                     result = await _accrualRulesProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "employeeaccrualsettings":
+                    _employeeAccrualSettingsProcessor.SetCurrentUser(authResult.User);
+                    result = await _employeeAccrualSettingsProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);
