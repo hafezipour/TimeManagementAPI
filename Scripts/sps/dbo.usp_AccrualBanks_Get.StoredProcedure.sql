@@ -28,6 +28,8 @@ BEGIN
         ars.AccrueFrequency AS accrueFrequency,
         ars.AccrueFrequencyValue AS accrueFrequencyValue,
         ars.WorkCodeId AS workCodeId,
+        -- Work Code Name (null if workCodeId is null, otherwise work code name)
+        wc.WorkCodeName AS workCodeName,
         ars.SortOrder AS slotSortOrder,
         ars.CreatedBy AS slotCreatedBy,
         ars.UpdatedBy AS slotUpdatedBy,
@@ -66,6 +68,8 @@ BEGIN
         AND ab.UserId = @UserId
         AND ab.AccrualProfileId = @AccrualProfileId
         AND ab.TenantId = @TenantId
+    LEFT JOIN [dbo].[WorkCodes] wc ON ars.WorkCodeId = wc.Id
+        AND wc.TenantId = @TenantId
     WHERE ars.TenantId = @TenantId
         AND ar.AccrualProfileId = @AccrualProfileId
     ORDER BY at.TypeName, ars.SortOrder
