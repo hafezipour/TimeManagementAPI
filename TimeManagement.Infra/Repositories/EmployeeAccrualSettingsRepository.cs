@@ -51,27 +51,5 @@ public class EmployeeAccrualSettingsRepository
             throw ex;
         }
     }
-
-    public async Task<string> GetAccrualBanks(int userId, int accrualProfileId, int tenantId)
-    {
-        try
-        {
-            List<SqlParameterModel> param = new()
-            {
-                new SqlParameterModel { Name = "UserId", Value = userId },
-                new SqlParameterModel { Name = "AccrualProfileId", Value = accrualProfileId },
-                new SqlParameterModel { Name = "TenantId", Value = tenantId }
-            };
-
-            var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_Get", param);
-            
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw ex;
-        }
-    }
-
 }
 

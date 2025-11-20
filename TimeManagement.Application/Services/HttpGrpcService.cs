@@ -33,6 +33,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly AccrualTracksProcessor _accrualTracksProcessor;
     private readonly AccrualRulesProcessor _accrualRulesProcessor;
     private readonly EmployeeAccrualSettingsProcessor _employeeAccrualSettingsProcessor;
+    private readonly AccrualBanksProcessor _accrualBanksProcessor;
 
     public HttpGrpcService(
         JobCodeProcessor jobCodeProcessor,
@@ -57,13 +58,15 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         AccrualProfilesProcessor accrualProfilesProcessor,
         AccrualTracksProcessor accrualTracksProcessor,
         AccrualRulesProcessor accrualRulesProcessor,
-        EmployeeAccrualSettingsProcessor employeeAccrualSettingsProcessor)
+        EmployeeAccrualSettingsProcessor employeeAccrualSettingsProcessor,
+        AccrualBanksProcessor accrualBanksProcessor)
     {
         _accrualTypesProcessor = accrualTypesProcessor;
         _accrualProfilesProcessor = accrualProfilesProcessor;
         _accrualTracksProcessor = accrualTracksProcessor;
         _accrualRulesProcessor = accrualRulesProcessor;
         _employeeAccrualSettingsProcessor = employeeAccrualSettingsProcessor;
+        _accrualBanksProcessor = accrualBanksProcessor;
         _customTableValuesProcessor = customTableValuesProcessor;
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
@@ -338,6 +341,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "employeeaccrualsettings":
                     _employeeAccrualSettingsProcessor.SetCurrentUser(authResult.User);
                     result = await _employeeAccrualSettingsProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "accrualbanks":
+                    _accrualBanksProcessor.SetCurrentUser(authResult.User);
+                    result = await _accrualBanksProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);
