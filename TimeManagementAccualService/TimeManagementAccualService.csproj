@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk.Worker">
+﻿<Project Sdk="Microsoft.NET.Sdk.Worker">
 
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
@@ -9,11 +9,16 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+    <PackageReference Include="ClosedXML" Version="0.95.3" />
+    <PackageReference Include="DbOperations" Version="1.0.0.4" />
+    <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Log4Net.AspNetCore" Version="8.0.0" />
+    <PackageReference Include="WebPortalSecurityManager" Version="1.0.6.6" />
+    <PackageReference Include="log4net" Version="3.2.0" />
+  </ItemGroup>
 
-	  <PackageReference Include="ClosedXML" Version="0.95.3" />
-	  <PackageReference Include="DbOperations" Version="1.0.0.4" />
-	  <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
-	  <PackageReference Include="Microsoft.Extensions.Logging.Log4Net.AspNetCore" Version="8.0.0" />
-	  <PackageReference Include="WebPortalSecurityManager" Version="1.0.6.5" />
+  <ItemGroup>
+    <ProjectReference Include="..\TimeManagement.Application\TimeManagement.Application.csproj" />
+    <ProjectReference Include="..\TimeManagement.Infra\TimeManagement.Infra.csproj" />
   </ItemGroup>
 </Project>
