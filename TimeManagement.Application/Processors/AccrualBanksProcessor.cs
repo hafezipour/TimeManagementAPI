@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using TimeManagement.Application.DTOs.EmployeeAccrualSettings;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Infra.Repositories;
@@ -11,6 +12,12 @@ public class AccrualBanksProcessor : BaseProcessor
     private readonly EmployeeAccrualSettingsRepository _employeeAccrualSettingsRepository;
     private readonly AccrualTracksRepository _accrualTracksRepository;
     private readonly AccrualProfilesRepository _accrualProfilesRepository;
+
+    private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
 
     public AccrualBanksProcessor(
         AccrualBanksRepository accrualBanksRepository,
@@ -78,7 +85,7 @@ public class AccrualBanksProcessor : BaseProcessor
         var updateResult = await UpdateBalance(new List<UpdateBalancesRequest> { updateRequest });
 
         // Deserialize update result to get the response
-        var updateResponses = JsonSerializer.Deserialize<List<UpdateBalancesResponse>>(updateResult);
+        var updateResponses = JsonSerializer.Deserialize<List<UpdateBalancesResponse>>(updateResult, JsonOptions);
         var updateResponse = updateResponses![0];
 
         // Step 3: Log transaction
@@ -108,7 +115,7 @@ public class AccrualBanksProcessor : BaseProcessor
             CurrentUser.LoginId,
             CurrentUser.TenantID);
 
-        var checkData = JsonSerializer.Deserialize<List<CheckAndCreateBanksResponse>>(result);
+        var checkData = JsonSerializer.Deserialize<List<CheckAndCreateBanksResponse>>(result, JsonOptions);
         return checkData![0];
     }
 
@@ -191,6 +198,7 @@ public class AccrualBanksProcessor : BaseProcessor
 
             int resolvedAccrualProfileId = 0;
             string currentAccrualProfileName = string.Empty;
+            int? resolvedAccrualTrackId = null;
 
             // Method 1: If accrualProfileId exists directly, use it
             if (accrualProfileId.HasValue && accrualProfileId.Value > 0)
@@ -229,6 +237,7 @@ public class AccrualBanksProcessor : BaseProcessor
                 }
                 resolvedAccrualProfileId = profileId;
                 currentAccrualProfileName = profileName;
+                resolvedAccrualTrackId = accrualTrackId.Value; // Store track ID when profile comes from track
             }
             else
             {
@@ -248,7 +257,8 @@ public class AccrualBanksProcessor : BaseProcessor
             {
                 result = banksData,
                 currentAccrualProfileId = resolvedAccrualProfileId,
-                currentAccrualProfileName = currentAccrualProfileName
+                currentAccrualProfileName = currentAccrualProfileName,
+                currentAccrualTrackId = resolvedAccrualTrackId
             }.ToJson();
         }
         catch (Exception ex)
