@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk.Worker">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>dotnet-TimeManagementAccualService-62000ba4-2716-4555-9c50-ee97e3be355f</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.1" />
+
+	  <PackageReference Include="ClosedXML" Version="0.95.3" />
+	  <PackageReference Include="DbOperations" Version="1.0.0.4" />
+	  <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
+	  <PackageReference Include="Microsoft.Extensions.Logging.Log4Net.AspNetCore" Version="8.0.0" />
+	  <PackageReference Include="WebPortalSecurityManager" Version="1.0.6.5" />
+  </ItemGroup>
+</Project>
