@@ -48,58 +48,84 @@ public class AccrualBanksProcessor : BaseProcessor
     private async Task<string> AdjustBalance(AdjustBalanceRequest? request)
     {
         // Step 1: Check and create bank if needed
-        var checkAndCreateJson = new[]
+        var checkRequest = new CheckAndCreateBanksRequest
         {
-            new
-            {
-                userId = request!.UserId!.Value,
-                accrualProfileId = request.AccrualProfileId ?? 0,
-                accrualTrackId = request.AccrualTrackId,
-                accrualTypeId = request.AccrualTypeId ?? 0,
-                accrualRuleId = request.AccrualRuleId,
-                accrualRulesSlotId = request.AccrualRuleSlotId
-            }
-        }.ToJson();
+            UserId = request!.UserId!.Value,
+            AccrualProfileId = request.AccrualProfileId ?? 0,
+            AccrualTrackId = request.AccrualTrackId,
+            AccrualTypeId = request.AccrualTypeId ?? 0,
+            AccrualRuleId = request.AccrualRuleId,
+            AccrualRulesSlotId = request.AccrualRuleSlotId
+        };
 
-        var checkResult = await _accrualBanksRepository.CheckAndCreateBanks(
-            checkAndCreateJson,
-            CurrentUser.LoginId,
-            CurrentUser.TenantID);
-
-        // Deserialize check result
-        var checkData = JsonSerializer.Deserialize<List<CheckAndCreateBanksResponse>>(checkResult);
-        var bankInfo = checkData![0];
-        var bankId = bankInfo.BankId;
-        var currentBalance = bankInfo.CurrentBalance;
+        var bankInfo = await CheckAndCreateBank(new List<CheckAndCreateBanksRequest> { checkRequest });
 
         // Step 2: Update balances
-        var updateJson = new[]
+        var updateRequest = new UpdateBalancesRequest
         {
-            new
-            {
-                bankId = bankId,
-                userId = request.UserId.Value,
-                accrualProfileId = request.AccrualProfileId ?? 0,
-                accrualRulesSlotId = request.AccrualRuleSlotId,
-                currentBalance = currentBalance,
-                @operator = request.Operator,
-                adjustmentAmount = request.Balance,
-                notes = request.Notes
-            }
-        }.ToJson();
+            BankId = bankInfo.BankId,
+            UserId = request.UserId.Value,
+            AccrualProfileId = request.AccrualProfileId ?? 0,
+            AccrualRulesSlotId = request.AccrualRuleSlotId,
+            CurrentBalance = bankInfo.CurrentBalance,
+            Operator = request.Operator,
+            AdjustmentAmount = request.Balance,
+            Notes = request.Notes
+        };
 
-        var updateResult = await _accrualBanksRepository.UpdateBalances(
-            updateJson,
-            CurrentUser.LoginId,
-            CurrentUser.TenantID);
+        var updateResult = await UpdateBalance(new List<UpdateBalancesRequest> { updateRequest });
+
+        // Deserialize update result to get the response
+        var updateResponses = JsonSerializer.Deserialize<List<UpdateBalancesResponse>>(updateResult);
+        var updateResponse = updateResponses![0];
 
         // Step 3: Log transaction
-        var logResult = await _accrualBanksRepository.LogTransactions(
-            updateResult,
+        var logRequest = new LogTransactionsRequest
+        {
+            BankId = updateResponse.BankId,
+            UserId = updateResponse.UserId,
+            AccrualProfileId = updateResponse.AccrualProfileId,
+            AccrualRulesSlotId = updateResponse.AccrualRulesSlotId,
+            OldBalance = updateResponse.OldBalance,
+            NewBalance = updateResponse.NewBalance,
+            Operator = updateResponse.Operator,
+            AdjustmentAmount = updateResponse.AdjustmentAmount,
+            Notes = updateResponse.Notes
+        };
+
+        var logResult = await LogTransaction(new List<LogTransactionsRequest> { logRequest });
+
+        return logResult;
+    }
+
+    private async Task<CheckAndCreateBanksResponse> CheckAndCreateBank(List<CheckAndCreateBanksRequest> requests)
+    {
+        var json = requests.ToJson();
+        var result = await _accrualBanksRepository.CheckAndCreateBanks(
+            json,
             CurrentUser.LoginId,
             CurrentUser.TenantID);
 
-        return logResult;
+        var checkData = JsonSerializer.Deserialize<List<CheckAndCreateBanksResponse>>(result);
+        return checkData![0];
+    }
+
+    private async Task<string> UpdateBalance(List<UpdateBalancesRequest> requests)
+    {
+        var json = requests.ToJson();
+        return await _accrualBanksRepository.UpdateBalances(
+            json,
+            CurrentUser.LoginId,
+            CurrentUser.TenantID);
+    }
+
+    private async Task<string> LogTransaction(List<LogTransactionsRequest> requests)
+    {
+        var json = requests.ToJson();
+        return await _accrualBanksRepository.LogTransactions(
+            json,
+            CurrentUser.LoginId,
+            CurrentUser.TenantID);
     }
 
     private async Task<string> GetAccrualBanks(GetAccrualBanksRequest? request)
