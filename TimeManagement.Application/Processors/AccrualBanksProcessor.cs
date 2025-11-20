@@ -45,6 +45,8 @@ public class AccrualBanksProcessor : BaseProcessor
         }
     }
 
+    #region Balance Adjustments
+
     private async Task<string> AdjustBalance(AdjustBalanceRequest? request)
     {
         // Step 1: Check and create bank if needed
@@ -128,6 +130,10 @@ public class AccrualBanksProcessor : BaseProcessor
             CurrentUser.TenantID);
     }
 
+    #endregion
+
+    #region Get Employee Accrual Banks
+
     private async Task<string> GetAccrualBanks(GetAccrualBanksRequest? request)
     {
         try
@@ -139,7 +145,7 @@ public class AccrualBanksProcessor : BaseProcessor
 
             // Step 1: Get EmployeeAccrualSettings by UserId
             var settingsJson = await _employeeAccrualSettingsRepository.GetEmployeeAccrualSettings(request.UserId, CurrentUser.TenantID);
-            
+
             if (string.IsNullOrEmpty(settingsJson))
             {
                 return new { success = false, message = "Employee accrual settings not found." }.ToJson();
@@ -154,11 +160,11 @@ public class AccrualBanksProcessor : BaseProcessor
 
             var setting = settings[0];
             var userId = setting.GetProperty("userId").GetInt32();
-            
+
             int? accrualProfileId = null;
             int? accrualTrackId = null;
             string? accrualStartDate = null;
-            
+
             if (setting.TryGetProperty("accrualProfileId", out var accrualProfileIdElement))
             {
                 if (accrualProfileIdElement.ValueKind != JsonValueKind.Null)
@@ -166,7 +172,7 @@ public class AccrualBanksProcessor : BaseProcessor
                     accrualProfileId = accrualProfileIdElement.GetInt32();
                 }
             }
-            
+
             if (setting.TryGetProperty("accrualTrackId", out var accrualTrackIdElement))
             {
                 if (accrualTrackIdElement.ValueKind != JsonValueKind.Null)
@@ -174,7 +180,7 @@ public class AccrualBanksProcessor : BaseProcessor
                     accrualTrackId = accrualTrackIdElement.GetInt32();
                 }
             }
-            
+
             if (setting.TryGetProperty("accrualStartDate", out var accrualStartDateElement))
             {
                 if (accrualStartDateElement.ValueKind != JsonValueKind.Null)
@@ -231,15 +237,15 @@ public class AccrualBanksProcessor : BaseProcessor
 
             // Step 2: Get Accrual Banks with resolved profile ID
             var result = await _accrualBanksRepository.GetAccrualBanks(
-                userId, 
-                resolvedAccrualProfileId, 
+                userId,
+                resolvedAccrualProfileId,
                 CurrentUser.TenantID);
-            
+
             // Parse the result to return as part of response
             var banksData = JsonSerializer.Deserialize<object>(result);
-            
-            return new 
-            { 
+
+            return new
+            {
                 result = banksData,
                 currentAccrualProfileId = resolvedAccrualProfileId,
                 currentAccrualProfileName = currentAccrualProfileName
@@ -257,7 +263,7 @@ public class AccrualBanksProcessor : BaseProcessor
         {
             // Get the accrual track with profiles
             var trackJson = await _accrualTracksRepository.GetAccrualTracks(accrualTrackId, tenantId);
-            
+
             if (string.IsNullOrEmpty(trackJson))
             {
                 return (0, string.Empty);
@@ -307,7 +313,7 @@ public class AccrualBanksProcessor : BaseProcessor
             yearsServed = Math.Max(0, yearsServed);
 
             // Find matching profile
-            var sortedProfiles = profiles.OrderBy(p => 
+            var sortedProfiles = profiles.OrderBy(p =>
             {
                 if (p.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
                 {
@@ -322,22 +328,22 @@ public class AccrualBanksProcessor : BaseProcessor
                 decimal? to = null;
                 int profileId = 0;
                 string profileName = string.Empty;
-                
+
                 if (profile.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
                 {
                     from = fromYearsElement.GetDecimal();
                 }
-                
+
                 if (profile.TryGetProperty("toYears", out var toYearsElement) && toYearsElement.ValueKind != JsonValueKind.Null)
                 {
                     to = toYearsElement.GetDecimal();
                 }
-                
+
                 if (profile.TryGetProperty("accrualProfileId", out var profileIdElement) && profileIdElement.ValueKind != JsonValueKind.Null)
                 {
                     profileId = profileIdElement.GetInt32();
                 }
-                
+
                 if (profile.TryGetProperty("profileName", out var profileNameElement) && profileNameElement.ValueKind != JsonValueKind.Null)
                 {
                     profileName = profileNameElement.GetString() ?? string.Empty;
@@ -366,17 +372,17 @@ public class AccrualBanksProcessor : BaseProcessor
                 var firstProfile = sortedProfiles[0];
                 int firstProfileId = 0;
                 string firstNameValue = string.Empty;
-                
+
                 if (firstProfile.TryGetProperty("accrualProfileId", out var firstProfileIdElement) && firstProfileIdElement.ValueKind != JsonValueKind.Null)
                 {
                     firstProfileId = firstProfileIdElement.GetInt32();
                 }
-                
+
                 if (firstProfile.TryGetProperty("profileName", out var firstNameElement) && firstNameElement.ValueKind != JsonValueKind.Null)
                 {
                     firstNameValue = firstNameElement.GetString() ?? string.Empty;
                 }
-                
+
                 if (firstProfileId > 0)
                 {
                     return (firstProfileId, firstNameValue);
@@ -390,5 +396,9 @@ public class AccrualBanksProcessor : BaseProcessor
             throw ex;
         }
     }
+
+
+    #endregion
+
 }
 
