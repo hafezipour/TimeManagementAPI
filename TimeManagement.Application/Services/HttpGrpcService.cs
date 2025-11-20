@@ -34,6 +34,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly AccrualRulesProcessor _accrualRulesProcessor;
     private readonly EmployeeAccrualSettingsProcessor _employeeAccrualSettingsProcessor;
     private readonly AccrualBanksProcessor _accrualBanksProcessor;
+    private readonly AccrualTransactionsProcessor _accrualTransactionsProcessor;
 
     public HttpGrpcService(
         JobCodeProcessor jobCodeProcessor,
@@ -59,7 +60,8 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         AccrualTracksProcessor accrualTracksProcessor,
         AccrualRulesProcessor accrualRulesProcessor,
         EmployeeAccrualSettingsProcessor employeeAccrualSettingsProcessor,
-        AccrualBanksProcessor accrualBanksProcessor)
+        AccrualBanksProcessor accrualBanksProcessor,
+        AccrualTransactionsProcessor accrualTransactionsProcessor)
     {
         _accrualTypesProcessor = accrualTypesProcessor;
         _accrualProfilesProcessor = accrualProfilesProcessor;
@@ -67,6 +69,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _accrualRulesProcessor = accrualRulesProcessor;
         _employeeAccrualSettingsProcessor = employeeAccrualSettingsProcessor;
         _accrualBanksProcessor = accrualBanksProcessor;
+        _accrualTransactionsProcessor = accrualTransactionsProcessor;
         _customTableValuesProcessor = customTableValuesProcessor;
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
@@ -349,6 +352,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "accrualbanks":
                     _accrualBanksProcessor.SetCurrentUser(authResult.User);
                     result = await _accrualBanksProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "accrualtransactions":
+                    _accrualTransactionsProcessor.SetCurrentUser(authResult.User);
+                    result = await _accrualTransactionsProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);

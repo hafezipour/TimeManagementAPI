@@ -55,27 +55,6 @@ public class AccrualBanksRepository
         }
     }
 
-    public async Task<string> LogTransactions(string json, int createdBy, int tenantId)
-    {
-        try
-        {
-            List<SqlParameterModel> param = new()
-            {
-                new SqlParameterModel { Name = "Json", Value = json },
-                new SqlParameterModel { Name = "CreatedBy", Value = createdBy },
-                new SqlParameterModel { Name = "TenantId", Value = tenantId }
-            };
-
-            var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_LogTransactions", param);
-            
-            return result;
-        }
-        catch (Exception ex)
-        {
-            throw ex;
-        }
-    }
-
     public async Task<string> GetAccrualBanks(int userId, int accrualProfileId, int tenantId)
     {
         try
@@ -96,5 +75,6 @@ public class AccrualBanksRepository
             throw ex;
         }
     }
+
 }
 

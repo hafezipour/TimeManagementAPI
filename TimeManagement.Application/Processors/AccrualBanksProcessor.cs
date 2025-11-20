@@ -12,6 +12,7 @@ public class AccrualBanksProcessor : BaseProcessor
     private readonly EmployeeAccrualSettingsRepository _employeeAccrualSettingsRepository;
     private readonly AccrualTracksRepository _accrualTracksRepository;
     private readonly AccrualProfilesRepository _accrualProfilesRepository;
+    private readonly AccrualTransactionsProcessor _accrualTransactionsProcessor;
 
     private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
     {
@@ -23,12 +24,14 @@ public class AccrualBanksProcessor : BaseProcessor
         AccrualBanksRepository accrualBanksRepository,
         EmployeeAccrualSettingsRepository employeeAccrualSettingsRepository,
         AccrualTracksRepository accrualTracksRepository,
-        AccrualProfilesRepository accrualProfilesRepository)
+        AccrualProfilesRepository accrualProfilesRepository,
+        AccrualTransactionsProcessor accrualTransactionsProcessor)
     {
         _accrualBanksRepository = accrualBanksRepository;
         _employeeAccrualSettingsRepository = employeeAccrualSettingsRepository;
         _accrualTracksRepository = accrualTracksRepository;
         _accrualProfilesRepository = accrualProfilesRepository;
+        _accrualTransactionsProcessor = accrualTransactionsProcessor;
     }
 
     public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData)
@@ -102,7 +105,8 @@ public class AccrualBanksProcessor : BaseProcessor
             Notes = updateResponse.Notes
         };
 
-        var logResult = await LogTransaction(new List<LogTransactionsRequest> { logRequest });
+        _accrualTransactionsProcessor.SetCurrentUser(CurrentUser);
+        var logResult = await _accrualTransactionsProcessor.LogTransactions(new List<LogTransactionsRequest> { logRequest });
 
         return logResult;
     }
@@ -123,15 +127,6 @@ public class AccrualBanksProcessor : BaseProcessor
     {
         var json = requests.ToJson();
         return await _accrualBanksRepository.UpdateBalances(
-            json,
-            CurrentUser.LoginId,
-            CurrentUser.TenantID);
-    }
-
-    private async Task<string> LogTransaction(List<LogTransactionsRequest> requests)
-    {
-        var json = requests.ToJson();
-        return await _accrualBanksRepository.LogTransactions(
             json,
             CurrentUser.LoginId,
             CurrentUser.TenantID);

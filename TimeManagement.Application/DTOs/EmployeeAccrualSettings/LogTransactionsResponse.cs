@@ -3,7 +3,7 @@ namespace TimeManagement.Application.DTOs.EmployeeAccrualSettings;
 public class LogTransactionsResponse
 {
     public int TransactionId { get; set; }
-    public int? AccrualRuleId { get; set; }
+    public int AccrualBankId { get; set; }
     public int SourceTypeID { get; set; }
     public int SourceID { get; set; }
     public decimal Amount { get; set; }

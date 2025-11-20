@@ -35,6 +35,7 @@ builder.Services.AddScoped<TimeManagement.Application.Processors.AccrualTracksPr
 builder.Services.AddScoped<TimeManagement.Application.Processors.AccrualRulesProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.EmployeeAccrualSettingsProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.AccrualBanksProcessor>();
+builder.Services.AddScoped<TimeManagement.Application.Processors.AccrualTransactionsProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.HolidayAssignmentProcessor>();
 builder.Services.AddScoped<TimeManagement.Application.Processors.ShiftProcessor>();
@@ -71,6 +72,7 @@ builder.Services.AddScoped<TimeManagement.Infra.Repositories.AccrualTracksReposi
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.AccrualRulesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.EmployeeAccrualSettingsRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.AccrualBanksRepository>();
+builder.Services.AddScoped<TimeManagement.Infra.Repositories.AccrualTransactionsRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.SchedulesRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.ShiftsRepository>();
 builder.Services.AddScoped<TimeManagement.Infra.Repositories.LayoutRepository>();
