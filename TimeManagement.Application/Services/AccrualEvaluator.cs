@@ -134,7 +134,11 @@ public class AccrualEvaluator
 
             #region Proceed here Rule by rule Evaluation for each accrual bank
 
+            foreach (var bank in banks)
+            {
+                var accrualRule = accrualRules.Where(c => c.Id == bank.AccrualRulesSlotId).FirstOrDefault();
 
+            }
 
             #endregion
 
@@ -150,5 +154,19 @@ public class AccrualEvaluator
             throw;
         }
     }
+
+    private void GetAccrualBanksToUpdate(AccrualBankEvaluationResponse bank, AccrualRuleEvaluationResponse accrualRule)
+    {
+
+
+
+    }
+
+
+
+
+
+
+
 }
 
