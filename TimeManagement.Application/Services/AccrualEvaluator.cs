@@ -157,7 +157,7 @@ public class AccrualEvaluator
 
     private void GetAccrualBanksToUpdate(AccrualBankEvaluationResponse bank, AccrualRuleEvaluationResponse accrualRule)
     {
-
+        //bank.AccrualStartDate = DateTime.Now;
 
 
     }
