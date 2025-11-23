@@ -17,6 +17,7 @@ public class AccrualEvaluator
     {
         CustomLogger.Log(LogLevel.Error, new Exception() { }, "This is a test");//Just by default set here log level as error type
 
+
         // TODO: Implement accrual evaluation logic
         await Task.CompletedTask;
     }
