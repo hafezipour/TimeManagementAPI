@@ -8,5 +8,7 @@ public class CheckAndCreateBanksRequest
     public int AccrualTypeId { get; set; }
     public int AccrualRuleId { get; set; }
     public int AccrualRulesSlotId { get; set; }
+
+    public int TenantId { get; set; }
 }
 

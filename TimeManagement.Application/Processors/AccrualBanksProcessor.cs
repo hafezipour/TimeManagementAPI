@@ -111,7 +111,7 @@ public class AccrualBanksProcessor : BaseProcessor
         return logResult;
     }
 
-    private async Task<CheckAndCreateBanksResponse> CheckAndCreateBank(List<CheckAndCreateBanksRequest> requests)
+    public async Task<CheckAndCreateBanksResponse> CheckAndCreateBank(List<CheckAndCreateBanksRequest> requests)
     {
         var json = requests.ToJson();
         var result = await _accrualBanksRepository.CheckAndCreateBanks(

@@ -33,6 +33,23 @@ public class EmployeeAccrualSettingsRepository
         }
     }
 
+    public async Task<string> GetEmployeeAccrualSettingsForEvaluation(string profileIdsJson)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new()
+            {
+                new SqlParameterModel { Name = "ProfileIdsJson", Value = profileIdsJson }
+            };
+
+            return await _dbOperations.ExecuteDataSetAsync("usp_EmployeeAccrualSettings_GetForEvaluation_EVAL", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
     public async Task<string> SaveEmployeeAccrualSettings(string json, int userId, int tenantId)
     {
         try

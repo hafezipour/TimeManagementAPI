@@ -51,5 +51,19 @@ public class AccrualRulesRepository
             throw ex;
         }
     }
+
+    public async Task<string> GetAccrualRulesForEvaluation()
+    {
+        try
+        {
+            List<SqlParameterModel> param = new();
+
+            return await _dbOperations.ExecuteDataSetAsync("usp_AccrualRules_GetForEvaluation_EVAL", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
