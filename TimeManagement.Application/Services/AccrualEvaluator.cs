@@ -35,10 +35,13 @@ public class AccrualEvaluator
         using var scope = _serviceScopeFactory.CreateScope();
         var accrualRulesRepository = scope.ServiceProvider.GetRequiredService<AccrualRulesRepository>();
         var employeeAccrualSettingsRepository = scope.ServiceProvider.GetRequiredService<EmployeeAccrualSettingsRepository>();
+        var accrualBanksRepository = scope.ServiceProvider.GetRequiredService<AccrualBanksRepository>();
         var accrualBanksProcessor = scope.ServiceProvider.GetRequiredService<AccrualBanksProcessor>();
 
         try
         {
+            #region Get Accrual Rules
+
             // Call first stored procedure to get all accrual rules for evaluation
             var jsonResult = await accrualRulesRepository.GetAccrualRulesForEvaluation();
 
@@ -50,6 +53,10 @@ public class AccrualEvaluator
                 CustomLogger.Log(LogLevel.Information, null, "No accrual rules found for evaluation");
                 return;
             }
+
+            #endregion
+
+            #region Create Banks for missing banks using employee accrual settings table
 
             // Extract unique profile IDs from the first SP results
             var profileIds = accrualRules
@@ -105,7 +112,31 @@ public class AccrualEvaluator
                 accrualBanksProcessor.SetCurrentUser(new Domain.Models.LoggedInUser() { LoginId = -1, TenantID = tenantId });
                 var bankInfo = await accrualBanksProcessor.CheckAndCreateBank(requests);
             }
-            //TO DO, Fetch here all the banks
+
+            #endregion
+
+            #region Fetch Accrual Banks for all users and tenants
+
+            // Fetch all banks for all tenants and users
+            var banksJson = await accrualBanksRepository.GetAccrualBanksForEvaluation();
+            var banks = JsonSerializer.Deserialize<List<AccrualBankEvaluationResponse>>(banksJson, JsonOptions);
+
+            if (banks == null || banks.Count == 0)
+            {
+                CustomLogger.Log(LogLevel.Information, null, "No accrual banks found");
+            }
+            else
+            {
+                CustomLogger.Log(LogLevel.Information, null, $"Retrieved {banks.Count} accrual banks for evaluation");
+            }
+
+            #endregion
+
+            #region Proceed here Rule by rule Evaluation for each accrual bank
+
+
+
+            #endregion
 
         }
         catch (JsonException ex)

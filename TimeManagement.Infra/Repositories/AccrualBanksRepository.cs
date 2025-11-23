@@ -76,5 +76,19 @@ public class AccrualBanksRepository
         }
     }
 
+    public async Task<string> GetAccrualBanksForEvaluation()
+    {
+        try
+        {
+            List<SqlParameterModel> param = new();
+
+            return await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_GetForEvaluation_EVAL", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
 }
 
