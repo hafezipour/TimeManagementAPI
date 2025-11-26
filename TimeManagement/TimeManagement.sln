@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeManagement.Domain", "..
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeManagement.Infra", "..\TimeManagement.Infra\TimeManagement.Infra.csproj", "{CD10C20A-EC0B-4D16-9B9E-8B661088C539}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TimeManagementAccualService", "..\TimeManagementAccualService\TimeManagementAccualService.csproj", "{E8AAB3D8-6862-499C-88E5-7ABD0E2F60B2}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -33,6 +35,10 @@ Global
 		{CD10C20A-EC0B-4D16-9B9E-8B661088C539}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CD10C20A-EC0B-4D16-9B9E-8B661088C539}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CD10C20A-EC0B-4D16-9B9E-8B661088C539}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E8AAB3D8-6862-499C-88E5-7ABD0E2F60B2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E8AAB3D8-6862-499C-88E5-7ABD0E2F60B2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E8AAB3D8-6862-499C-88E5-7ABD0E2F60B2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E8AAB3D8-6862-499C-88E5-7ABD0E2F60B2}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

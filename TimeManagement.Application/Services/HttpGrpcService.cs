@@ -27,6 +27,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly TradeBoardSettingsProcessor _tradeBoardSettingsProcessor;
     private readonly ShiftAssignmentProcessor _shiftAssignmentProcessor;
     private readonly EmployeeAvailabilityProcessor _employeeAvailabilityProcessor;
+    private readonly CustomTableValuesProcessor _customTableValuesProcessor;
+    private readonly AccrualTypesProcessor _accrualTypesProcessor;
+    private readonly AccrualProfilesProcessor _accrualProfilesProcessor;
+    private readonly AccrualTracksProcessor _accrualTracksProcessor;
+    private readonly AccrualRulesProcessor _accrualRulesProcessor;
+    private readonly EmployeeAccrualSettingsProcessor _employeeAccrualSettingsProcessor;
+    private readonly AccrualBanksProcessor _accrualBanksProcessor;
+    private readonly AccrualTransactionsProcessor _accrualTransactionsProcessor;
 
     public HttpGrpcService(
         JobCodeProcessor jobCodeProcessor,
@@ -45,8 +53,24 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         AssistantQualifiersProcessor assistantQualifiersProcessor,
         TradeBoardSettingsProcessor tradeBoardSettingsProcessor,
         ShiftAssignmentProcessor shiftAssignmentProcessor,
-        EmployeeAvailabilityProcessor employeeAvailabilityProcessor)
+        EmployeeAvailabilityProcessor employeeAvailabilityProcessor,
+        CustomTableValuesProcessor customTableValuesProcessor,
+        AccrualTypesProcessor accrualTypesProcessor,
+        AccrualProfilesProcessor accrualProfilesProcessor,
+        AccrualTracksProcessor accrualTracksProcessor,
+        AccrualRulesProcessor accrualRulesProcessor,
+        EmployeeAccrualSettingsProcessor employeeAccrualSettingsProcessor,
+        AccrualBanksProcessor accrualBanksProcessor,
+        AccrualTransactionsProcessor accrualTransactionsProcessor)
     {
+        _accrualTypesProcessor = accrualTypesProcessor;
+        _accrualProfilesProcessor = accrualProfilesProcessor;
+        _accrualTracksProcessor = accrualTracksProcessor;
+        _accrualRulesProcessor = accrualRulesProcessor;
+        _employeeAccrualSettingsProcessor = employeeAccrualSettingsProcessor;
+        _accrualBanksProcessor = accrualBanksProcessor;
+        _accrualTransactionsProcessor = accrualTransactionsProcessor;
+        _customTableValuesProcessor = customTableValuesProcessor;
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
         _holidayProcessor = holidayProcessor;
@@ -272,6 +296,70 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "employeeavailability":
                     _employeeAvailabilityProcessor.SetCurrentUser(authResult.User);
                     result = await _employeeAvailabilityProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "customtablevalues":
+                    _customTableValuesProcessor.SetCurrentUser(authResult.User);
+                    result = await _customTableValuesProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "accrualtypes":
+                    _accrualTypesProcessor.SetCurrentUser(authResult.User);
+                    result = await _accrualTypesProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "accrualprofiles":
+                    _accrualProfilesProcessor.SetCurrentUser(authResult.User);
+                    result = await _accrualProfilesProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "accrualtracks":
+                    _accrualTracksProcessor.SetCurrentUser(authResult.User);
+                    result = await _accrualTracksProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "accrualrules":
+                    _accrualRulesProcessor.SetCurrentUser(authResult.User);
+                    result = await _accrualRulesProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "employeeaccrualsettings":
+                    _employeeAccrualSettingsProcessor.SetCurrentUser(authResult.User);
+                    result = await _employeeAccrualSettingsProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "accrualbanks":
+                    _accrualBanksProcessor.SetCurrentUser(authResult.User);
+                    result = await _accrualBanksProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "accrualtransactions":
+                    _accrualTransactionsProcessor.SetCurrentUser(authResult.User);
+                    result = await _accrualTransactionsProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);

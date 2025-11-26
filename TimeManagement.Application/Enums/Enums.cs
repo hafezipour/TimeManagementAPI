@@ -43,4 +43,26 @@ namespace TimeManagement.Application.Enums
         Off = 0,
         On = 1
     }
+
+    /// <summary>
+    /// Accrue unit types for accrual rules
+    /// </summary>
+    public enum AccrueUnit
+    {
+        Minutes = 1,
+        Hours = 2
+    }
+
+    /// <summary>
+    /// Accrue frequency types for accrual rules
+    /// </summary>
+    public enum AccrueFrequency
+    {
+        Year = 1,
+        Quarter = 2,
+        Month = 3,
+        Months = 4,
+        Days = 5,
+        HoursWorked = 6
+    }
 }

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TimeManagement.Application.Services;
+using TimeManagement.Infra.Extensions;
 
 namespace TimeManagement.Controllers;
 
@@ -21,6 +22,8 @@ public class ShiftAssignmentConflictController : ControllerBase
     [HttpGet("demo")]
     public IActionResult Examples()
     {
+        CustomLogger.Log(LogLevel.Error, new Exception() { }, "This is a test");//Just by default set here log level as error type
+
         var html = _examples.BuildHtmlReport();
         return Content(html, "text/html");
     }

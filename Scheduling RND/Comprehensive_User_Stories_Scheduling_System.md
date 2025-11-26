@@ -1038,6 +1038,14 @@ Based on the Complete HR System ERD, this document provides detailed user storie
 - [ ] System creates audit trail of job code and accrual rule changes
 - [ ] System handles retroactive accrual adjustments if needed
 - [ ] System recalculates both time-entry based and fixed earning mode accruals
+- [ ] **Accrual Balance Preservation:** System preserves existing accrual balances when job code changes (balances belong to employee, not job code)
+- [ ] **Same Accrual Type:** If new job code has same accrual type (e.g., both have "Sick Leave"), existing balance is preserved and future accruals use new job code's rules
+- [ ] **Different Accrual Types:** If new job code has different accrual types, employee maintains separate balances for each accrual type
+- [ ] **Missing Accrual Type:** If new job code doesn't have an accrual type that employee has balance for, existing balance remains but no new accruals are earned for that type
+- [ ] **Balance Continuity:** Employee does NOT receive duplicate balances when job code changes - existing balance continues to be available for consumption
+- [ ] **Future Accruals:** Only future accruals (earned after job code change) use the new job code's accrual rules and rates
+- [ ] **Historical Tracking:** System maintains audit trail showing which job code was used when each accrual transaction occurred
+- [ ] **Balance Display:** System shows accrual balances with indication of which job code rules currently apply for future accruals
 
 #### US-ACC-022: Generate Accrual Reports with Categorization Information
 **As a** manager  
