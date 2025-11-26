@@ -21,7 +21,7 @@ namespace TimeManagement.Application.DTOs.EmployeeAvailability
         /// <summary>
         /// End date - defaults to StartDate if not provided (same-day availability)
         /// </summary>
-        public DateTime EndDate { get; set; }
+        public DateTime? EndDate { get; set; }
 
         /// <summary>
         /// End time - defaults to 11:59 PM if not provided (end of day)
