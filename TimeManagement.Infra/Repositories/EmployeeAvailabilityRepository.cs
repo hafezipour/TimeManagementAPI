@@ -20,6 +20,20 @@ public class EmployeeAvailabilityRepository
     {
         try
         {
+            if (startDate.HasValue && endDate.HasValue)
+            {
+                var diff = (endDate.Value - startDate.Value).TotalDays;
+
+                // If difference is equal or greater than 27 days
+                if (diff >= 27)
+                {
+                    // Move startDate back by 7 days
+                    startDate = startDate.Value.AddDays(-7);
+
+                    // Move endDate forward by 14 days
+                    endDate = endDate.Value.AddDays(14);
+                }
+            }
             List<SqlParameterModel> param = new List<SqlParameterModel>()
             {
                 new SqlParameterModel(){ Name = "UserId", Value = userId},
