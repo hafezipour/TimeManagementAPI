@@ -134,10 +134,18 @@ public class AccrualEvaluator
 
             #region Proceed here Rule by rule Evaluation for each accrual bank
 
-            foreach (var bank in banks)
-            {
-                var accrualRule = accrualRules.Where(c => c.Id == bank.AccrualRulesSlotId).FirstOrDefault();
+            // Group banks by tenant for bulk processing
+            var banksByTenant = banks.GroupBy(b => b.TenantId).ToList();
 
+            foreach (var tenantGroup in banksByTenant)
+            {
+                var tenantId = tenantGroup.Key;
+                var tenantBanks = tenantGroup.ToList();
+
+                CustomLogger.Log(LogLevel.Information, null, $"Processing {tenantBanks.Count} banks for tenant {tenantId}");
+
+                // Process all banks for this tenant
+                await GetAccrualBanksToUpdate(tenantBanks, accrualRules, tenantId, scope);
             }
 
             #endregion
@@ -155,12 +163,384 @@ public class AccrualEvaluator
         }
     }
 
-    private void GetAccrualBanksToUpdate(AccrualBankEvaluationResponse bank, AccrualRuleEvaluationResponse accrualRule)
+    /// <summary>
+    /// Processes accrual banks for a tenant in bulk - calculates missing accruals and updates banks
+    /// </summary>
+    private async Task GetAccrualBanksToUpdate(
+        List<AccrualBankEvaluationResponse> banks,
+        List<AccrualRuleEvaluationResponse> accrualRules,
+        int tenantId,
+        IServiceScope scope)
     {
-        //bank.AccrualStartDate = DateTime.Now;
+        var accrualTransactionsRepository = scope.ServiceProvider.GetRequiredService<AccrualTransactionsRepository>();
+        var accrualBanksRepository = scope.ServiceProvider.GetRequiredService<AccrualBanksRepository>();
+        var accrualTransactionsProcessor = scope.ServiceProvider.GetRequiredService<AccrualTransactionsProcessor>();
 
+        try
+        {
+            // Set current user for processors
+            accrualTransactionsProcessor.SetCurrentUser(new Domain.Models.LoggedInUser() { LoginId = -1, TenantID = tenantId });
 
+            // Get all bank IDs for this tenant
+            var bankIds = banks.Select(b => b.Id).ToList();
+
+            // Get existing transactions for all banks
+            var existingTransactions = await GetExistingTransactionsByBankIds(bankIds, tenantId, accrualTransactionsRepository);
+
+            // Process each bank and rule combination
+            var transactionsToAdd = new List<AccrualTransactionRequest>();
+            var banksToUpdate = new List<AccrualBankUpdateRequest>();
+
+            foreach (var bank in banks)
+            {
+                var accrualRule = accrualRules.FirstOrDefault(r => r.Id == bank.AccrualRulesSlotId);
+                if (accrualRule == null)
+                {
+                    CustomLogger.Log(LogLevel.Warning, null, $"No accrual rule found for bank {bank.Id}, slot {bank.AccrualRulesSlotId}");
+                    continue;
+                }
+
+                // Calculate accrual periods and missing transactions
+                var result = CalculateAccrualPeriodsAndTransactions(
+                    bank,
+                    accrualRule,
+                    existingTransactions.Where(t => t.AccrualBankId == bank.Id).ToList());
+
+                if (result.MissingTransactions.Count > 0)
+                {
+                    transactionsToAdd.AddRange(result.MissingTransactions);
+                }
+
+                if (result.BankUpdate != null)
+                {
+                    banksToUpdate.Add(result.BankUpdate);
+                }
+            }
+
+            // Bulk insert transactions for this tenant
+            if (transactionsToAdd.Count > 0)
+            {
+                await InsertAccrualTransactionsBulk(transactionsToAdd, tenantId, accrualTransactionsRepository);
+                CustomLogger.Log(LogLevel.Information, null, $"Inserted {transactionsToAdd.Count} accrual transactions for tenant {tenantId}");
+            }
+
+            // Bulk update banks for this tenant
+            if (banksToUpdate.Count > 0)
+            {
+                await UpdateAccrualBanksBulk(banksToUpdate, tenantId, accrualBanksRepository);
+                CustomLogger.Log(LogLevel.Information, null, $"Updated {banksToUpdate.Count} accrual banks for tenant {tenantId}");
+            }
+        }
+        catch (Exception ex)
+        {
+            CustomLogger.Log(LogLevel.Error, ex, $"Error processing accrual banks for tenant {tenantId}");
+            throw;
+        }
     }
+
+    /// <summary>
+    /// Gets existing transactions by bank IDs
+    /// </summary>
+    private async Task<List<AccrualTransactionResponse>> GetExistingTransactionsByBankIds(
+        List<int> bankIds,
+        int tenantId,
+        AccrualTransactionsRepository repository)
+    {
+        try
+        {
+            // Convert bank IDs to JSON array
+            var bankIdsJson = JsonSerializer.Serialize(bankIds);
+
+            // Call stored procedure to get existing transactions
+            var transactionsJson = await repository.GetTransactionsByBankIds(bankIdsJson, tenantId);
+
+            if (string.IsNullOrEmpty(transactionsJson))
+            {
+                return new List<AccrualTransactionResponse>();
+            }
+
+            var transactions = JsonSerializer.Deserialize<List<AccrualTransactionResponse>>(transactionsJson, JsonOptions);
+            return transactions ?? new List<AccrualTransactionResponse>();
+        }
+        catch (Exception ex)
+        {
+            CustomLogger.Log(LogLevel.Error, ex, "Error getting existing transactions");
+            return new List<AccrualTransactionResponse>();
+        }
+    }
+
+    /// <summary>
+    /// Calculates accrual periods and determines missing transactions
+    /// </summary>
+    private AccrualCalculationResult CalculateAccrualPeriodsAndTransactions(
+        AccrualBankEvaluationResponse bank,
+        AccrualRuleEvaluationResponse accrualRule,
+        List<AccrualTransactionResponse> existingTransactions)
+    {
+        var result = new AccrualCalculationResult();
+
+        // Determine start date: use LastAccruedPeriodDate if available, otherwise AccrualStartDate
+        DateTime? startDate = bank.LastAccruedPeriodDate ?? bank.AccrualStartDate;
+        if (!startDate.HasValue)
+        {
+            CustomLogger.Log(LogLevel.Warning, null, $"No start date found for bank {bank.Id}");
+            return result;
+        }
+
+        // Calculate all possible accrual periods from start date to today
+        var allPeriods = CalculateAllAccrualPeriods(
+            startDate.Value,
+            DateTime.UtcNow.Date,
+            accrualRule.AccrueFrequency,
+            accrualRule.AccrueFrequencyValue);
+
+        // Get existing period dates
+        var existingPeriodDates = existingTransactions
+            .Where(t => t.AccrualPeriodDate.HasValue)
+            .Select(t => t.AccrualPeriodDate!.Value.Date)
+            .ToHashSet();
+
+        // Find missing periods
+        var missingPeriods = allPeriods
+            .Where(p => !existingPeriodDates.Contains(p))
+            .OrderBy(p => p)
+            .ToList();
+
+        // Check if stop accruing is enabled and if limit is already reached
+        if (accrualRule.IsStopAccruingEnabled && accrualRule.StopAccruingAfterReaching.HasValue)
+        {
+            if (bank.CurrentBalance >= accrualRule.StopAccruingAfterReaching.Value)
+            {
+                CustomLogger.Log(LogLevel.Information, null, 
+                    $"Bank {bank.Id} has reached accrual limit ({accrualRule.StopAccruingAfterReaching.Value}). Current balance: {bank.CurrentBalance}. Skipping accruals.");
+                return result;
+            }
+        }
+
+        // Calculate new balance
+        decimal runningBalance = bank.CurrentBalance;
+        DateTime? lastAccruedDate = bank.LastAccruedPeriodDate;
+
+        foreach (var periodDate in missingPeriods)
+        {
+            // Calculate accrual amount for this period
+            decimal accrualAmount = CalculateAccrualAmount(accrualRule, periodDate);
+
+            // Check if stop accruing is enabled and if adding this accrual would exceed the limit
+            if (accrualRule.IsStopAccruingEnabled && accrualRule.StopAccruingAfterReaching.HasValue)
+            {
+                decimal potentialNewBalance = runningBalance + accrualAmount;
+
+                // If adding this accrual would exceed the limit, stop processing
+                if (potentialNewBalance >= accrualRule.StopAccruingAfterReaching.Value)
+                {
+                    CustomLogger.Log(LogLevel.Information, null, 
+                        $"Bank {bank.Id} would reach accrual limit ({accrualRule.StopAccruingAfterReaching.Value}) after period {periodDate:yyyy-MM-dd}. " +
+                        $"Current balance: {runningBalance}, Accrual amount: {accrualAmount}, Potential balance: {potentialNewBalance}. Stopping accruals.");
+                    break;
+                }
+            }
+
+            // Store old balance before adding accrual
+            decimal oldBalance = runningBalance;
+            runningBalance += accrualAmount;
+            lastAccruedDate = periodDate;
+
+            result.MissingTransactions.Add(new AccrualTransactionRequest
+            {
+                AccrualBankId = bank.Id,
+                UserId = bank.UserId,
+                AccrualProfileId = bank.AccrualProfileId,
+                AccrualRulesSlotId = bank.AccrualRulesSlotId,
+                AccrualPeriodDate = periodDate,
+                Amount = accrualAmount,
+                OldBalance = oldBalance,
+                NewBalance = runningBalance,
+                Description = $"Accrual for period {periodDate:yyyy-MM-dd}"
+            });
+        }
+
+        // Create bank update request if there are new transactions
+        if (result.MissingTransactions.Count > 0)
+        {
+            result.BankUpdate = new AccrualBankUpdateRequest
+            {
+                BankId = bank.Id,
+                UserId = bank.UserId,
+                AccrualProfileId = bank.AccrualProfileId,
+                AccrualRulesSlotId = bank.AccrualRulesSlotId,
+                CurrentBalance = bank.CurrentBalance,
+                NewBalance = runningBalance,
+                LastAccruedPeriodDate = lastAccruedDate
+            };
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Calculates all accrual period dates based on frequency
+    /// </summary>
+    private List<DateTime> CalculateAllAccrualPeriods(
+        DateTime startDate,
+        DateTime endDate,
+        int accrueFrequency,
+        decimal? accrueFrequencyValue)
+    {
+        var periods = new List<DateTime>();
+        var currentDate = startDate.Date;
+
+        // If frequency value is null or 0, default to 1
+        decimal frequencyValue = accrueFrequencyValue ?? 1;
+
+        // Add the start date as the first period
+        if (currentDate <= endDate)
+        {
+            periods.Add(currentDate);
+        }
+
+        // Calculate subsequent periods
+        while (currentDate <= endDate)
+        {
+            // Calculate next period based on frequency type
+            currentDate = accrueFrequency switch
+            {
+                1 => currentDate.AddYears((int)frequencyValue), // Year
+                2 => currentDate.AddMonths((int)(frequencyValue * 3)), // Quarter (3 months)
+                3 => currentDate.AddMonths((int)frequencyValue), // Month
+                4 => currentDate.AddMonths((int)frequencyValue), // Months
+                5 => currentDate.AddDays((int)frequencyValue), // Days
+                _ => currentDate.AddMonths(1) // Default to monthly
+            };
+
+            if (currentDate <= endDate)
+            {
+                periods.Add(currentDate);
+            }
+        }
+
+        return periods;
+    }
+
+    /// <summary>
+    /// Calculates accrual amount for a given period
+    /// </summary>
+    private decimal CalculateAccrualAmount(AccrualRuleEvaluationResponse accrualRule, DateTime periodDate)
+    {
+        // For now, return the base accrual amount
+        // This can be extended to handle different accrual units (hours, days, etc.)
+        return accrualRule.AccrueAmount;
+    }
+
+    /// <summary>
+    /// Inserts accrual transactions in bulk
+    /// </summary>
+    private async Task InsertAccrualTransactionsBulk(
+        List<AccrualTransactionRequest> transactions,
+        int tenantId,
+        AccrualTransactionsRepository repository)
+    {
+        try
+        {
+            // Convert to LogTransactionsRequest format
+            var logRequests = transactions.Select(t => new LogTransactionsRequest
+            {
+                BankId = t.AccrualBankId,
+                UserId = t.UserId,
+                AccrualProfileId = t.AccrualProfileId,
+                AccrualRulesSlotId = t.AccrualRulesSlotId,
+                OldBalance = t.OldBalance,
+                NewBalance = t.NewBalance,
+                Operator = "+",
+                AdjustmentAmount = t.Amount,
+                Notes = t.Description
+            }).ToList();
+
+            // Note: We need to extend LogTransactionsRequest or create a new method
+            // that accepts AccrualPeriodDate. For now, we'll use the existing method
+            // and update the stored procedure to handle AccrualPeriodDate
+            var json = JsonSerializer.Serialize(logRequests);
+            await repository.LogTransactionsWithPeriodDate(json, -1, tenantId);
+        }
+        catch (Exception ex)
+        {
+            CustomLogger.Log(LogLevel.Error, ex, "Error inserting accrual transactions in bulk");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Updates accrual banks in bulk
+    /// </summary>
+    private async Task UpdateAccrualBanksBulk(
+        List<AccrualBankUpdateRequest> bankUpdates,
+        int tenantId,
+        AccrualBanksRepository repository)
+    {
+        try
+        {
+            // Convert to UpdateBalancesRequest format
+            var updateRequests = bankUpdates.Select(b => new UpdateBalancesRequest
+            {
+                BankId = b.BankId,
+                UserId = b.UserId,
+                AccrualProfileId = b.AccrualProfileId,
+                AccrualRulesSlotId = b.AccrualRulesSlotId,
+                CurrentBalance = b.CurrentBalance,
+                Operator = "+",
+                AdjustmentAmount = b.NewBalance - b.CurrentBalance,
+                Notes = $"Accrual update - Last accrued: {b.LastAccruedPeriodDate:yyyy-MM-dd}"
+            }).ToList();
+
+            var json = JsonSerializer.Serialize(updateRequests);
+            await repository.UpdateBalancesWithLastAccruedDate(json, -1, tenantId);
+        }
+        catch (Exception ex)
+        {
+            CustomLogger.Log(LogLevel.Error, ex, "Error updating accrual banks in bulk");
+            throw;
+        }
+    }
+
+    #region Helper Classes
+
+    private class AccrualCalculationResult
+    {
+        public List<AccrualTransactionRequest> MissingTransactions { get; set; } = new();
+        public AccrualBankUpdateRequest? BankUpdate { get; set; }
+    }
+
+    private class AccrualTransactionRequest
+    {
+        public int AccrualBankId { get; set; }
+        public int UserId { get; set; }
+        public int AccrualProfileId { get; set; }
+        public int AccrualRulesSlotId { get; set; }
+        public DateTime AccrualPeriodDate { get; set; }
+        public decimal Amount { get; set; }
+        public decimal OldBalance { get; set; }
+        public decimal NewBalance { get; set; }
+        public string Description { get; set; } = string.Empty;
+    }
+
+    private class AccrualTransactionResponse
+    {
+        public int AccrualBankId { get; set; }
+        public DateTime? AccrualPeriodDate { get; set; }
+    }
+
+    private class AccrualBankUpdateRequest
+    {
+        public int BankId { get; set; }
+        public int UserId { get; set; }
+        public int AccrualProfileId { get; set; }
+        public int AccrualRulesSlotId { get; set; }
+        public decimal CurrentBalance { get; set; }
+        public decimal NewBalance { get; set; }
+        public DateTime? LastAccruedPeriodDate { get; set; }
+    }
+
+    #endregion
 
 
 

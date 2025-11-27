@@ -57,5 +57,46 @@ public class AccrualTransactionsRepository
             throw ex;
         }
     }
+
+    public async Task<string> GetTransactionsByBankIds(string bankIdsJson, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new()
+            {
+                new SqlParameterModel { Name = "BankIdsJson", Value = bankIdsJson },
+                new SqlParameterModel { Name = "TenantId", Value = tenantId }
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualTransactions_GetByBankIds", param);
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<string> LogTransactionsWithPeriodDate(string json, int createdBy, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new()
+            {
+                new SqlParameterModel { Name = "Json", Value = json },
+                new SqlParameterModel { Name = "CreatedBy", Value = createdBy },
+                new SqlParameterModel { Name = "TenantId", Value = tenantId }
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_LogTransactionsWithPeriodDate", param);
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 

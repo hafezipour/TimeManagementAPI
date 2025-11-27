@@ -17,5 +17,6 @@ public class AccrualBankEvaluationResponse
     public DateTimeOffset? DateUpdated { get; set; }
     public int? UpdatedBy { get; set; }
     public DateTime? AccrualStartDate { get; set; }
+    public DateTime? LastAccruedPeriodDate { get; set; }
 }
 

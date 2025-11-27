@@ -90,5 +90,26 @@ public class AccrualBanksRepository
         }
     }
 
+    public async Task<string> UpdateBalancesWithLastAccruedDate(string json, int updatedBy, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new()
+            {
+                new SqlParameterModel { Name = "Json", Value = json },
+                new SqlParameterModel { Name = "UpdatedBy", Value = updatedBy },
+                new SqlParameterModel { Name = "TenantId", Value = tenantId }
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_UpdateBalancesWithLastAccruedDate", param);
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
 }
 
