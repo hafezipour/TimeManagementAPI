@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TimeManagement.Application.DTOs.AccrualEvaluations;
 using TimeManagement.Application.DTOs.AccrualRules;
 using TimeManagement.Application.DTOs.EmployeeAccrualSettings;
 using TimeManagement.Application.Processors;
@@ -533,51 +534,6 @@ public class AccrualEvaluator
             throw;
         }
     }
-
-    #region Helper Classes
-
-    private class AccrualCalculationResult
-    {
-        public List<AccrualTransactionRequest> MissingTransactions { get; set; } = new();
-        public AccrualBankUpdateRequest? BankUpdate { get; set; }
-    }
-
-    private class AccrualTransactionRequest
-    {
-        public int AccrualBankId { get; set; }
-        public int UserId { get; set; }
-        public int AccrualProfileId { get; set; }
-        public int AccrualRulesSlotId { get; set; }
-        public DateTime AccrualPeriodDate { get; set; }
-        public decimal Amount { get; set; }
-        public decimal OldBalance { get; set; }
-        public decimal NewBalance { get; set; }
-        public string Description { get; set; } = string.Empty;
-    }
-
-    private class AccrualTransactionResponse
-    {
-        public int AccrualBankId { get; set; }
-        public DateTime? AccrualPeriodDate { get; set; }
-    }
-
-    private class AccrualBankUpdateRequest
-    {
-        public int BankId { get; set; }
-        public int UserId { get; set; }
-        public int AccrualProfileId { get; set; }
-        public int AccrualRulesSlotId { get; set; }
-        public decimal CurrentBalance { get; set; }
-        public decimal NewBalance { get; set; }
-        public DateTime? LastAccruedPeriodDate { get; set; }
-    }
-
-    #endregion
-
-
-
-
-
 
 
 }
