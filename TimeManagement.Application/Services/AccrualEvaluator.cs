@@ -324,20 +324,42 @@ public class AccrualEvaluator
         foreach (var periodDate in missingPeriods)
         {
             // Calculate accrual amount for this period
-            decimal accrualAmount = CalculateAccrualAmount(accrualRule, periodDate);
+            decimal fullAccrualAmount = CalculateAccrualAmount(accrualRule, periodDate);
+            decimal accrualAmount = fullAccrualAmount;
+            bool isPartialAccrual = false;
 
             // Check if stop accruing is enabled and if adding this accrual would exceed the limit
             if (accrualRule.IsStopAccruingEnabled && accrualRule.StopAccruingAfterReaching.HasValue)
             {
-                decimal potentialNewBalance = runningBalance + accrualAmount;
+                decimal potentialNewBalance = runningBalance + fullAccrualAmount;
 
-                // If adding this accrual would exceed the limit, stop processing
-                if (potentialNewBalance >= accrualRule.StopAccruingAfterReaching.Value)
+                // If adding this accrual would exceed the limit, calculate partial accrual
+                if (potentialNewBalance > accrualRule.StopAccruingAfterReaching.Value)
                 {
-                    CustomLogger.Log(LogLevel.Information, null, 
-                        $"Bank {bank.Id} would reach accrual limit ({accrualRule.StopAccruingAfterReaching.Value}) after period {periodDate:yyyy-MM-dd}. " +
-                        $"Current balance: {runningBalance}, Accrual amount: {accrualAmount}, Potential balance: {potentialNewBalance}. Stopping accruals.");
-                    break;
+                    // Calculate how much can be accrued without exceeding the limit
+                    decimal remainingCapacity = accrualRule.StopAccruingAfterReaching.Value - runningBalance;
+                    
+                    if (remainingCapacity > 0)
+                    {
+                        // Accrue only up to the limit
+                        accrualAmount = remainingCapacity;
+                        isPartialAccrual = true;
+                        decimal unaccruedAmount = fullAccrualAmount - accrualAmount;
+
+                        CustomLogger.Log(LogLevel.Information, null, 
+                            $"Bank {bank.Id} would exceed accrual limit ({accrualRule.StopAccruingAfterReaching.Value}) after period {periodDate:yyyy-MM-dd}. " +
+                            $"Current balance: {runningBalance}, Full accrual amount: {fullAccrualAmount}, " +
+                            $"Partial accrual: {accrualAmount}, Unaccrued amount: {unaccruedAmount}, New balance: {runningBalance + accrualAmount}. " +
+                            $"Stopping accruals after this partial accrual.");
+                    }
+                    else
+                    {
+                        // Already at or above limit, stop processing
+                        CustomLogger.Log(LogLevel.Information, null, 
+                            $"Bank {bank.Id} has reached accrual limit ({accrualRule.StopAccruingAfterReaching.Value}). " +
+                            $"Current balance: {runningBalance}. No accrual possible for period {periodDate:yyyy-MM-dd}. Stopping accruals.");
+                        break;
+                    }
                 }
             }
 
@@ -345,6 +367,10 @@ public class AccrualEvaluator
             decimal oldBalance = runningBalance;
             runningBalance += accrualAmount;
             lastAccruedDate = periodDate;
+
+            string description = isPartialAccrual
+                ? $"Partial accrual for period {periodDate:yyyy-MM-dd} (limit reached, {fullAccrualAmount - accrualAmount} unaccrued)"
+                : $"Accrual for period {periodDate:yyyy-MM-dd}";
 
             result.MissingTransactions.Add(new AccrualTransactionRequest
             {
@@ -356,8 +382,14 @@ public class AccrualEvaluator
                 Amount = accrualAmount,
                 OldBalance = oldBalance,
                 NewBalance = runningBalance,
-                Description = $"Accrual for period {periodDate:yyyy-MM-dd}"
+                Description = description
             });
+
+            // If this was a partial accrual, stop processing further periods
+            if (isPartialAccrual)
+            {
+                break;
+            }
         }
 
         // Create bank update request if there are new transactions
