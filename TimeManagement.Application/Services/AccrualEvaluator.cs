@@ -195,8 +195,8 @@ public class AccrualEvaluator
 
             foreach (var bank in banks)
             {
-                var a = banks.Where(c => c.TenantId == tenantId).Select(c => new { c.UserId }).Distinct().ToList();
-                await new CallApiService(tenantId).SendRequest<object>(a);
+                //var a = banks.Where(c => c.TenantId == tenantId).Select(c => new { c.UserId }).Distinct().ToList();
+                //await new CallApiService(tenantId).SendRequest<object>(a);
 
                 var accrualRule = accrualRules.FirstOrDefault(r => r.Id == bank.AccrualRulesSlotId);
                 if (accrualRule == null)
