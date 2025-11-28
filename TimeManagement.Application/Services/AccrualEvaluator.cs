@@ -9,6 +9,7 @@ using TimeManagement.Application.DTOs.EmployeeAccrualSettings;
 using TimeManagement.Application.Processors;
 using TimeManagement.Infra.Extensions;
 using TimeManagement.Infra.Repositories;
+using WebPortal_TM.API.ExternalAuth;
 
 namespace TimeManagement.Application.Services;
 
@@ -194,6 +195,9 @@ public class AccrualEvaluator
 
             foreach (var bank in banks)
             {
+                var a = banks.Where(c => c.TenantId == tenantId).Select(c => new { c.UserId }).Distinct().ToList();
+                await new CallApiService(tenantId).SendRequest<object>(a);
+
                 var accrualRule = accrualRules.FirstOrDefault(r => r.Id == bank.AccrualRulesSlotId);
                 if (accrualRule == null)
                 {
@@ -312,7 +316,7 @@ public class AccrualEvaluator
         {
             if (bank.CurrentBalance >= accrualRule.StopAccruingAfterReaching.Value)
             {
-                CustomLogger.Log(LogLevel.Information, null, 
+                CustomLogger.Log(LogLevel.Information, null,
                     $"Bank {bank.Id} has reached accrual limit ({accrualRule.StopAccruingAfterReaching.Value}). Current balance: {bank.CurrentBalance}. Skipping accruals.");
                 return result;
             }
@@ -335,7 +339,7 @@ public class AccrualEvaluator
                 // If adding this accrual would exceed the limit, stop processing
                 if (potentialNewBalance > accrualRule.StopAccruingAfterReaching.Value)
                 {
-                    CustomLogger.Log(LogLevel.Information, null, 
+                    CustomLogger.Log(LogLevel.Information, null,
                         $"Bank {bank.Id} would exceed accrual limit ({accrualRule.StopAccruingAfterReaching.Value}) after period {periodDate:yyyy-MM-dd}. " +
                         $"Current balance: {runningBalance}, Accrual amount: {accrualAmount}, Potential balance: {potentialNewBalance}. Stopping accruals.");
                     break;

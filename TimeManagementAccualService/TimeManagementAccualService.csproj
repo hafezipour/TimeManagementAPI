@@ -13,7 +13,7 @@
     <PackageReference Include="DbOperations" Version="1.0.0.4" />
     <PackageReference Include="Microsoft.Extensions.Hosting.WindowsServices" Version="8.0.1" />
     <PackageReference Include="Microsoft.Extensions.Logging.Log4Net.AspNetCore" Version="8.0.0" />
-    <PackageReference Include="WebPortalSecurityManager" Version="1.0.6.6" />
+    <PackageReference Include="WebPortalSecurityManager" Version="1.0.6.7" />
     <PackageReference Include="log4net" Version="3.2.0" />
   </ItemGroup>
 
