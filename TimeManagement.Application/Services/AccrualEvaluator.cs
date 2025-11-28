@@ -146,8 +146,11 @@ public class AccrualEvaluator
 
                 CustomLogger.Log(LogLevel.Information, null, $"Processing {tenantBanks.Count} banks for tenant {tenantId}");
 
+                // Get employee settings for this tenant to access profile tenure information
+                var tenantEmployeeSettings = employeeSettings.Where(s => s.TenantId == tenantId).ToList();
+
                 // Process all banks for this tenant
-                await GetAccrualBanksToUpdate(tenantBanks, accrualRules, tenantId, scope);
+                await GetAccrualBanksToUpdate(tenantBanks, accrualRules, tenantId, tenantEmployeeSettings, scope);
             }
 
             #endregion
@@ -172,6 +175,7 @@ public class AccrualEvaluator
         List<AccrualBankEvaluationResponse> banks,
         List<AccrualRuleEvaluationResponse> accrualRules,
         int tenantId,
+        List<EmployeeAccrualSettingsEvaluationResponse> employeeSettings,
         IServiceScope scope)
     {
         var accrualTransactionsRepository = scope.ServiceProvider.GetRequiredService<AccrualTransactionsRepository>();
@@ -195,14 +199,45 @@ public class AccrualEvaluator
 
             foreach (var bank in banks)
             {
-                //var a = banks.Where(c => c.TenantId == tenantId).Select(c => new { c.UserId }).Distinct().ToList();
-                //await new CallApiService(tenantId).SendRequest<object>(a);
-
                 var accrualRule = accrualRules.FirstOrDefault(r => r.Id == bank.AccrualRulesSlotId);
                 if (accrualRule == null)
                 {
                     CustomLogger.Log(LogLevel.Warning, null, $"No accrual rule found for bank {bank.Id}, slot {bank.AccrualRulesSlotId}");
                     continue;
+                }
+
+                // Get employee setting for this bank to access profile tenure information
+                var employeeSetting = employeeSettings.FirstOrDefault(s => 
+                    s.UserId == bank.UserId && 
+                    s.AccrualProfileId == bank.AccrualProfileId && 
+                    s.TenantId == tenantId);
+
+                // Check tenure requirements if profile is based on years served
+                if (employeeSetting != null && employeeSetting.IsBaseOnYearsServed)
+                {
+                    if (!bank.AccrualStartDate.HasValue)
+                    {
+                        CustomLogger.Log(LogLevel.Warning, null, 
+                            $"AccrualStartDate is null for bank {bank.Id}, user {bank.UserId}, profile {bank.AccrualProfileId}. Skipping accrual processing.");
+                        continue;
+                    }
+
+                    // Calculate tenure from AccrualStartDate
+                    decimal tenure = CalculateTenure(bank.AccrualStartDate.Value);
+
+                    // Check if tenure falls within the profile's tenure range
+                    // Logic: "Includes employees who worked at least the first number of years, but less than the second number"
+                    // So: tenure >= FromYears AND tenure < ToYears (if ToYears is specified)
+                    bool isTenureValid = CheckTenureAgainstProfile(tenure, employeeSetting.FromYears, employeeSetting.ToYears);
+
+                    if (!isTenureValid)
+                    {
+                        CustomLogger.Log(LogLevel.Information, null, 
+                            $"Bank {bank.Id} (User {bank.UserId}, Profile {bank.AccrualProfileId}) does not meet tenure requirements. " +
+                            $"Tenure: {tenure:F2} years (from AccrualStartDate {bank.AccrualStartDate:yyyy-MM-dd}), " +
+                            $"Required: {employeeSetting.FromYears} - {employeeSetting.ToYears}. Skipping accrual processing.");
+                        continue;
+                    }
                 }
 
                 // Calculate accrual periods and missing transactions
@@ -507,6 +542,259 @@ public class AccrualEvaluator
         }
     }
 
+    /// <summary>
+    /// Checks if tenure falls within the profile's tenure range
+    /// Logic: "Includes employees who worked at least the first number of years, but less than the second number"
+    /// </summary>
+    private bool CheckTenureAgainstProfile(decimal tenure, decimal? fromYears, decimal? toYears)
+    {
+        if (!fromYears.HasValue)
+        {
+            return true; // No tenure requirement
+        }
 
+        if (toYears.HasValue)
+        {
+            // Range: FromYears <= tenure < ToYears
+            return tenure >= fromYears.Value && tenure < toYears.Value;
+        }
+        else
+        {
+            // Open-ended: tenure >= FromYears
+            return tenure >= fromYears.Value;
+        }
+    }
+
+    /// <summary>
+    /// Calculates tenure (years of service) from AccrualStartDate
+    /// </summary>
+    private decimal CalculateTenure(DateTime accrualStartDate)
+    {
+        var now = DateTime.UtcNow;
+        var years = now.Year - accrualStartDate.Year;
+        
+        // Adjust if the anniversary hasn't occurred this year
+        if (now.Month < accrualStartDate.Month || (now.Month == accrualStartDate.Month && now.Day < accrualStartDate.Day))
+        {
+            years--;
+        }
+        
+        // Calculate fractional years (months and days)
+        var months = now.Month - accrualStartDate.Month;
+        if (months < 0)
+        {
+            months += 12;
+        }
+        
+        var days = now.Day - accrualStartDate.Day;
+        if (days < 0)
+        {
+            // Adjust for month boundaries
+            var daysInPreviousMonth = DateTime.DaysInMonth(now.Year, now.Month == 1 ? 12 : now.Month - 1);
+            days += daysInPreviousMonth;
+            months--;
+            if (months < 0)
+            {
+                months += 12;
+                years--;
+            }
+        }
+        
+        // Convert to decimal years (approximate: 1 month = 1/12 year, 1 day = 1/365.25 year)
+        decimal fractionalYears = years + (months / 12.0m) + (days / 365.25m);
+        
+        return Math.Max(0, fractionalYears);
+    }
+
+    /// <summary>
+    /// Gets accrual profile ID from track based on tenure (without repository dependency)
+    /// </summary>
+    private async Task<(int profileId, string profileName)> GetAccrualProfileIdFromTrack(
+        int accrualTrackId, 
+        string accrualStartDate, 
+        int tenantId,
+        AccrualTracksRepository accrualTracksRepository)
+    {
+        try
+        {
+            // Get the accrual track with profiles
+            var trackJson = await accrualTracksRepository.GetAccrualTracks(accrualTrackId, tenantId);
+
+            if (string.IsNullOrEmpty(trackJson))
+            {
+                return (0, string.Empty);
+            }
+
+            var tracks = JsonSerializer.Deserialize<List<JsonElement>>(trackJson);
+            if (tracks == null || tracks.Count == 0)
+            {
+                return (0, string.Empty);
+            }
+
+            var track = tracks[0];
+            if (!track.TryGetProperty("profiles", out var profilesElement))
+            {
+                return (0, string.Empty);
+            }
+
+            List<JsonElement> profiles;
+            if (profilesElement.ValueKind == JsonValueKind.String)
+            {
+                // If profiles is a JSON string, parse it
+                profiles = JsonSerializer.Deserialize<List<JsonElement>>(profilesElement.GetString() ?? "[]");
+            }
+            else if (profilesElement.ValueKind == JsonValueKind.Array)
+            {
+                // If profiles is already an array, use it directly
+                profiles = JsonSerializer.Deserialize<List<JsonElement>>(profilesElement.GetRawText());
+            }
+            else
+            {
+                return (0, string.Empty);
+            }
+
+            if (profiles == null || profiles.Count == 0)
+            {
+                return (0, string.Empty);
+            }
+
+            // Calculate years served
+            var startDate = DateTime.Parse(accrualStartDate);
+            var now = DateTime.UtcNow;
+            var yearsServed = now.Year - startDate.Year;
+            if (now.Month < startDate.Month || (now.Month == startDate.Month && now.Day < startDate.Day))
+            {
+                yearsServed--;
+            }
+            yearsServed = Math.Max(0, yearsServed);
+
+            // Find matching profile
+            var sortedProfiles = profiles.OrderBy(p =>
+            {
+                if (p.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
+                {
+                    return fromYearsElement.GetDecimal();
+                }
+                return 0;
+            }).ToList();
+
+            foreach (var profile in sortedProfiles)
+            {
+                decimal from = 0;
+                decimal? to = null;
+                int profileId = 0;
+                string profileName = string.Empty;
+
+                if (profile.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
+                {
+                    from = fromYearsElement.GetDecimal();
+                }
+
+                if (profile.TryGetProperty("toYears", out var toYearsElement) && toYearsElement.ValueKind != JsonValueKind.Null)
+                {
+                    to = toYearsElement.GetDecimal();
+                }
+
+                if (profile.TryGetProperty("accrualProfileId", out var profileIdElement) && profileIdElement.ValueKind != JsonValueKind.Null)
+                {
+                    profileId = profileIdElement.GetInt32();
+                }
+
+                if (profile.TryGetProperty("profileName", out var profileNameElement) && profileNameElement.ValueKind != JsonValueKind.Null)
+                {
+                    profileName = profileNameElement.GetString() ?? string.Empty;
+                }
+
+                if (to == null)
+                {
+                    // No upper limit
+                    if (yearsServed >= from)
+                    {
+                        return (profileId, profileName);
+                    }
+                }
+                else
+                {
+                    if (yearsServed >= from && yearsServed <= to.Value)
+                    {
+                        return (profileId, profileName);
+                    }
+                }
+            }
+
+            // If no match, return first profile
+            if (sortedProfiles.Count > 0)
+            {
+                var firstProfile = sortedProfiles[0];
+                int firstProfileId = 0;
+                string firstNameValue = string.Empty;
+
+                if (firstProfile.TryGetProperty("accrualProfileId", out var firstProfileIdElement) && firstProfileIdElement.ValueKind != JsonValueKind.Null)
+                {
+                    firstProfileId = firstProfileIdElement.GetInt32();
+                }
+
+                if (firstProfile.TryGetProperty("profileName", out var firstNameElement) && firstNameElement.ValueKind != JsonValueKind.Null)
+                {
+                    firstNameValue = firstNameElement.GetString() ?? string.Empty;
+                }
+
+                if (firstProfileId > 0)
+                {
+                    return (firstProfileId, firstNameValue);
+                }
+            }
+
+            return (0, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            CustomLogger.Log(LogLevel.Error, ex, $"Error getting accrual profile from track {accrualTrackId}");
+            return (0, string.Empty);
+        }
+    }
+
+    #region Helper Classes
+
+    private class AccrualCalculationResult
+    {
+        public List<AccrualTransactionRequest> MissingTransactions { get; set; } = new();
+        public AccrualBankUpdateRequest? BankUpdate { get; set; }
+    }
+
+    private class AccrualTransactionRequest
+    {
+        public int AccrualBankId { get; set; }
+        public int UserId { get; set; }
+        public int AccrualProfileId { get; set; }
+        public int AccrualRulesSlotId { get; set; }
+        public DateTime AccrualPeriodDate { get; set; }
+        public decimal Amount { get; set; }
+        public decimal OldBalance { get; set; }
+        public decimal NewBalance { get; set; }
+        public string Description { get; set; } = string.Empty;
+    }
+
+    private class AccrualTransactionResponse
+    {
+        public int AccrualBankId { get; set; }
+        public DateTime? AccrualPeriodDate { get; set; }
+        public decimal? Amount { get; set; }
+        public decimal? BalanceAfter { get; set; }
+        public DateTimeOffset? ProcessedDate { get; set; }
+    }
+
+    private class AccrualBankUpdateRequest
+    {
+        public int BankId { get; set; }
+        public int UserId { get; set; }
+        public int AccrualProfileId { get; set; }
+        public int AccrualRulesSlotId { get; set; }
+        public decimal CurrentBalance { get; set; }
+        public decimal NewBalance { get; set; }
+        public DateTime? LastAccruedPeriodDate { get; set; }
+    }
+
+    #endregion
 }
 
