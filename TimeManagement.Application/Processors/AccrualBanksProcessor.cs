@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TimeManagement.Application.DTOs.AccrualProfiles;
-using TimeManagement.Application.DTOs.AccrualTracks;
 using TimeManagement.Application.DTOs.EmployeeAccrualSettings;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Infra.Repositories;
@@ -239,24 +238,43 @@ public class AccrualBanksProcessor : BaseProcessor
     {
         try
         {
-            // Get the accrual track with profiles using JSON array format
-            var trackIdsJson = System.Text.Json.JsonSerializer.Serialize(new[] { accrualTrackId });
-            var trackJson = await _accrualTracksRepository.GetAccrualTracksByIds(trackIdsJson, tenantId);
+            // Get the accrual track with profiles
+            var trackJson = await _accrualTracksRepository.GetAccrualTracks(accrualTrackId, tenantId);
 
             if (string.IsNullOrEmpty(trackJson))
             {
                 return (0, string.Empty);
             }
 
-            // Deserialize the track response
-            var tracks = JsonSerializer.Deserialize<List<AccrualTrackResponse>>(trackJson, JsonOptions);
+            var tracks = JsonSerializer.Deserialize<List<JsonElement>>(trackJson);
             if (tracks == null || tracks.Count == 0)
             {
                 return (0, string.Empty);
             }
 
             var track = tracks[0];
-            if (track.Profiles == null || track.Profiles.Count == 0)
+            if (!track.TryGetProperty("profiles", out var profilesElement))
+            {
+                return (0, string.Empty);
+            }
+
+            List<JsonElement> profiles;
+            if (profilesElement.ValueKind == JsonValueKind.String)
+            {
+                // If profiles is a JSON string, parse it
+                profiles = JsonSerializer.Deserialize<List<JsonElement>>(profilesElement.GetString() ?? "[]");
+            }
+            else if (profilesElement.ValueKind == JsonValueKind.Array)
+            {
+                // If profiles is already an array, use it directly
+                profiles = JsonSerializer.Deserialize<List<JsonElement>>(profilesElement.GetRawText());
+            }
+            else
+            {
+                return (0, string.Empty);
+            }
+
+            if (profiles == null || profiles.Count == 0)
             {
                 return (0, string.Empty);
             }
@@ -271,42 +289,82 @@ public class AccrualBanksProcessor : BaseProcessor
             }
             yearsServed = Math.Max(0, yearsServed);
 
-            // Find matching profile - sort by FromYears
-            var sortedProfiles = track.Profiles
-                .OrderBy(p => p.FromYears ?? 0)
-                .ToList();
+            // Find matching profile
+            var sortedProfiles = profiles.OrderBy(p =>
+            {
+                if (p.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
+                {
+                    return fromYearsElement.GetDecimal();
+                }
+                return 0;
+            }).ToList();
 
             foreach (var profile in sortedProfiles)
             {
-                var from = profile.FromYears ?? 0;
-                var to = profile.ToYears;
+                decimal from = 0;
+                decimal? to = null;
+                int profileId = 0;
+                string profileName = string.Empty;
+
+                if (profile.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
+                {
+                    from = fromYearsElement.GetDecimal();
+                }
+
+                if (profile.TryGetProperty("toYears", out var toYearsElement) && toYearsElement.ValueKind != JsonValueKind.Null)
+                {
+                    to = toYearsElement.GetDecimal();
+                }
+
+                if (profile.TryGetProperty("accrualProfileId", out var profileIdElement) && profileIdElement.ValueKind != JsonValueKind.Null)
+                {
+                    profileId = profileIdElement.GetInt32();
+                }
+
+                if (profile.TryGetProperty("profileName", out var profileNameElement) && profileNameElement.ValueKind != JsonValueKind.Null)
+                {
+                    profileName = profileNameElement.GetString() ?? string.Empty;
+                }
 
                 if (to == null)
                 {
                     // No upper limit
                     if (yearsServed >= from)
                     {
-                        return (profile.AccrualProfileId, profile.ProfileName ?? string.Empty);
+                        return (profileId, profileName);
                     }
                 }
                 else
                 {
                     if (yearsServed >= from && yearsServed <= to.Value)
                     {
-                        return (profile.AccrualProfileId, profile.ProfileName ?? string.Empty);
+                        return (profileId, profileName);
                     }
                 }
             }
 
-            //// If no match, return first profile
-            //if (sortedProfiles.Count > 0)
-            //{
-            //    var firstProfile = sortedProfiles[0];
-            //    if (firstProfile.AccrualProfileId > 0)
-            //    {
-            //        return (firstProfile.AccrualProfileId, firstProfile.ProfileName ?? string.Empty);
-            //    }
-            //}
+            // If no match, return first profile
+            if (sortedProfiles.Count > 0)
+            {
+                var firstProfile = sortedProfiles[0];
+                int firstProfileId = 0;
+                string firstNameValue = string.Empty;
+
+                if (firstProfile.TryGetProperty("accrualProfileId", out var firstProfileIdElement) && firstProfileIdElement.ValueKind != JsonValueKind.Null)
+                {
+                    firstProfileId = firstProfileIdElement.GetInt32();
+                }
+
+                if (firstProfile.TryGetProperty("profileName", out var firstNameElement) && firstNameElement.ValueKind != JsonValueKind.Null)
+                {
+                    firstNameValue = firstNameElement.GetString() ?? string.Empty;
+                }
+
+                if (firstProfileId > 0)
+                {
+                    return (firstProfileId, firstNameValue);
+                }
+            }
 
             return (0, string.Empty);
         }
