@@ -32,7 +32,7 @@ public class AccrualEvaluator
 
     #region Get Data Methods
 
-    private async Task<List<AccrualProfileResponse>> GetAccrualProfilesByProfileOrTrackIds(
+    private async Task<List<EmployeeAccrualSettingsEvaluationResponse>> GetAccrualProfilesByProfileOrTrackIds(
         List<AccrualRuleEvaluationResponse> accrualRules, AccrualProfilesRepository accrualProfilesRepository, EmployeeAccrualSettingsRepository employeeAccrualSettingsRepository)
     {
 
@@ -53,7 +53,7 @@ public class AccrualEvaluator
         var profilesJson = await accrualProfilesRepository.GetAccrualProfilesByProfileOrTrackIds(profileIdsJson, trackIdsJson);
         var data = JsonSerializer.Deserialize<List<AccrualProfileResponse>>(profilesJson, JsonOptions);
 
-        return data;
+        return employeeSettings;
     }
 
     #endregion
@@ -147,12 +147,8 @@ public class AccrualEvaluator
     /// <summary>
     /// Processes accrual banks for a tenant in bulk - calculates missing accruals and updates banks
     /// </summary>
-    private async Task GetAccrualBanksToUpdate(
-        List<AccrualBankEvaluationResponse> banks,
-        List<AccrualRuleEvaluationResponse> accrualRules,
-        int tenantId,
-        List<EmployeeAccrualSettingsEvaluationResponse> employeeSettings,
-        IServiceScope scope)
+    private async Task GetAccrualBanksToUpdate(List<AccrualBankEvaluationResponse> banks, List<AccrualRuleEvaluationResponse> accrualRules,
+        int tenantId, List<EmployeeAccrualSettingsEvaluationResponse> employeeSettings, IServiceScope scope)
     {
         var accrualTransactionsRepository = scope.ServiceProvider.GetRequiredService<AccrualTransactionsRepository>();
         var accrualBanksRepository = scope.ServiceProvider.GetRequiredService<AccrualBanksRepository>();
@@ -176,52 +172,19 @@ public class AccrualEvaluator
             foreach (var bank in banks)
             {
                 var accrualRule = accrualRules.FirstOrDefault(r => r.Id == bank.AccrualRulesSlotId);
-                if (accrualRule == null)
-                {
-                    CustomLogger.Log(LogLevel.Warning, null, $"No accrual rule found for bank {bank.Id}, slot {bank.AccrualRulesSlotId}");
-                    continue;
-                }
-
-                // Get employee setting for this bank to access profile tenure information
-                var employeeSetting = employeeSettings.FirstOrDefault(s =>
-                    s.UserId == bank.UserId &&
-                    s.AccrualProfileId == bank.AccrualProfileId &&
-                    s.TenantId == tenantId);
-
+                var employeeSetting = employeeSettings.FirstOrDefault(s => s.UserId == bank.UserId && s.AccrualProfileId == bank.AccrualProfileId && s.TenantId == tenantId);
                 // Check tenure requirements if profile is based on years served
                 if (employeeSetting != null && employeeSetting.IsBaseOnYearsServed)
                 {
-                    if (!bank.AccrualStartDate.HasValue)
-                    {
-                        CustomLogger.Log(LogLevel.Warning, null,
-                            $"AccrualStartDate is null for bank {bank.Id}, user {bank.UserId}, profile {bank.AccrualProfileId}. Skipping accrual processing.");
-                        continue;
-                    }
-
-                    // Calculate tenure from AccrualStartDate
                     decimal tenure = CalculateTenure(bank.AccrualStartDate.Value);
-
-                    // Check if tenure falls within the profile's tenure range
-                    // Logic: "Includes employees who worked at least the first number of years, but less than the second number"
-                    // So: tenure >= FromYears AND tenure < ToYears (if ToYears is specified)
                     bool isTenureValid = CheckTenureAgainstProfile(tenure, employeeSetting.FromYears, employeeSetting.ToYears);
-
                     if (!isTenureValid)
                     {
-                        CustomLogger.Log(LogLevel.Information, null,
-                            $"Bank {bank.Id} (User {bank.UserId}, Profile {bank.AccrualProfileId}) does not meet tenure requirements. " +
-                            $"Tenure: {tenure:F2} years (from AccrualStartDate {bank.AccrualStartDate:yyyy-MM-dd}), " +
-                            $"Required: {employeeSetting.FromYears} - {employeeSetting.ToYears}. Skipping accrual processing.");
                         continue;
                     }
                 }
 
-                // Calculate accrual periods and missing transactions
-                var result = CalculateAccrualPeriodsAndTransactions(
-                    bank,
-                    accrualRule,
-                    existingTransactions.Where(t => t.AccrualBankId == bank.Id).ToList());
-
+                var result = CalculateAccrualPeriodsAndTransactions(bank, accrualRule, existingTransactions.Where(t => t.AccrualBankId == bank.Id).ToList());
                 if (result.MissingTransactions.Count > 0)
                 {
                     transactionsToAdd.AddRange(result.MissingTransactions);
@@ -237,14 +200,12 @@ public class AccrualEvaluator
             if (transactionsToAdd.Count > 0)
             {
                 await InsertAccrualTransactionsBulk(transactionsToAdd, tenantId, accrualTransactionsRepository);
-                CustomLogger.Log(LogLevel.Information, null, $"Inserted {transactionsToAdd.Count} accrual transactions for tenant {tenantId}");
             }
 
             // Bulk update banks for this tenant
             if (banksToUpdate.Count > 0)
             {
                 await UpdateAccrualBanksBulk(banksToUpdate, tenantId, accrualBanksRepository);
-                CustomLogger.Log(LogLevel.Information, null, $"Updated {banksToUpdate.Count} accrual banks for tenant {tenantId}");
             }
         }
         catch (Exception ex)
@@ -288,14 +249,9 @@ public class AccrualEvaluator
     /// <summary>
     /// Calculates accrual periods and determines missing transactions
     /// </summary>
-    private AccrualCalculationResult CalculateAccrualPeriodsAndTransactions(
-        AccrualBankEvaluationResponse bank,
-        AccrualRuleEvaluationResponse accrualRule,
-        List<AccrualTransactionResponse> existingTransactions)
+    private AccrualCalculationResult CalculateAccrualPeriodsAndTransactions(AccrualBankEvaluationResponse bank, AccrualRuleEvaluationResponse accrualRule, List<AccrualTransactionResponse> existingTransactions)
     {
         var result = new AccrualCalculationResult();
-
-        // Determine start date: use LastAccruedPeriodDate if available, otherwise AccrualStartDate
         DateTime? startDate = bank.LastAccruedPeriodDate ?? bank.AccrualStartDate;
         if (!startDate.HasValue)
         {
@@ -303,32 +259,15 @@ public class AccrualEvaluator
             return result;
         }
 
-        // Calculate all possible accrual periods from start date to today
-        var allPeriods = CalculateAllAccrualPeriods(
-            startDate.Value,
-            DateTime.UtcNow.Date,
-            accrualRule.AccrueFrequency,
-            accrualRule.AccrueFrequencyValue);
-
-        // Get existing period dates
-        var existingPeriodDates = existingTransactions
-            .Where(t => t.AccrualPeriodDate.HasValue)
-            .Select(t => t.AccrualPeriodDate!.Value.Date)
-            .ToHashSet();
-
-        // Find missing periods
-        var missingPeriods = allPeriods
-            .Where(p => !existingPeriodDates.Contains(p))
-            .OrderBy(p => p)
-            .ToList();
+        var allPeriods = CalculateAllAccrualPeriods(startDate.Value, DateTime.UtcNow.Date, accrualRule.AccrueFrequency, accrualRule.AccrueFrequencyValue);
+        var existingPeriodDates = existingTransactions.Where(t => t.AccrualPeriodDate.HasValue).Select(t => t.AccrualPeriodDate!.Value.Date).ToHashSet();
+        var missingPeriods = allPeriods.Where(p => !existingPeriodDates.Contains(p)).OrderBy(p => p).ToList();
 
         // Check if stop accruing is enabled and if limit is already reached
         if (accrualRule.IsStopAccruingEnabled && accrualRule.StopAccruingAfterReaching.HasValue)
         {
             if (bank.CurrentBalance >= accrualRule.StopAccruingAfterReaching.Value)
             {
-                CustomLogger.Log(LogLevel.Information, null,
-                    $"Bank {bank.Id} has reached accrual limit ({accrualRule.StopAccruingAfterReaching.Value}). Current balance: {bank.CurrentBalance}. Skipping accruals.");
                 return result;
             }
         }
@@ -350,9 +289,6 @@ public class AccrualEvaluator
                 // If adding this accrual would exceed the limit, stop processing
                 if (potentialNewBalance > accrualRule.StopAccruingAfterReaching.Value)
                 {
-                    CustomLogger.Log(LogLevel.Information, null,
-                        $"Bank {bank.Id} would exceed accrual limit ({accrualRule.StopAccruingAfterReaching.Value}) after period {periodDate:yyyy-MM-dd}. " +
-                        $"Current balance: {runningBalance}, Accrual amount: {accrualAmount}, Potential balance: {potentialNewBalance}. Stopping accruals.");
                     break;
                 }
             }
