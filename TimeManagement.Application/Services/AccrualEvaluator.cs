@@ -60,7 +60,7 @@ public class AccrualEvaluator
 
         foreach (var track in tracks)
         {
-            var hehe = trackProfiles.Where(c => c.TrackId == track.AccrualTrackId).Select(c => new AccrualTrackProfileResponse
+            var profiles = trackProfiles.Where(c => c.TrackId == track.AccrualTrackId).Select(c => new AccrualTrackProfileResponse
             {
                 AccrualTrackId = c.TrackId ?? 0,
                 AccrualProfileId = c.Id,
@@ -73,7 +73,8 @@ public class AccrualEvaluator
                 UpdatedBy = c.UpdatedBy,
                 DateUpdated = c.DateUpdated
             }).ToList();
-            var (profileId, profileName) = accrualBanksProcessor.GetAccrualProfileIdFromTrack(hehe, track.AccrualStartDate);
+            var (profileId, profileName) = accrualBanksProcessor.GetAccrualProfileIdFromTrack(profiles, track.AccrualStartDate);
+
             //employeeSettingsWithProfileIds.Add
         }
 
