@@ -15,8 +15,8 @@ public class EmployeeAccrualSettingsEvaluationResponse
     public DateTimeOffset? DateUpdated { get; set; }
     
     // Accrual Profile Information (for tenure checking)
-    public bool IsBaseOnYearsServed { get; set; }
-    public decimal? FromYears { get; set; }
-    public decimal? ToYears { get; set; }
+    //public bool IsBaseOnYearsServed { get; set; }
+    //public decimal? FromYears { get; set; }
+    //public decimal? ToYears { get; set; }
 }
 
