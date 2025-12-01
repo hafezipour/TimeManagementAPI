@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TimeManagement.Application.DTOs.AccrualEvaluations;
+using TimeManagement.Application.DTOs.AccrualProfiles;
 using TimeManagement.Application.DTOs.AccrualRules;
 using TimeManagement.Application.DTOs.EmployeeAccrualSettings;
 using TimeManagement.Application.Processors;
@@ -29,6 +30,34 @@ public class AccrualEvaluator
         _serviceScopeFactory = serviceScopeFactory;
     }
 
+    #region Get Data Methods
+
+    private async Task<List<AccrualProfileResponse>> GetAccrualProfilesByProfileOrTrackIds(
+        List<AccrualRuleEvaluationResponse> accrualRules, AccrualProfilesRepository accrualProfilesRepository, EmployeeAccrualSettingsRepository employeeAccrualSettingsRepository)
+    {
+
+        // Call second stored procedure to get employee accrual settings
+        string tenantIds = string.Join(',', accrualRules.Select(c => c.TenantId).Distinct().ToList());
+        var employeeSettingsJson = await employeeAccrualSettingsRepository.GetEmployeeAccrualSettings(0, tenantIds);
+
+        // Deserialize employee accrual settings response
+        var employeeSettings = JsonSerializer.Deserialize<List<EmployeeAccrualSettingsEvaluationResponse>>(employeeSettingsJson, JsonOptions);
+
+
+        var profileIds = employeeSettings.Where(e => e.AccrualProfileId.HasValue).Select(e => e.AccrualProfileId!.Value).Distinct().ToList();
+        var trackIds = employeeSettings.Where(e => e.AccrualTrackId.HasValue).Select(e => e.AccrualTrackId!.Value).Distinct().ToList();
+
+        var profileIdsJson = profileIds.Count > 0 ? JsonSerializer.Serialize(profileIds) : null;
+        var trackIdsJson = trackIds.Count > 0 ? JsonSerializer.Serialize(trackIds) : null;
+
+        var profilesJson = await accrualProfilesRepository.GetAccrualProfilesByProfileOrTrackIds(profileIdsJson, trackIdsJson);
+        var data = JsonSerializer.Deserialize<List<AccrualProfileResponse>>(profilesJson, JsonOptions);
+
+        return data;
+    }
+
+    #endregion
+
     /// <summary>
     /// Evaluates accrual rules and processes accruals
     /// </summary>
@@ -40,6 +69,7 @@ public class AccrualEvaluator
         var employeeAccrualSettingsRepository = scope.ServiceProvider.GetRequiredService<EmployeeAccrualSettingsRepository>();
         var accrualBanksRepository = scope.ServiceProvider.GetRequiredService<AccrualBanksRepository>();
         var accrualBanksProcessor = scope.ServiceProvider.GetRequiredService<AccrualBanksProcessor>();
+        var accrualProfilesRepository = scope.ServiceProvider.GetRequiredService<AccrualProfilesRepository>();
 
         try
         {
@@ -61,12 +91,9 @@ public class AccrualEvaluator
 
             #region Create Banks for missing banks using employee accrual settings table
 
-            // Call second stored procedure to get employee accrual settings
-            string tenantIds = string.Join(',', accrualRules.Select(c => c.TenantId).Distinct().ToList());
-            var employeeSettingsJson = await employeeAccrualSettingsRepository.GetEmployeeAccrualSettings(0, tenantIds);
+            
+           var employeeSettings = await GetAccrualProfilesByProfileOrTrackIds(accrualRules, accrualProfilesRepository, employeeAccrualSettingsRepository);
 
-            // Deserialize employee accrual settings response
-            var employeeSettings = JsonSerializer.Deserialize<List<EmployeeAccrualSettingsEvaluationResponse>>(employeeSettingsJson, JsonOptions);
 
             if (employeeSettings == null || employeeSettings.Count == 0)
             {

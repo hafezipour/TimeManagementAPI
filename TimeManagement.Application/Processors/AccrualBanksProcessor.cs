@@ -147,7 +147,7 @@ public class AccrualBanksProcessor : BaseProcessor
             }
 
             // Step 1: Get EmployeeAccrualSettings by UserId
-            var settingsJson = await _employeeAccrualSettingsRepository.GetEmployeeAccrualSettings(request.UserId, CurrentUser.TenantID);
+            var settingsJson = await _employeeAccrualSettingsRepository.GetEmployeeAccrualSettings(request.UserId, CurrentUser.TenantID.ToString());
 
             if (string.IsNullOrEmpty(settingsJson))
             {
