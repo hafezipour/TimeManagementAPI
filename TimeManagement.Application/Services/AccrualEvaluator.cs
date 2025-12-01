@@ -435,7 +435,7 @@ public class AccrualEvaluator
             // Note: We need to extend LogTransactionsRequest or create a new method
             // that accepts AccrualPeriodDate. For now, we'll use the existing method
             // and update the stored procedure to handle AccrualPeriodDate
-            var json = JsonSerializer.Serialize(logRequests);
+            var json = JsonSerializer.Serialize(logRequests, JsonOptions);
             await repository.LogTransactionsWithPeriodDate(json, -1, tenantId);
         }
         catch (Exception ex)
@@ -465,7 +465,7 @@ public class AccrualEvaluator
                 Notes = $"Accrual update - Last accrued: {b.LastAccruedPeriodDate:yyyy-MM-dd}"
             }).ToList();
 
-            var json = JsonSerializer.Serialize(updateRequests);
+            var json = JsonSerializer.Serialize(updateRequests, JsonOptions);
             await repository.UpdateBalancesWithLastAccruedDate(json, -1, tenantId);
         }
         catch (Exception ex)

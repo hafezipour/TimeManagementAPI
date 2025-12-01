@@ -10,7 +10,9 @@ GO
 -- Author:      Auto Generated
 -- Create date: 11/27/2025
 -- Description: Log accrual transactions in bulk with AccrualPeriodDate
---              Takes JSON array of AccrualTransactionRequest
+--              Takes JSON array with bankId, userId, accrualProfileId, accrualRulesSlotId, 
+--              oldBalance, newBalance, operator, adjustmentAmount, notes
+--              Extracts AccrualPeriodDate from notes field (format: "Accrual for period YYYY-MM-DD")
 --              Inserts records into AccrualTransactions table with AccrualPeriodDate
 --              Returns array of inserted transaction records
 -- =============================================
@@ -25,64 +27,77 @@ BEGIN
     BEGIN TRY
         BEGIN TRANSACTION;
 
-        -- Parse JSON input (AccrualTransactionRequest format)
+        -- Parse JSON input (matching the provided format)
         DECLARE @Transactions TABLE (
             TempId INT IDENTITY(1,1),
-            AccrualBankId INT,
+            BankId INT,
             UserId INT,
             AccrualProfileId INT,
             AccrualRulesSlotId INT,
-            AccrualPeriodDate DATE,
-            Amount DECIMAL(10, 2),
             OldBalance DECIMAL(10, 2),
             NewBalance DECIMAL(10, 2),
-            Description NVARCHAR(MAX) NULL,
+            Operator VARCHAR(1),
+            AdjustmentAmount DECIMAL(10, 2),
+            Notes NVARCHAR(MAX) NULL,
+            AccrualPeriodDate DATE,
             HasError BIT DEFAULT 0
         );
 
-        -- Insert parsed JSON data
-        INSERT INTO @Transactions (AccrualBankId, UserId, AccrualProfileId, AccrualRulesSlotId, AccrualPeriodDate, Amount, OldBalance, NewBalance, Description, HasError)
+        -- Insert parsed JSON data and extract period date from notes
+        INSERT INTO @Transactions (BankId, UserId, AccrualProfileId, AccrualRulesSlotId, OldBalance, NewBalance, Operator, AdjustmentAmount, Notes, AccrualPeriodDate, HasError)
         SELECT 
-            AccrualBankId,
+            BankId,
             UserId,
             AccrualProfileId,
             AccrualRulesSlotId,
-            CAST(AccrualPeriodDate AS DATE) AS AccrualPeriodDate,
-            Amount,
             OldBalance,
             NewBalance,
-            Description,
-            CASE WHEN AccrualBankId IS NULL OR AccrualPeriodDate IS NULL THEN 1 ELSE 0 END
+            Operator,
+            AdjustmentAmount,
+            Notes,
+            -- Extract date from notes: "Accrual for period YYYY-MM-DD" format
+            CASE 
+                WHEN Notes IS NOT NULL AND Notes LIKE '%period%' THEN
+                    TRY_CAST(
+                        SUBSTRING(
+                            Notes, 
+                            CHARINDEX('period', Notes) + 7, 
+                            10
+                        ) AS DATE
+                    )
+                ELSE NULL
+            END AS AccrualPeriodDate,
+            CASE WHEN BankId IS NULL THEN 1 ELSE 0 END
         FROM OPENJSON(@Json)
         WITH (
-            AccrualBankId INT '$.accrualBankId',
+            BankId INT '$.bankId',
             UserId INT '$.userId',
             AccrualProfileId INT '$.accrualProfileId',
             AccrualRulesSlotId INT '$.accrualRulesSlotId',
-            AccrualPeriodDate NVARCHAR(20) '$.accrualPeriodDate',
-            Amount DECIMAL(10, 2) '$.amount',
             OldBalance DECIMAL(10, 2) '$.oldBalance',
             NewBalance DECIMAL(10, 2) '$.newBalance',
-            Description NVARCHAR(MAX) '$.description'
+            Operator VARCHAR(1) '$.operator',
+            AdjustmentAmount DECIMAL(10, 2) '$.adjustmentAmount',
+            Notes NVARCHAR(MAX) '$.notes'
         );
 
         -- Filter valid transactions
         DECLARE @ValidTransactions TABLE (
-            AccrualBankId INT,
+            BankId INT,
             UserId INT,
             AccrualProfileId INT,
             AccrualRulesSlotId INT,
             AccrualPeriodDate DATE,
-            Amount DECIMAL(10, 2),
+            AdjustmentAmount DECIMAL(10, 2),
             OldBalance DECIMAL(10, 2),
             NewBalance DECIMAL(10, 2),
-            Description NVARCHAR(MAX) NULL
+            Notes NVARCHAR(MAX) NULL
         );
 
-        INSERT INTO @ValidTransactions (AccrualBankId, UserId, AccrualProfileId, AccrualRulesSlotId, AccrualPeriodDate, Amount, OldBalance, NewBalance, Description)
-        SELECT AccrualBankId, UserId, AccrualProfileId, AccrualRulesSlotId, AccrualPeriodDate, Amount, OldBalance, NewBalance, Description
+        INSERT INTO @ValidTransactions (BankId, UserId, AccrualProfileId, AccrualRulesSlotId, AccrualPeriodDate, AdjustmentAmount, OldBalance, NewBalance, Notes)
+        SELECT BankId, UserId, AccrualProfileId, AccrualRulesSlotId, AccrualPeriodDate, AdjustmentAmount, OldBalance, NewBalance, Notes
         FROM @Transactions
-        WHERE HasError = 0 AND AccrualBankId IS NOT NULL AND AccrualPeriodDate IS NOT NULL;
+        WHERE HasError = 0 AND BankId IS NOT NULL AND AccrualPeriodDate IS NOT NULL;
 
         -- Insert into AccrualTransactions table with AccrualPeriodDate
         -- Note: SourceTypeID and SourceID should be set based on business logic
@@ -103,13 +118,13 @@ BEGIN
         )
         SELECT 
             @TenantId,
-            vt.AccrualBankId,
+            vt.BankId,
             2, -- SourceTypeID: 2 = Accrual (adjust based on your business logic)
             vt.AccrualRulesSlotId, -- SourceID: AccrualRulesSlotId
             2, -- CustomTableTransactionTypeId: 2 = Accrual (adjust based on your CustomTable values)
-            vt.Amount,
+            vt.AdjustmentAmount,
             vt.NewBalance,
-            ISNULL(vt.Description, 'Accrual transaction for period: ' + CAST(vt.AccrualPeriodDate AS VARCHAR(20))),
+            ISNULL(vt.Notes, 'Accrual transaction for period: ' + CAST(vt.AccrualPeriodDate AS VARCHAR(20))),
             GETUTCDATE(),
             @CreatedBy,
             vt.AccrualPeriodDate
@@ -131,7 +146,7 @@ BEGIN
             'true' AS success,
             'Transaction logged successfully' AS message
         FROM [dbo].[AccrualTransactions] t
-        INNER JOIN @ValidTransactions vt ON t.AccrualBankId = vt.AccrualBankId
+        INNER JOIN @ValidTransactions vt ON t.AccrualBankId = vt.BankId
             AND t.AccrualPeriodDate = vt.AccrualPeriodDate
             AND t.ProcessedDate >= DATEADD(SECOND, -5, GETUTCDATE())
         WHERE t.TenantId = @TenantId
