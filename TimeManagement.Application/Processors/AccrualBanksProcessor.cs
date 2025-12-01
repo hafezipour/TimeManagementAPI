@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using TimeManagement.Application.DTOs.AccrualProfiles;
+using TimeManagement.Application.DTOs.AccrualTracks;
 using TimeManagement.Application.DTOs.EmployeeAccrualSettings;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Infra.Repositories;
@@ -153,43 +155,18 @@ public class AccrualBanksProcessor : BaseProcessor
                 return new { success = false, message = "Employee accrual settings not found." }.ToJson();
             }
 
-            // Parse the settings
-            var settings = JsonSerializer.Deserialize<List<JsonElement>>(settingsJson);
+            // Deserialize the settings
+            var settings = JsonSerializer.Deserialize<List<EmployeeAccrualSettingsResponse>>(settingsJson, JsonOptions);
             if (settings == null || settings.Count == 0)
             {
                 return new { success = false, message = "Employee accrual settings not found." }.ToJson();
             }
 
             var setting = settings[0];
-            var userId = setting.GetProperty("userId").GetInt32();
-
-            int? accrualProfileId = null;
-            int? accrualTrackId = null;
-            string? accrualStartDate = null;
-
-            if (setting.TryGetProperty("accrualProfileId", out var accrualProfileIdElement))
-            {
-                if (accrualProfileIdElement.ValueKind != JsonValueKind.Null)
-                {
-                    accrualProfileId = accrualProfileIdElement.GetInt32();
-                }
-            }
-
-            if (setting.TryGetProperty("accrualTrackId", out var accrualTrackIdElement))
-            {
-                if (accrualTrackIdElement.ValueKind != JsonValueKind.Null)
-                {
-                    accrualTrackId = accrualTrackIdElement.GetInt32();
-                }
-            }
-
-            if (setting.TryGetProperty("accrualStartDate", out var accrualStartDateElement))
-            {
-                if (accrualStartDateElement.ValueKind != JsonValueKind.Null)
-                {
-                    accrualStartDate = accrualStartDateElement.GetString();
-                }
-            }
+            var userId = setting.UserId;
+            var accrualProfileId = setting.AccrualProfileId;
+            var accrualTrackId = setting.AccrualTrackId;
+            var accrualStartDate = setting.AccrualStartDate?.ToString("yyyy-MM-dd");
 
             int resolvedAccrualProfileId = 0;
             string currentAccrualProfileName = string.Empty;
@@ -205,14 +182,10 @@ public class AccrualBanksProcessor : BaseProcessor
                     var profileJson = await _accrualProfilesRepository.GetAccrualProfiles(resolvedAccrualProfileId, CurrentUser.TenantID);
                     if (!string.IsNullOrEmpty(profileJson))
                     {
-                        var profiles = JsonSerializer.Deserialize<List<JsonElement>>(profileJson);
+                        var profiles = JsonSerializer.Deserialize<List<AccrualProfileResponse>>(profileJson, JsonOptions);
                         if (profiles != null && profiles.Count > 0)
                         {
-                            var profile = profiles[0];
-                            if (profile.TryGetProperty("profileName", out var profileNameElement) && profileNameElement.ValueKind != JsonValueKind.Null)
-                            {
-                                currentAccrualProfileName = profileNameElement.GetString() ?? string.Empty;
-                            }
+                            currentAccrualProfileName = profiles[0].ProfileName ?? string.Empty;
                         }
                     }
                 }
@@ -274,35 +247,15 @@ public class AccrualBanksProcessor : BaseProcessor
                 return (0, string.Empty);
             }
 
-            var tracks = JsonSerializer.Deserialize<List<JsonElement>>(trackJson);
+            // Deserialize the track response
+            var tracks = JsonSerializer.Deserialize<List<AccrualTrackResponse>>(trackJson, JsonOptions);
             if (tracks == null || tracks.Count == 0)
             {
                 return (0, string.Empty);
             }
 
             var track = tracks[0];
-            if (!track.TryGetProperty("profiles", out var profilesElement))
-            {
-                return (0, string.Empty);
-            }
-
-            List<JsonElement> profiles;
-            if (profilesElement.ValueKind == JsonValueKind.String)
-            {
-                // If profiles is a JSON string, parse it
-                profiles = JsonSerializer.Deserialize<List<JsonElement>>(profilesElement.GetString() ?? "[]");
-            }
-            else if (profilesElement.ValueKind == JsonValueKind.Array)
-            {
-                // If profiles is already an array, use it directly
-                profiles = JsonSerializer.Deserialize<List<JsonElement>>(profilesElement.GetRawText());
-            }
-            else
-            {
-                return (0, string.Empty);
-            }
-
-            if (profiles == null || profiles.Count == 0)
+            if (track.Profiles == null || track.Profiles.Count == 0)
             {
                 return (0, string.Empty);
             }
@@ -317,56 +270,29 @@ public class AccrualBanksProcessor : BaseProcessor
             }
             yearsServed = Math.Max(0, yearsServed);
 
-            // Find matching profile
-            var sortedProfiles = profiles.OrderBy(p =>
-            {
-                if (p.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
-                {
-                    return fromYearsElement.GetDecimal();
-                }
-                return 0;
-            }).ToList();
+            // Find matching profile - sort by FromYears
+            var sortedProfiles = track.Profiles
+                .OrderBy(p => p.FromYears ?? 0)
+                .ToList();
 
             foreach (var profile in sortedProfiles)
             {
-                decimal from = 0;
-                decimal? to = null;
-                int profileId = 0;
-                string profileName = string.Empty;
-
-                if (profile.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
-                {
-                    from = fromYearsElement.GetDecimal();
-                }
-
-                if (profile.TryGetProperty("toYears", out var toYearsElement) && toYearsElement.ValueKind != JsonValueKind.Null)
-                {
-                    to = toYearsElement.GetDecimal();
-                }
-
-                if (profile.TryGetProperty("accrualProfileId", out var profileIdElement) && profileIdElement.ValueKind != JsonValueKind.Null)
-                {
-                    profileId = profileIdElement.GetInt32();
-                }
-
-                if (profile.TryGetProperty("profileName", out var profileNameElement) && profileNameElement.ValueKind != JsonValueKind.Null)
-                {
-                    profileName = profileNameElement.GetString() ?? string.Empty;
-                }
+                var from = profile.FromYears ?? 0;
+                var to = profile.ToYears;
 
                 if (to == null)
                 {
                     // No upper limit
                     if (yearsServed >= from)
                     {
-                        return (profileId, profileName);
+                        return (profile.AccrualProfileId, profile.ProfileName ?? string.Empty);
                     }
                 }
                 else
                 {
                     if (yearsServed >= from && yearsServed <= to.Value)
                     {
-                        return (profileId, profileName);
+                        return (profile.AccrualProfileId, profile.ProfileName ?? string.Empty);
                     }
                 }
             }
@@ -375,22 +301,9 @@ public class AccrualBanksProcessor : BaseProcessor
             if (sortedProfiles.Count > 0)
             {
                 var firstProfile = sortedProfiles[0];
-                int firstProfileId = 0;
-                string firstNameValue = string.Empty;
-
-                if (firstProfile.TryGetProperty("accrualProfileId", out var firstProfileIdElement) && firstProfileIdElement.ValueKind != JsonValueKind.Null)
+                if (firstProfile.AccrualProfileId > 0)
                 {
-                    firstProfileId = firstProfileIdElement.GetInt32();
-                }
-
-                if (firstProfile.TryGetProperty("profileName", out var firstNameElement) && firstNameElement.ValueKind != JsonValueKind.Null)
-                {
-                    firstNameValue = firstNameElement.GetString() ?? string.Empty;
-                }
-
-                if (firstProfileId > 0)
-                {
-                    return (firstProfileId, firstNameValue);
+                    return (firstProfile.AccrualProfileId, firstProfile.ProfileName ?? string.Empty);
                 }
             }
 
