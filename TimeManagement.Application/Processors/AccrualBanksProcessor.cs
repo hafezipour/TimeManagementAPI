@@ -239,8 +239,9 @@ public class AccrualBanksProcessor : BaseProcessor
     {
         try
         {
-            // Get the accrual track with profiles
-            var trackJson = await _accrualTracksRepository.GetAccrualTracks(accrualTrackId, tenantId);
+            // Get the accrual track with profiles using JSON array format
+            var trackIdsJson = System.Text.Json.JsonSerializer.Serialize(new[] { accrualTrackId });
+            var trackJson = await _accrualTracksRepository.GetAccrualTracksByIds(trackIdsJson, tenantId);
 
             if (string.IsNullOrEmpty(trackJson))
             {

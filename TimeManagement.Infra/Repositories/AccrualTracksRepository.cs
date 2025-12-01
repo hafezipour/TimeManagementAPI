@@ -20,6 +20,26 @@ public class AccrualTracksRepository
             List<SqlParameterModel> param = new()
             {
                 new SqlParameterModel { Name = "AccrualTrackId", Value = accrualTrackId },
+                new SqlParameterModel { Name = "AccrualTrackIdsJson", Value = null },
+                new SqlParameterModel { Name = "TenantId", Value = tenantId }
+            };
+
+            return await _dbOperations.ExecuteDataSetAsync("usp_AccrualTracks_Get", param);
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<string> GetAccrualTracksByIds(string accrualTrackIdsJson, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new()
+            {
+                new SqlParameterModel { Name = "AccrualTrackId", Value = null },
+                new SqlParameterModel { Name = "AccrualTrackIdsJson", Value = accrualTrackIdsJson },
                 new SqlParameterModel { Name = "TenantId", Value = tenantId }
             };
 

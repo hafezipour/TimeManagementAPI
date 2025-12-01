@@ -1,6 +1,7 @@
 using Azure.Core;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TimeManagement.Application.DTOs.AccrualEvaluations;
@@ -60,24 +61,9 @@ public class AccrualEvaluator
 
             #region Create Banks for missing banks using employee accrual settings table
 
-            // Extract unique profile IDs from the first SP results
-            var profileIds = accrualRules
-                .Select(r => r.AccrualProfileId)
-                .Distinct()
-                .Where(id => id > 0)
-                .ToList();
-
-            if (profileIds.Count == 0)
-            {
-                CustomLogger.Log(LogLevel.Information, null, "No valid profile IDs found in accrual rules");
-                return;
-            }
-
-            // Convert profile IDs to JSON array
-            var profileIdsJson = JsonSerializer.Serialize(profileIds);
-
             // Call second stored procedure to get employee accrual settings
-            var employeeSettingsJson = await employeeAccrualSettingsRepository.GetEmployeeAccrualSettingsForEvaluation(profileIdsJson);
+            string tenantIds = string.Join(',', accrualRules.Select(c => c.TenantId).Distinct().ToList());
+            var employeeSettingsJson = await employeeAccrualSettingsRepository.GetEmployeeAccrualSettings(0, tenantIds);
 
             // Deserialize employee accrual settings response
             var employeeSettings = JsonSerializer.Deserialize<List<EmployeeAccrualSettingsEvaluationResponse>>(employeeSettingsJson, JsonOptions);
@@ -207,9 +193,9 @@ public class AccrualEvaluator
                 }
 
                 // Get employee setting for this bank to access profile tenure information
-                var employeeSetting = employeeSettings.FirstOrDefault(s => 
-                    s.UserId == bank.UserId && 
-                    s.AccrualProfileId == bank.AccrualProfileId && 
+                var employeeSetting = employeeSettings.FirstOrDefault(s =>
+                    s.UserId == bank.UserId &&
+                    s.AccrualProfileId == bank.AccrualProfileId &&
                     s.TenantId == tenantId);
 
                 // Check tenure requirements if profile is based on years served
@@ -217,7 +203,7 @@ public class AccrualEvaluator
                 {
                     if (!bank.AccrualStartDate.HasValue)
                     {
-                        CustomLogger.Log(LogLevel.Warning, null, 
+                        CustomLogger.Log(LogLevel.Warning, null,
                             $"AccrualStartDate is null for bank {bank.Id}, user {bank.UserId}, profile {bank.AccrualProfileId}. Skipping accrual processing.");
                         continue;
                     }
@@ -232,7 +218,7 @@ public class AccrualEvaluator
 
                     if (!isTenureValid)
                     {
-                        CustomLogger.Log(LogLevel.Information, null, 
+                        CustomLogger.Log(LogLevel.Information, null,
                             $"Bank {bank.Id} (User {bank.UserId}, Profile {bank.AccrualProfileId}) does not meet tenure requirements. " +
                             $"Tenure: {tenure:F2} years (from AccrualStartDate {bank.AccrualStartDate:yyyy-MM-dd}), " +
                             $"Required: {employeeSetting.FromYears} - {employeeSetting.ToYears}. Skipping accrual processing.");
@@ -572,20 +558,20 @@ public class AccrualEvaluator
     {
         var now = DateTime.UtcNow;
         var years = now.Year - accrualStartDate.Year;
-        
+
         // Adjust if the anniversary hasn't occurred this year
         if (now.Month < accrualStartDate.Month || (now.Month == accrualStartDate.Month && now.Day < accrualStartDate.Day))
         {
             years--;
         }
-        
+
         // Calculate fractional years (months and days)
         var months = now.Month - accrualStartDate.Month;
         if (months < 0)
         {
             months += 12;
         }
-        
+
         var days = now.Day - accrualStartDate.Day;
         if (days < 0)
         {
@@ -599,10 +585,10 @@ public class AccrualEvaluator
                 years--;
             }
         }
-        
+
         // Convert to decimal years (approximate: 1 month = 1/12 year, 1 day = 1/365.25 year)
         decimal fractionalYears = years + (months / 12.0m) + (days / 365.25m);
-        
+
         return Math.Max(0, fractionalYears);
     }
 
@@ -610,8 +596,8 @@ public class AccrualEvaluator
     /// Gets accrual profile ID from track based on tenure (without repository dependency)
     /// </summary>
     private async Task<(int profileId, string profileName)> GetAccrualProfileIdFromTrack(
-        int accrualTrackId, 
-        string accrualStartDate, 
+        int accrualTrackId,
+        string accrualStartDate,
         int tenantId,
         AccrualTracksRepository accrualTracksRepository)
     {
