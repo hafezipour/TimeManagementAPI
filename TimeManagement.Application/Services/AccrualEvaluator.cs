@@ -75,7 +75,7 @@ public class AccrualEvaluator
                 DateUpdated = c.DateUpdated
             }).ToList();
             var (profileId, profileName) = accrualBanksProcessor.GetAccrualProfileIdFromTrack(profiles, trackSetting.AccrualStartDate);
-            if (profileId > 0)//current profile id matched
+            if (profileId > 0 && !employeeSettingsWithProfileIds.Any(c => c.AccrualProfileId == profileId))//current profile id matched
             {
                 var trackSettingCloned = JsonSerializer.Deserialize<EmployeeAccrualSettingsEvaluationResponse>(trackSetting.ToJson(), JsonOptions);
 
@@ -87,10 +87,6 @@ public class AccrualEvaluator
                 employeeSettingsWithProfileIds.Add(trackSettingCloned);
             }
         }
-        //foreach (var item in employeeSettings.Where(c => (c.AccrualTrackId ?? 0) == 0))
-        //{
-        //    employeeSettingsWithProfileIds.Add(item);
-        //}
         return employeeSettingsWithProfileIds;
     }
 

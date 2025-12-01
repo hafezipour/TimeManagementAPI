@@ -103,7 +103,6 @@ public class AccrualProfilesRepository
             {
                 new SqlParameterModel { Name = "AccrualProfileIdsJson", Value = accrualProfileIdsJson ?? (object)DBNull.Value },
                 new SqlParameterModel { Name = "AccrualTrackIdsJson", Value = accrualTrackIdsJson ?? (object)DBNull.Value },
-                new SqlParameterModel { Name = "TenantId", Value = tenantId }
             };
 
             return await _dbOperations.ExecuteDataSetAsync("usp_AccrualProfiles_GetByProfileOrTrackIds", param);
