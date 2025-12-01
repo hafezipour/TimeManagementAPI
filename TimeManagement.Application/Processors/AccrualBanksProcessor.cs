@@ -297,15 +297,15 @@ public class AccrualBanksProcessor : BaseProcessor
                 }
             }
 
-            // If no match, return first profile
-            if (sortedProfiles.Count > 0)
-            {
-                var firstProfile = sortedProfiles[0];
-                if (firstProfile.AccrualProfileId > 0)
-                {
-                    return (firstProfile.AccrualProfileId, firstProfile.ProfileName ?? string.Empty);
-                }
-            }
+            //// If no match, return first profile
+            //if (sortedProfiles.Count > 0)
+            //{
+            //    var firstProfile = sortedProfiles[0];
+            //    if (firstProfile.AccrualProfileId > 0)
+            //    {
+            //        return (firstProfile.AccrualProfileId, firstProfile.ProfileName ?? string.Empty);
+            //    }
+            //}
 
             return (0, string.Empty);
         }
