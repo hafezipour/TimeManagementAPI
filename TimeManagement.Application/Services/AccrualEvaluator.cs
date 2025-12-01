@@ -210,7 +210,7 @@ public class AccrualEvaluator
                 // Check tenure requirements if profile is based on years served
                 if (employeeSetting != null && employeeSetting.IsBaseOnYearsServed)
                 {
-                    decimal tenure = CalculateTenure(bank.AccrualStartDate.Value);
+                    decimal tenure = CalculateTenure(employeeSetting.AccrualStartDate);
                     bool isTenureValid = CheckTenureAgainstProfile(tenure, employeeSetting.FromYears, employeeSetting.ToYears);
                     if (!isTenureValid)
                     {
@@ -218,7 +218,7 @@ public class AccrualEvaluator
                     }
                 }
 
-                var result = CalculateAccrualPeriodsAndTransactions(bank, accrualRule, existingTransactions.Where(t => t.AccrualBankId == bank.Id).ToList());
+                var result = CalculateAccrualPeriodsAndTransactions(employeeSetting.AccrualStartDate, bank, accrualRule, existingTransactions.Where(t => t.AccrualBankId == bank.Id).ToList());
                 if (result.MissingTransactions.Count > 0)
                 {
                     transactionsToAdd.AddRange(result.MissingTransactions);
@@ -280,10 +280,10 @@ public class AccrualEvaluator
     /// <summary>
     /// Calculates accrual periods and determines missing transactions
     /// </summary>
-    private AccrualCalculationResult CalculateAccrualPeriodsAndTransactions(AccrualBankEvaluationResponse bank, AccrualRuleEvaluationResponse accrualRule, List<AccrualTransactionResponse> existingTransactions)
+    private AccrualCalculationResult CalculateAccrualPeriodsAndTransactions(DateTime? accrualStartDate, AccrualBankEvaluationResponse bank, AccrualRuleEvaluationResponse accrualRule, List<AccrualTransactionResponse> existingTransactions)
     {
         var result = new AccrualCalculationResult();
-        DateTime? startDate = bank.LastAccruedPeriodDate ?? bank.AccrualStartDate;
+        DateTime? startDate = bank.LastAccruedPeriodDate ?? accrualStartDate;
         if (!startDate.HasValue)
         {
             CustomLogger.Log(LogLevel.Warning, null, $"No start date found for bank {bank.Id}");
