@@ -241,7 +241,7 @@ public class AccrualBanksProcessor : BaseProcessor
     /// <summary>
     /// Gets accrual profile ID from track profiles based on tenure (without DB call)
     /// </summary>
-    private (int profileId, string profileName) GetAccrualProfileIdFromTrack(List<AccrualTrackProfileResponse> profiles, string accrualStartDate)
+    public (int profileId, string profileName) GetAccrualProfileIdFromTrack(List<AccrualTrackProfileResponse> profiles, string accrualStartDate)
     {
         try
         {

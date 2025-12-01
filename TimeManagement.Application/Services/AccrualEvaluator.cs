@@ -33,16 +33,17 @@ public class AccrualEvaluator
     #region Get Data Methods
 
     private async Task<List<EmployeeAccrualSettingsEvaluationResponse>> GetAccrualProfilesByProfileOrTrackIds(
-        List<AccrualRuleEvaluationResponse> accrualRules, AccrualProfilesRepository accrualProfilesRepository, EmployeeAccrualSettingsRepository employeeAccrualSettingsRepository)
+        List<AccrualRuleEvaluationResponse> accrualRules, IServiceScope scope)
     {
+        var accrualProfilesRepository = scope.ServiceProvider.GetRequiredService<AccrualProfilesRepository>();
+        var employeeAccrualSettingsRepository = scope.ServiceProvider.GetRequiredService<EmployeeAccrualSettingsRepository>();
+        var accrualBanksProcessor = scope.ServiceProvider.GetRequiredService<AccrualBanksProcessor>();
         // Call second stored procedure to get employee accrual settings
         string tenantIds = string.Join(',', accrualRules.Select(c => c.TenantId).Distinct().ToList());
         var employeeSettingsJson = await employeeAccrualSettingsRepository.GetEmployeeAccrualSettings(0, tenantIds);
 
         // Deserialize employee accrual settings response
         var employeeSettings = JsonSerializer.Deserialize<List<EmployeeAccrualSettingsEvaluationResponse>>(employeeSettingsJson, JsonOptions);
-
-
         var profileIds = employeeSettings.Where(e => e.AccrualProfileId.HasValue).Select(e => e.AccrualProfileId!.Value).Distinct().ToList();
         var trackIds = employeeSettings.Where(e => e.AccrualTrackId.HasValue).Select(e => e.AccrualTrackId!.Value).Distinct().ToList();
 
@@ -50,7 +51,17 @@ public class AccrualEvaluator
         var trackIdsJson = trackIds.Count > 0 ? JsonSerializer.Serialize(trackIds) : null;
 
         var profilesJson = await accrualProfilesRepository.GetAccrualProfilesByProfileOrTrackIds(profileIdsJson, trackIdsJson, 0);
-        var data = JsonSerializer.Deserialize<List<AccrualProfileResponse>>(profilesJson, JsonOptions);
+        var trackProfiles = JsonSerializer.Deserialize<List<AccrualProfileResponse>>(profilesJson, JsonOptions);
+
+        var employeeSettingsWithProfileIds = employeeSettings.Where(c => c.AccrualProfileId > 0).ToList();
+        var tracks = JsonSerializer.Deserialize<List<EmployeeAccrualSettingsEvaluationResponse>>(employeeSettings.Where(c => c.AccrualTrackId > 0).ToJson(), JsonOptions);
+
+        foreach (var track in tracks)
+        {
+            //var hehe = data.Where(c => c.AccrualTrackId == track.AccrualTrackId).ToList();
+            await accrualBanksProcessor.GetAccrualProfileIdFromTrack(, track.AccrualStartDate);
+            //employeeSettingsWithProfileIds.Add
+        }
 
         return employeeSettings;
     }
@@ -217,10 +228,7 @@ public class AccrualEvaluator
     /// <summary>
     /// Gets existing transactions by bank IDs
     /// </summary>
-    private async Task<List<AccrualTransactionResponse>> GetExistingTransactionsByBankIds(
-        List<int> bankIds,
-        int tenantId,
-        AccrualTransactionsRepository repository)
+    private async Task<List<AccrualTransactionResponse>> GetExistingTransactionsByBankIds(List<int> bankIds, int tenantId, AccrualTransactionsRepository repository)
     {
         try
         {
@@ -332,11 +340,7 @@ public class AccrualEvaluator
     /// <summary>
     /// Calculates all accrual period dates based on frequency
     /// </summary>
-    private List<DateTime> CalculateAllAccrualPeriods(
-        DateTime startDate,
-        DateTime endDate,
-        int accrueFrequency,
-        decimal? accrueFrequencyValue)
+    private List<DateTime> CalculateAllAccrualPeriods(DateTime startDate, DateTime endDate, int accrueFrequency, decimal? accrueFrequencyValue)
     {
         var periods = new List<DateTime>();
         var currentDate = startDate.Date;
@@ -386,10 +390,7 @@ public class AccrualEvaluator
     /// <summary>
     /// Inserts accrual transactions in bulk
     /// </summary>
-    private async Task InsertAccrualTransactionsBulk(
-        List<AccrualTransactionRequest> transactions,
-        int tenantId,
-        AccrualTransactionsRepository repository)
+    private async Task InsertAccrualTransactionsBulk(List<AccrualTransactionRequest> transactions, int tenantId, AccrualTransactionsRepository repository)
     {
         try
         {
@@ -423,10 +424,7 @@ public class AccrualEvaluator
     /// <summary>
     /// Updates accrual banks in bulk
     /// </summary>
-    private async Task UpdateAccrualBanksBulk(
-        List<AccrualBankUpdateRequest> bankUpdates,
-        int tenantId,
-        AccrualBanksRepository repository)
+    private async Task UpdateAccrualBanksBulk(List<AccrualBankUpdateRequest> bankUpdates, int tenantId, AccrualBanksRepository repository)
     {
         try
         {
@@ -515,154 +513,6 @@ public class AccrualEvaluator
         decimal fractionalYears = years + (months / 12.0m) + (days / 365.25m);
 
         return Math.Max(0, fractionalYears);
-    }
-
-    /// <summary>
-    /// Gets accrual profile ID from track based on tenure (without repository dependency)
-    /// </summary>
-    private async Task<(int profileId, string profileName)> GetAccrualProfileIdFromTrack(
-        int accrualTrackId,
-        string accrualStartDate,
-        int tenantId,
-        AccrualTracksRepository accrualTracksRepository)
-    {
-        try
-        {
-            // Get the accrual track with profiles
-            var trackJson = await accrualTracksRepository.GetAccrualTracks(accrualTrackId, tenantId);
-
-            if (string.IsNullOrEmpty(trackJson))
-            {
-                return (0, string.Empty);
-            }
-
-            var tracks = JsonSerializer.Deserialize<List<JsonElement>>(trackJson);
-            if (tracks == null || tracks.Count == 0)
-            {
-                return (0, string.Empty);
-            }
-
-            var track = tracks[0];
-            if (!track.TryGetProperty("profiles", out var profilesElement))
-            {
-                return (0, string.Empty);
-            }
-
-            List<JsonElement> profiles;
-            if (profilesElement.ValueKind == JsonValueKind.String)
-            {
-                // If profiles is a JSON string, parse it
-                profiles = JsonSerializer.Deserialize<List<JsonElement>>(profilesElement.GetString() ?? "[]");
-            }
-            else if (profilesElement.ValueKind == JsonValueKind.Array)
-            {
-                // If profiles is already an array, use it directly
-                profiles = JsonSerializer.Deserialize<List<JsonElement>>(profilesElement.GetRawText());
-            }
-            else
-            {
-                return (0, string.Empty);
-            }
-
-            if (profiles == null || profiles.Count == 0)
-            {
-                return (0, string.Empty);
-            }
-
-            // Calculate years served
-            var startDate = DateTime.Parse(accrualStartDate);
-            var now = DateTime.UtcNow;
-            var yearsServed = now.Year - startDate.Year;
-            if (now.Month < startDate.Month || (now.Month == startDate.Month && now.Day < startDate.Day))
-            {
-                yearsServed--;
-            }
-            yearsServed = Math.Max(0, yearsServed);
-
-            // Find matching profile
-            var sortedProfiles = profiles.OrderBy(p =>
-            {
-                if (p.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
-                {
-                    return fromYearsElement.GetDecimal();
-                }
-                return 0;
-            }).ToList();
-
-            foreach (var profile in sortedProfiles)
-            {
-                decimal from = 0;
-                decimal? to = null;
-                int profileId = 0;
-                string profileName = string.Empty;
-
-                if (profile.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
-                {
-                    from = fromYearsElement.GetDecimal();
-                }
-
-                if (profile.TryGetProperty("toYears", out var toYearsElement) && toYearsElement.ValueKind != JsonValueKind.Null)
-                {
-                    to = toYearsElement.GetDecimal();
-                }
-
-                if (profile.TryGetProperty("accrualProfileId", out var profileIdElement) && profileIdElement.ValueKind != JsonValueKind.Null)
-                {
-                    profileId = profileIdElement.GetInt32();
-                }
-
-                if (profile.TryGetProperty("profileName", out var profileNameElement) && profileNameElement.ValueKind != JsonValueKind.Null)
-                {
-                    profileName = profileNameElement.GetString() ?? string.Empty;
-                }
-
-                if (to == null)
-                {
-                    // No upper limit
-                    if (yearsServed >= from)
-                    {
-                        return (profileId, profileName);
-                    }
-                }
-                else
-                {
-                    if (yearsServed >= from && yearsServed <= to.Value)
-                    {
-                        return (profileId, profileName);
-                    }
-                }
-            }
-
-            // If no match, return first profile
-            if (sortedProfiles.Count > 0)
-            {
-                var firstProfile = sortedProfiles[0];
-                int firstProfileId = 0;
-                string firstNameValue = string.Empty;
-
-                if (firstProfile.TryGetProperty("accrualProfileId", out var firstProfileIdElement) && firstProfileIdElement.ValueKind != JsonValueKind.Null)
-                {
-                    firstProfileId = firstProfileIdElement.GetInt32();
-                }
-
-                if (firstProfile.TryGetProperty("profileName", out var firstNameElement) && firstNameElement.ValueKind != JsonValueKind.Null)
-                {
-                    firstNameValue = firstNameElement.GetString() ?? string.Empty;
-                }
-
-                if (firstProfileId > 0)
-                {
-                    return (firstProfileId, firstNameValue);
-                }
-            }
-
-            return (0, string.Empty);
-        }
-        catch (Exception ex)
-        {
-            CustomLogger.Log(LogLevel.Error, ex, $"Error getting accrual profile from track {accrualTrackId}");
-            return (0, string.Empty);
-        }
     }
 
     #region Helper Classes
