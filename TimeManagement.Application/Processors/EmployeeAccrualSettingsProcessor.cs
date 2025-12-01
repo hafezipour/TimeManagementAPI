@@ -59,7 +59,7 @@ public class EmployeeAccrualSettingsProcessor : BaseProcessor
                 return new { success = false, message = "User Id is required." }.ToJson();
             }
 
-            var result = await _employeeAccrualSettingsRepository.GetEmployeeAccrualSettings(request.UserId, CurrentUser.TenantID);
+            var result = await _employeeAccrualSettingsRepository.GetEmployeeAccrualSettings(request.UserId, CurrentUser.TenantID.ToString());
             return result;
         }
         catch (Exception ex)
