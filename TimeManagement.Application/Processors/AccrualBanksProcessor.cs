@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using TimeManagement.Application.DTOs.AccrualProfiles;
-using TimeManagement.Application.DTOs.AccrualTracks;
 using TimeManagement.Application.DTOs.EmployeeAccrualSettings;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Infra.Repositories;
@@ -198,9 +197,8 @@ public class AccrualBanksProcessor : BaseProcessor
             // Method 2: If accrualTrackId exists, get the track and find matching profile
             else if (accrualTrackId.HasValue && accrualTrackId.Value > 0 && !string.IsNullOrEmpty(accrualStartDate))
             {
-                var trackJson = await _accrualTracksRepository.GetAccrualTracks(accrualTrackId, CurrentUser.TenantID);
-                var tracks = JsonSerializer.Deserialize<List<AccrualTrackResponse>>(trackJson, JsonOptions);
-                var (profileId, profileName) = await GetAccrualProfileIdFromTrack(tracks[0], accrualTrackId.Value, accrualStartDate, CurrentUser.TenantID);
+
+                var (profileId, profileName) = await GetAccrualProfileIdFromTrack(accrualTrackId.Value, accrualStartDate, CurrentUser.TenantID);
                 if (profileId <= 0)
                 {
                     return new { success = false, message = "Unable to determine accrual profile from track." }.ToJson();
@@ -215,10 +213,14 @@ public class AccrualBanksProcessor : BaseProcessor
             }
 
             // Step 2: Get Accrual Banks with resolved profile ID
-            var result = await _accrualBanksRepository.GetAccrualBanks(userId, resolvedAccrualProfileId, CurrentUser.TenantID);
+            var result = await _accrualBanksRepository.GetAccrualBanks(
+                userId,
+                resolvedAccrualProfileId,
+                CurrentUser.TenantID);
 
             // Parse the result to return as part of response
             var banksData = JsonSerializer.Deserialize<object>(result);
+
             return new
             {
                 result = banksData,
@@ -233,20 +235,47 @@ public class AccrualBanksProcessor : BaseProcessor
         }
     }
 
-    private async Task<(int profileId, string profileName)> GetAccrualProfileIdFromTrack(AccrualTrackResponse track, int accrualTrackId, string accrualStartDate, int tenantId)
+    private async Task<(int profileId, string profileName)> GetAccrualProfileIdFromTrack(int accrualTrackId, string accrualStartDate, int tenantId)
     {
         try
         {
-            List<AccrualTrackProfileResponse> profiles;
-            if (string.IsNullOrEmpty(track.Profiles))
+            // Get the accrual track with profiles
+            var trackJson = await _accrualTracksRepository.GetAccrualTracks(accrualTrackId, tenantId);
+
+            if (string.IsNullOrEmpty(trackJson))
             {
                 return (0, string.Empty);
             }
 
-            profiles = JsonSerializer.Deserialize<List<AccrualTrackProfileResponse>>(track.Profiles, JsonOptions)
-                ?? new List<AccrualTrackProfileResponse>();
+            var tracks = JsonSerializer.Deserialize<List<JsonElement>>(trackJson);
+            if (tracks == null || tracks.Count == 0)
+            {
+                return (0, string.Empty);
+            }
 
-            if (profiles.Count == 0)
+            var track = tracks[0];
+            if (!track.TryGetProperty("profiles", out var profilesElement))
+            {
+                return (0, string.Empty);
+            }
+
+            List<JsonElement> profiles;
+            if (profilesElement.ValueKind == JsonValueKind.String)
+            {
+                // If profiles is a JSON string, parse it
+                profiles = JsonSerializer.Deserialize<List<JsonElement>>(profilesElement.GetString() ?? "[]");
+            }
+            else if (profilesElement.ValueKind == JsonValueKind.Array)
+            {
+                // If profiles is already an array, use it directly
+                profiles = JsonSerializer.Deserialize<List<JsonElement>>(profilesElement.GetRawText());
+            }
+            else
+            {
+                return (0, string.Empty);
+            }
+
+            if (profiles == null || profiles.Count == 0)
             {
                 return (0, string.Empty);
             }
@@ -261,29 +290,56 @@ public class AccrualBanksProcessor : BaseProcessor
             }
             yearsServed = Math.Max(0, yearsServed);
 
-            // Find matching profile - sort by FromYears
-            var sortedProfiles = profiles
-                .OrderBy(p => p.FromYears ?? 0)
-                .ToList();
+            // Find matching profile
+            var sortedProfiles = profiles.OrderBy(p =>
+            {
+                if (p.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
+                {
+                    return fromYearsElement.GetDecimal();
+                }
+                return 0;
+            }).ToList();
 
             foreach (var profile in sortedProfiles)
             {
-                var from = profile.FromYears ?? 0;
-                var to = profile.ToYears;
+                decimal from = 0;
+                decimal? to = null;
+                int profileId = 0;
+                string profileName = string.Empty;
+
+                if (profile.TryGetProperty("fromYears", out var fromYearsElement) && fromYearsElement.ValueKind != JsonValueKind.Null)
+                {
+                    from = fromYearsElement.GetDecimal();
+                }
+
+                if (profile.TryGetProperty("toYears", out var toYearsElement) && toYearsElement.ValueKind != JsonValueKind.Null)
+                {
+                    to = toYearsElement.GetDecimal();
+                }
+
+                if (profile.TryGetProperty("accrualProfileId", out var profileIdElement) && profileIdElement.ValueKind != JsonValueKind.Null)
+                {
+                    profileId = profileIdElement.GetInt32();
+                }
+
+                if (profile.TryGetProperty("profileName", out var profileNameElement) && profileNameElement.ValueKind != JsonValueKind.Null)
+                {
+                    profileName = profileNameElement.GetString() ?? string.Empty;
+                }
 
                 if (to == null)
                 {
                     // No upper limit
                     if (yearsServed >= from)
                     {
-                        return (profile.AccrualProfileId, profile.ProfileName ?? string.Empty);
+                        return (profileId, profileName);
                     }
                 }
                 else
                 {
                     if (yearsServed >= from && yearsServed <= to.Value)
                     {
-                        return (profile.AccrualProfileId, profile.ProfileName ?? string.Empty);
+                        return (profileId, profileName);
                     }
                 }
             }
@@ -292,9 +348,22 @@ public class AccrualBanksProcessor : BaseProcessor
             if (sortedProfiles.Count > 0)
             {
                 var firstProfile = sortedProfiles[0];
-                if (firstProfile.AccrualProfileId > 0)
+                int firstProfileId = 0;
+                string firstNameValue = string.Empty;
+
+                if (firstProfile.TryGetProperty("accrualProfileId", out var firstProfileIdElement) && firstProfileIdElement.ValueKind != JsonValueKind.Null)
                 {
-                    return (firstProfile.AccrualProfileId, firstProfile.ProfileName ?? string.Empty);
+                    firstProfileId = firstProfileIdElement.GetInt32();
+                }
+
+                if (firstProfile.TryGetProperty("profileName", out var firstNameElement) && firstNameElement.ValueKind != JsonValueKind.Null)
+                {
+                    firstNameValue = firstNameElement.GetString() ?? string.Empty;
+                }
+
+                if (firstProfileId > 0)
+                {
+                    return (firstProfileId, firstNameValue);
                 }
             }
 

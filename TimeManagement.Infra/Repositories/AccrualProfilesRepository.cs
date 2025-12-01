@@ -93,15 +93,17 @@ public class AccrualProfilesRepository
     /// </summary>
     /// <param name="accrualProfileIdsJson">JSON array of profile IDs (e.g., "[1, 2, 3]") or null</param>
     /// <param name="accrualTrackIdsJson">JSON array of track IDs (e.g., "[1, 2, 3]") or null</param>
+    /// <param name="tenantId">Tenant ID</param>
     /// <returns>JSON string containing all matching profiles with all profile table columns</returns>
-    public async Task<string> GetAccrualProfilesByProfileOrTrackIds(string? accrualProfileIdsJson, string? accrualTrackIdsJson)
+    public async Task<string> GetAccrualProfilesByProfileOrTrackIds(string? accrualProfileIdsJson, string? accrualTrackIdsJson, int tenantId)
     {
         try
         {
             List<SqlParameterModel> param = new()
             {
                 new SqlParameterModel { Name = "AccrualProfileIdsJson", Value = accrualProfileIdsJson ?? (object)DBNull.Value },
-                new SqlParameterModel { Name = "AccrualTrackIdsJson", Value = accrualTrackIdsJson ?? (object)DBNull.Value }
+                new SqlParameterModel { Name = "AccrualTrackIdsJson", Value = accrualTrackIdsJson ?? (object)DBNull.Value },
+                new SqlParameterModel { Name = "TenantId", Value = tenantId }
             };
 
             return await _dbOperations.ExecuteDataSetAsync("usp_AccrualProfiles_GetByProfileOrTrackIds", param);

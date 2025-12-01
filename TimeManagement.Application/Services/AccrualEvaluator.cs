@@ -35,7 +35,6 @@ public class AccrualEvaluator
     private async Task<List<EmployeeAccrualSettingsEvaluationResponse>> GetAccrualProfilesByProfileOrTrackIds(
         List<AccrualRuleEvaluationResponse> accrualRules, AccrualProfilesRepository accrualProfilesRepository, EmployeeAccrualSettingsRepository employeeAccrualSettingsRepository)
     {
-
         // Call second stored procedure to get employee accrual settings
         string tenantIds = string.Join(',', accrualRules.Select(c => c.TenantId).Distinct().ToList());
         var employeeSettingsJson = await employeeAccrualSettingsRepository.GetEmployeeAccrualSettings(0, tenantIds);
@@ -50,7 +49,7 @@ public class AccrualEvaluator
         var profileIdsJson = profileIds.Count > 0 ? JsonSerializer.Serialize(profileIds) : null;
         var trackIdsJson = trackIds.Count > 0 ? JsonSerializer.Serialize(trackIds) : null;
 
-        var profilesJson = await accrualProfilesRepository.GetAccrualProfilesByProfileOrTrackIds(profileIdsJson, trackIdsJson);
+        var profilesJson = await accrualProfilesRepository.GetAccrualProfilesByProfileOrTrackIds(profileIdsJson, trackIdsJson, 0);
         var data = JsonSerializer.Deserialize<List<AccrualProfileResponse>>(profilesJson, JsonOptions);
 
         return employeeSettings;

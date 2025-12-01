@@ -14,7 +14,8 @@ GO
 -- =============================================
 CREATE PROCEDURE [dbo].[usp_AccrualProfiles_GetByProfileOrTrackIds]
     @AccrualProfileIdsJson NVARCHAR(MAX) = NULL,
-    @AccrualTrackIdsJson NVARCHAR(MAX) = NULL
+    @AccrualTrackIdsJson NVARCHAR(MAX) = NULL,
+    @TenantId INT
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -55,7 +56,8 @@ BEGIN
         ap.DateUpdated AS dateUpdated,
         ap.TenantId AS tenantId
     FROM AccrualProfiles ap
-    WHERE (
+    WHERE ap.TenantId = @TenantId
+      AND (
           -- Match direct profile IDs
           (EXISTS (SELECT 1 FROM @ProfileIds) AND EXISTS (SELECT 1 FROM @ProfileIds WHERE AccrualProfileId = ap.Id))
           OR
@@ -65,6 +67,7 @@ BEGIN
               FROM AccrualTrackProfiles atp
               INNER JOIN @TrackIds t ON atp.AccrualTrackId = t.AccrualTrackId
               WHERE atp.AccrualProfileId = ap.Id
+                AND atp.TenantId = @TenantId
           ))
       )
     ORDER BY ap.ProfileName

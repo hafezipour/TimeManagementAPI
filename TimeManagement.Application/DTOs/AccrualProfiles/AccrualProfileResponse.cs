@@ -12,6 +12,5 @@ public class AccrualProfileResponse
     public int? UpdatedBy { get; set; }
     public DateTimeOffset DateCreated { get; set; }
     public DateTimeOffset? DateUpdated { get; set; }
-    public int TenantId { get; set; }
 }
 
