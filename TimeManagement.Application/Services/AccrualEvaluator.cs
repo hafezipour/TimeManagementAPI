@@ -75,33 +75,14 @@ public class AccrualEvaluator
         {
             #region Get Accrual Rules
 
-            // Call first stored procedure to get all accrual rules for evaluation
             var jsonResult = await accrualRulesRepository.GetAccrualRulesForEvaluation();
-
-            // Deserialize JSON response to DTOs
             var accrualRules = JsonSerializer.Deserialize<List<AccrualRuleEvaluationResponse>>(jsonResult, JsonOptions);
-
-            if (accrualRules == null || accrualRules.Count == 0)
-            {
-                CustomLogger.Log(LogLevel.Information, null, "No accrual rules found for evaluation");
-                return;
-            }
 
             #endregion
 
             #region Create Banks for missing banks using employee accrual settings table
 
-            
-           var employeeSettings = await GetAccrualProfilesByProfileOrTrackIds(accrualRules, accrualProfilesRepository, employeeAccrualSettingsRepository);
-
-
-            if (employeeSettings == null || employeeSettings.Count == 0)
-            {
-                CustomLogger.Log(LogLevel.Information, null, "No employee accrual settings found for the provided profile IDs");
-                return;
-            }
-            //employeeSettings, accrualRules
-
+            var employeeSettings = await GetAccrualProfilesByProfileOrTrackIds(accrualRules, accrualProfilesRepository, employeeAccrualSettingsRepository);
             List<CheckAndCreateBanksRequest> requests = new List<CheckAndCreateBanksRequest>();
             foreach (var accrualRule in accrualRules)
             {
@@ -132,37 +113,19 @@ public class AccrualEvaluator
 
             #region Fetch Accrual Banks for all users and tenants
 
-            // Fetch all banks for all tenants and users
             var banksJson = await accrualBanksRepository.GetAccrualBanksForEvaluation();
             var banks = JsonSerializer.Deserialize<List<AccrualBankEvaluationResponse>>(banksJson, JsonOptions);
-
-            if (banks == null || banks.Count == 0)
-            {
-                CustomLogger.Log(LogLevel.Information, null, "No accrual banks found");
-            }
-            else
-            {
-                CustomLogger.Log(LogLevel.Information, null, $"Retrieved {banks.Count} accrual banks for evaluation");
-            }
 
             #endregion
 
             #region Proceed here Rule by rule Evaluation for each accrual bank
 
-            // Group banks by tenant for bulk processing
             var banksByTenant = banks.GroupBy(b => b.TenantId).ToList();
-
             foreach (var tenantGroup in banksByTenant)
             {
                 var tenantId = tenantGroup.Key;
                 var tenantBanks = tenantGroup.ToList();
-
-                CustomLogger.Log(LogLevel.Information, null, $"Processing {tenantBanks.Count} banks for tenant {tenantId}");
-
-                // Get employee settings for this tenant to access profile tenure information
                 var tenantEmployeeSettings = employeeSettings.Where(s => s.TenantId == tenantId).ToList();
-
-                // Process all banks for this tenant
                 await GetAccrualBanksToUpdate(tenantBanks, accrualRules, tenantId, tenantEmployeeSettings, scope);
             }
 
