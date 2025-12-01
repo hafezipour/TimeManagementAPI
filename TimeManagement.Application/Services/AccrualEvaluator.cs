@@ -55,12 +55,13 @@ public class AccrualEvaluator
         var profilesJson = await accrualProfilesRepository.GetAccrualProfilesByProfileOrTrackIds(profileIdsJson, trackIdsJson, 0);
         var trackProfiles = JsonSerializer.Deserialize<List<AccrualProfileResponse>>(profilesJson, JsonOptions);
 
-        var employeeSettingsWithProfileIds = employeeSettings.Where(c => c.AccrualProfileId > 0).ToList();
-        var tracks = JsonSerializer.Deserialize<List<EmployeeAccrualSettingsEvaluationResponse>>(employeeSettings.Where(c => c.AccrualTrackId > 0).ToJson(), JsonOptions);
+        var employeeSettingsWithProfileIds = JsonSerializer.Deserialize<List<EmployeeAccrualSettingsEvaluationResponse>>(employeeSettings.Where(c => c.AccrualProfileId > 0).ToJson(), JsonOptions);
+        var trackSettings = JsonSerializer.Deserialize<List<EmployeeAccrualSettingsEvaluationResponse>>(employeeSettings.Where(c => c.AccrualTrackId > 0).ToJson(), JsonOptions);
 
-        foreach (var track in tracks)
+        ///here we now checking the current profile of employee based on track settings and are setting up that
+        foreach (var trackSetting in trackSettings)
         {
-            var profiles = trackProfiles.Where(c => c.TrackId == track.AccrualTrackId).Select(c => new AccrualTrackProfileResponse
+            var profiles = trackProfiles.Where(c => c.TrackId == trackSetting.AccrualTrackId).Select(c => new AccrualTrackProfileResponse
             {
                 AccrualTrackId = c.TrackId ?? 0,
                 AccrualProfileId = c.Id,
@@ -73,12 +74,20 @@ public class AccrualEvaluator
                 UpdatedBy = c.UpdatedBy,
                 DateUpdated = c.DateUpdated
             }).ToList();
-            var (profileId, profileName) = accrualBanksProcessor.GetAccrualProfileIdFromTrack(profiles, track.AccrualStartDate);
+            var (profileId, profileName) = accrualBanksProcessor.GetAccrualProfileIdFromTrack(profiles, trackSetting.AccrualStartDate);
+            if (profileId > 0)//current profile id matched
+            {
+                var trackSettingCloned = JsonSerializer.Deserialize<EmployeeAccrualSettingsEvaluationResponse>(trackSetting.ToJson(), JsonOptions);
 
-            //employeeSettingsWithProfileIds.Add
+                var trackProfile = trackProfiles.Where(c => c.Id == profileId).FirstOrDefault();
+                trackSettingCloned.AccrualProfileId = trackProfile.Id;//ye he sari game hai, we setted here the current accrual profile id based on start date and track profiles
+                trackSettingCloned.FromYears = trackProfile.FromYears;
+                trackSettingCloned.ToYears = trackProfile.ToYears;
+                trackSettingCloned.IsBaseOnYearsServed = trackProfile.IsBaseOnYearsServed;
+                employeeSettingsWithProfileIds.Add(trackSettingCloned);
+            }
         }
-
-        return employeeSettings;
+        return employeeSettingsWithProfileIds;
     }
 
     #endregion
@@ -107,7 +116,7 @@ public class AccrualEvaluator
 
             #region Create Banks for missing banks using employee accrual settings table
 
-            var employeeSettings = await GetAccrualProfilesByProfileOrTrackIds(accrualRules, accrualProfilesRepository, employeeAccrualSettingsRepository);
+            var employeeSettings = await GetAccrualProfilesByProfileOrTrackIds(accrualRules, scope);
             List<CheckAndCreateBanksRequest> requests = new List<CheckAndCreateBanksRequest>();
             foreach (var accrualRule in accrualRules)
             {
