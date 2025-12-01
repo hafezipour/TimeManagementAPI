@@ -87,6 +87,10 @@ public class AccrualEvaluator
                 employeeSettingsWithProfileIds.Add(trackSettingCloned);
             }
         }
+        //foreach (var item in employeeSettings.Where(c => (c.AccrualTrackId ?? 0) == 0))
+        //{
+        //    employeeSettingsWithProfileIds.Add(item);
+        //}
         return employeeSettingsWithProfileIds;
     }
 
