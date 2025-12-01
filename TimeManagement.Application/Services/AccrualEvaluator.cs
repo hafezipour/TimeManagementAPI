@@ -7,6 +7,7 @@ using System.Text.Json.Serialization;
 using TimeManagement.Application.DTOs.AccrualEvaluations;
 using TimeManagement.Application.DTOs.AccrualProfiles;
 using TimeManagement.Application.DTOs.AccrualRules;
+using TimeManagement.Application.DTOs.AccrualTracks;
 using TimeManagement.Application.DTOs.EmployeeAccrualSettings;
 using TimeManagement.Application.Processors;
 using TimeManagement.Infra.Extensions;
@@ -38,6 +39,7 @@ public class AccrualEvaluator
         var accrualProfilesRepository = scope.ServiceProvider.GetRequiredService<AccrualProfilesRepository>();
         var employeeAccrualSettingsRepository = scope.ServiceProvider.GetRequiredService<EmployeeAccrualSettingsRepository>();
         var accrualBanksProcessor = scope.ServiceProvider.GetRequiredService<AccrualBanksProcessor>();
+
         // Call second stored procedure to get employee accrual settings
         string tenantIds = string.Join(',', accrualRules.Select(c => c.TenantId).Distinct().ToList());
         var employeeSettingsJson = await employeeAccrualSettingsRepository.GetEmployeeAccrualSettings(0, tenantIds);
@@ -58,8 +60,20 @@ public class AccrualEvaluator
 
         foreach (var track in tracks)
         {
-            //var hehe = data.Where(c => c.AccrualTrackId == track.AccrualTrackId).ToList();
-            await accrualBanksProcessor.GetAccrualProfileIdFromTrack(, track.AccrualStartDate);
+            var hehe = trackProfiles.Where(c => c.TrackId == track.AccrualTrackId).Select(c => new AccrualTrackProfileResponse
+            {
+                AccrualTrackId = c.TrackId ?? 0,
+                AccrualProfileId = c.Id,
+                ProfileName = c.ProfileName,
+                IsBaseOnYearsServed = c.IsBaseOnYearsServed,
+                FromYears = c.FromYears,
+                ToYears = c.ToYears,
+                CreatedBy = c.CreatedBy,
+                DateCreated = c.DateCreated,
+                UpdatedBy = c.UpdatedBy,
+                DateUpdated = c.DateUpdated
+            }).ToList();
+            var (profileId, profileName) = accrualBanksProcessor.GetAccrualProfileIdFromTrack(hehe, track.AccrualStartDate);
             //employeeSettingsWithProfileIds.Add
         }
 

@@ -14,8 +14,7 @@ GO
 -- =============================================
 CREATE PROCEDURE [dbo].[usp_AccrualProfiles_GetByProfileOrTrackIds]
     @AccrualProfileIdsJson NVARCHAR(MAX) = NULL,
-    @AccrualTrackIdsJson NVARCHAR(MAX) = NULL,
-    @TenantId INT
+    @AccrualTrackIdsJson NVARCHAR(MAX) = NULL
 AS
 BEGIN
     SET NOCOUNT ON;
@@ -42,7 +41,10 @@ BEGIN
         WHERE value IS NOT NULL;
     END
 
-    -- Get profiles that match profile IDs OR belong to track IDs
+    -- First: Get profiles from tracks (if track IDs are provided)
+    -- Select from AccrualTrackProfiles and join AccrualProfiles, include trackId
+    -- Second: Get direct profile IDs (if profile IDs are provided)
+    -- UNION them together
     SELECT DISTINCT
         ap.Id AS id,
         ap.ProfileName AS profileName,
@@ -54,23 +56,33 @@ BEGIN
         ap.UpdatedBy AS updatedBy,
         ap.DateCreated AS dateCreated,
         ap.DateUpdated AS dateUpdated,
-        ap.TenantId AS tenantId
+        ap.TenantId AS tenantId,
+        atp.AccrualTrackId AS trackId
+    FROM AccrualTrackProfiles atp
+    INNER JOIN AccrualProfiles ap ON atp.AccrualProfileId = ap.Id
+    INNER JOIN @TrackIds t ON atp.AccrualTrackId = t.AccrualTrackId
+    WHERE EXISTS (SELECT 1 FROM @TrackIds)
+
+    UNION
+
+    SELECT DISTINCT
+        ap.Id AS id,
+        ap.ProfileName AS profileName,
+        ap.IsBaseOnYearsServed AS isBaseOnYearsServed,
+        ap.FromYears AS fromYears,
+        ap.ToYears AS toYears,
+        ap.Description AS description,
+        ap.CreatedBy AS createdBy,
+        ap.UpdatedBy AS updatedBy,
+        ap.DateCreated AS dateCreated,
+        ap.DateUpdated AS dateUpdated,
+        ap.TenantId AS tenantId,
+        NULL AS trackId
     FROM AccrualProfiles ap
-    WHERE ap.TenantId = @TenantId
-      AND (
-          -- Match direct profile IDs
-          (EXISTS (SELECT 1 FROM @ProfileIds) AND EXISTS (SELECT 1 FROM @ProfileIds WHERE AccrualProfileId = ap.Id))
-          OR
-          -- Match profiles from tracks
-          (EXISTS (SELECT 1 FROM @TrackIds) AND EXISTS (
-              SELECT 1 
-              FROM AccrualTrackProfiles atp
-              INNER JOIN @TrackIds t ON atp.AccrualTrackId = t.AccrualTrackId
-              WHERE atp.AccrualProfileId = ap.Id
-                AND atp.TenantId = @TenantId
-          ))
-      )
-    ORDER BY ap.ProfileName
+    WHERE EXISTS (SELECT 1 FROM @ProfileIds)
+      AND EXISTS (SELECT 1 FROM @ProfileIds WHERE AccrualProfileId = ap.Id)
+
+    ORDER BY profileName
     FOR JSON PATH, INCLUDE_NULL_VALUES
 END
 GO

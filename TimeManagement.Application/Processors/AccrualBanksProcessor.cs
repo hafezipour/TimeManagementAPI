@@ -201,7 +201,7 @@ public class AccrualBanksProcessor : BaseProcessor
                 var trackJson = await _accrualTracksRepository.GetAccrualTracks(accrualTrackId.Value, CurrentUser.TenantID);
                 var tracks = JsonSerializer.Deserialize<List<AccrualTrackResponse>>(trackJson, JsonOptions);
                 var track = tracks[0];
-                var (profileId, profileName) = GetAccrualProfileIdFromTrack(track.Profiles, accrualStartDate);
+                var (profileId, profileName) = GetAccrualProfileIdFromTrack(track.Profiles, DateTime.Parse(accrualStartDate));
                 if (profileId <= 0)
                 {
                     return new { success = false, message = "Unable to determine accrual profile from track." }.ToJson();
@@ -241,7 +241,7 @@ public class AccrualBanksProcessor : BaseProcessor
     /// <summary>
     /// Gets accrual profile ID from track profiles based on tenure (without DB call)
     /// </summary>
-    public (int profileId, string profileName) GetAccrualProfileIdFromTrack(List<AccrualTrackProfileResponse> profiles, string accrualStartDate)
+    public (int profileId, string profileName) GetAccrualProfileIdFromTrack(List<AccrualTrackProfileResponse> profiles, DateTime startDate)
     {
         try
         {
@@ -251,7 +251,6 @@ public class AccrualBanksProcessor : BaseProcessor
             }
 
             // Calculate years served
-            var startDate = DateTime.Parse(accrualStartDate);
             var now = DateTime.UtcNow;
             var yearsServed = now.Year - startDate.Year;
             if (now.Month < startDate.Month || (now.Month == startDate.Month && now.Day < startDate.Day))
@@ -287,15 +286,15 @@ public class AccrualBanksProcessor : BaseProcessor
                 }
             }
 
-            // If no match, return first profile
-            if (sortedProfiles.Count > 0)
-            {
-                var firstProfile = sortedProfiles[0];
-                if (firstProfile.AccrualProfileId > 0)
-                {
-                    return (firstProfile.AccrualProfileId, firstProfile.ProfileName ?? string.Empty);
-                }
-            }
+            //// If no match, return first profile
+            //if (sortedProfiles.Count > 0)
+            //{
+            //    var firstProfile = sortedProfiles[0];
+            //    if (firstProfile.AccrualProfileId > 0)
+            //    {
+            //        return (firstProfile.AccrualProfileId, firstProfile.ProfileName ?? string.Empty);
+            //    }
+            //}
 
             return (0, string.Empty);
         }
