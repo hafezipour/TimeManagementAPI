@@ -25,7 +25,7 @@ public class AccrualBanksRepository
             };
 
             var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_CheckAndCreate", param);
-            
+
             return result;
         }
         catch (Exception ex)
@@ -46,7 +46,7 @@ public class AccrualBanksRepository
             };
 
             var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_UpdateBalances", param);
-            
+
             return result;
         }
         catch (Exception ex)
@@ -67,7 +67,7 @@ public class AccrualBanksRepository
             };
 
             var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_Get", param);
-            
+
             return result;
         }
         catch (Exception ex)
@@ -76,13 +76,17 @@ public class AccrualBanksRepository
         }
     }
 
-    public async Task<string> GetAccrualBanksForEvaluation()
+    public async Task<string> GetAccrualBanksForEvaluation(string json)
     {
         try
         {
-            List<SqlParameterModel> param = new();
+            List<SqlParameterModel> param = new()
+            {
+                new SqlParameterModel { Name = "Json", Value = json }
+            };
 
-            return await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_GetForEvaluation_EVAL", param);
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_GetForEvaluation_EVAL", param);
+            return result;
         }
         catch (Exception ex)
         {
@@ -102,7 +106,7 @@ public class AccrualBanksRepository
             };
 
             var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_UpdateBalancesWithLastAccruedDate", param);
-            
+
             return result;
         }
         catch (Exception ex)
