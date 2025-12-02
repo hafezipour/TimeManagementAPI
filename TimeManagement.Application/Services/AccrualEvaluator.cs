@@ -146,10 +146,8 @@ public class AccrualEvaluator
             #endregion
 
             #region Fetch Accrual Banks for all users and tenants
-
-            var banksJson = await accrualBanksRepository.GetAccrualBanksForEvaluation(
-                 JsonSerializer.Serialize(employeeSettings.Select(c => new { c.AccrualProfileId }).Distinct().ToList(), JsonOptions)
-            );
+            string json = JsonSerializer.Serialize(employeeSettings.Select(c => new { c.AccrualProfileId, c.UserId }).Distinct().ToList(), JsonOptions);
+            var banksJson = await accrualBanksRepository.GetAccrualBanksForEvaluation(json);
             var banks = JsonSerializer.Deserialize<List<AccrualBankEvaluationResponse>>(banksJson, JsonOptions);
 
             #endregion
