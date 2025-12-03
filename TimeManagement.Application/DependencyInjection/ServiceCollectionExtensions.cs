@@ -58,6 +58,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<CustomTableValuesProcessor>();
         services.AddScoped<ValidateToken>();
         services.AddScoped<EmployeeAvailabilityProcessor>();
+        services.AddScoped<TimeOffCodesProcessor>();
 
         // Register application services
         services.AddScoped<ScheduleEvaluator>();
@@ -91,6 +92,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ShiftAssignmentRepository>();
         services.AddScoped<CustomTableValuesRepository>();
         services.AddScoped<EmployeeAvailabilityRepository>();
+        services.AddScoped<TimeOffCodesRepository>();
         services.AddScoped<EfDbOperationsRepository>();
 
         return services;
