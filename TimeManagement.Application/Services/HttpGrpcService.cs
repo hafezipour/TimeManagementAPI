@@ -36,6 +36,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly AccrualBanksProcessor _accrualBanksProcessor;
     private readonly AccrualTransactionsProcessor _accrualTransactionsProcessor;
     private readonly TimeOffCodesProcessor _timeOffCodesProcessor;
+    private readonly TimeOffRequestsProcessor _timeOffRequestsProcessor;
 
     public HttpGrpcService(
         JobCodeProcessor jobCodeProcessor,
@@ -63,7 +64,8 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         EmployeeAccrualSettingsProcessor employeeAccrualSettingsProcessor,
         AccrualBanksProcessor accrualBanksProcessor,
         AccrualTransactionsProcessor accrualTransactionsProcessor,
-        TimeOffCodesProcessor timeOffCodesProcessor)
+        TimeOffCodesProcessor timeOffCodesProcessor,
+        TimeOffRequestsProcessor timeOffRequestsProcessor)
     {
         _accrualTypesProcessor = accrualTypesProcessor;
         _accrualProfilesProcessor = accrualProfilesProcessor;
@@ -73,6 +75,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _accrualBanksProcessor = accrualBanksProcessor;
         _accrualTransactionsProcessor = accrualTransactionsProcessor;
         _timeOffCodesProcessor = timeOffCodesProcessor;
+        _timeOffRequestsProcessor = timeOffRequestsProcessor;
         _customTableValuesProcessor = customTableValuesProcessor;
         _jobCodeProcessor = jobCodeProcessor;
         _workCodeProcessor = workCodeProcessor;
@@ -371,6 +374,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "timeoffcodes":
                     _timeOffCodesProcessor.SetCurrentUser(authResult.User);
                     result = await _timeOffCodesProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "timeoffrequests":
+                    _timeOffRequestsProcessor.SetCurrentUser(authResult.User);
+                    result = await _timeOffRequestsProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);
