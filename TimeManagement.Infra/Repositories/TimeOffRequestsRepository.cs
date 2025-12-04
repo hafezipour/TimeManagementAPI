@@ -115,5 +115,26 @@ public class TimeOffRequestsRepository
             throw ex;
         }
     }
+
+    public async Task<string> CheckOverlap(int userId, DateTime fromDate, int? excludeId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "FromDate", Value = fromDate.Date},
+                new SqlParameterModel(){ Name = "ExcludeId", Value = excludeId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_TimeOffRequests_CheckOverlap", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
