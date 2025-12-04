@@ -46,7 +46,7 @@ BEGIN
             @WorkCodeId = workCodeId,
             @AccrualTypeId = accrualTypeId,
             @TimeOffTypeId = timeOffTypeId,
-            @Status = ISNULL(status, 0), -- Default to 0 (Pending)
+            @Status = ISNULL(status, 1), -- Default to 1 (Pending)
             @Notes = notes,
             @FromDate = fromDate,
             @FromTime = fromTime,
