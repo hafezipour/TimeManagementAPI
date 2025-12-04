@@ -55,5 +55,65 @@ public class TimeOffRequestsRepository
             throw ex;
         }
     }
+
+    public async Task<string> ApproveTimeOffRequest(int timeOffRequestId, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "TimeOffRequestId", Value = timeOffRequestId},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_TimeOffRequests_Approve", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<string> RejectTimeOffRequest(int timeOffRequestId, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "TimeOffRequestId", Value = timeOffRequestId},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_TimeOffRequests_Reject", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    public async Task<string> DeleteTimeOffRequest(int timeOffRequestId, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "TimeOffRequestId", Value = timeOffRequestId},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_TimeOffRequests_Delete", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 

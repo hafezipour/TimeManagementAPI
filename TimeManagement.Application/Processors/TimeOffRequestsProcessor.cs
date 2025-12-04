@@ -19,9 +19,12 @@ public class TimeOffRequestsProcessor : BaseProcessor
         {
             return methodName.ToLower() switch
             {
-                "get"  => await GetTimeOffRequestsList(jsonData.FromJson<GetTimeOffRequestRequest>()),
-                "save" => await SaveTimeOffRequest(jsonData.FromJson<SaveTimeOffRequestRequest>()),
-                _      => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
+                "get"     => await GetTimeOffRequestsList(jsonData.FromJson<GetTimeOffRequestRequest>()),
+                "save"    => await SaveTimeOffRequest(jsonData.FromJson<SaveTimeOffRequestRequest>()),
+                "approve" => await ApproveTimeOffRequest(jsonData.FromJson<ApproveTimeOffRequestRequest>()),
+                "reject"  => await RejectTimeOffRequest(jsonData.FromJson<RejectTimeOffRequestRequest>()),
+                "delete"  => await DeleteTimeOffRequest(jsonData.FromJson<DeleteTimeOffRequestRequest>()),
+                _         => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
         catch (System.Text.Json.JsonException ex)
@@ -74,6 +77,60 @@ public class TimeOffRequestsProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error saving time off request: {ex.Message}" }.ToJson();
+        }
+    }
+
+    public async Task<string> ApproveTimeOffRequest(ApproveTimeOffRequestRequest request)
+    {
+        try
+        {
+            var result = await _timeOffRequestsRepository.ApproveTimeOffRequest(
+                request.Id,
+                CurrentUser.LoginId,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error approving time off request: {ex.Message}" }.ToJson();
+        }
+    }
+
+    public async Task<string> RejectTimeOffRequest(RejectTimeOffRequestRequest request)
+    {
+        try
+        {
+            var result = await _timeOffRequestsRepository.RejectTimeOffRequest(
+                request.Id,
+                CurrentUser.LoginId,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error rejecting time off request: {ex.Message}" }.ToJson();
+        }
+    }
+
+    public async Task<string> DeleteTimeOffRequest(DeleteTimeOffRequestRequest request)
+    {
+        try
+        {
+            var result = await _timeOffRequestsRepository.DeleteTimeOffRequest(
+                request.TimeOffRequestId,
+                CurrentUser.LoginId,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error deleting time off request: {ex.Message}" }.ToJson();
         }
     }
 }
