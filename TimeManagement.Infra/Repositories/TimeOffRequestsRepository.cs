@@ -35,5 +35,25 @@ public class TimeOffRequestsRepository
             throw ex;
         }
     }
+
+    public async Task<string> SaveTimeOffRequest(string json, int userId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "Json", Value = json},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_TimeOffRequests_Save", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 

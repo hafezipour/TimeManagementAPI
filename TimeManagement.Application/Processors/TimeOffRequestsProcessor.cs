@@ -19,8 +19,9 @@ public class TimeOffRequestsProcessor : BaseProcessor
         {
             return methodName.ToLower() switch
             {
-                "get" => await GetTimeOffRequestsList(jsonData.FromJson<GetTimeOffRequestRequest>()),
-                _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
+                "get"  => await GetTimeOffRequestsList(jsonData.FromJson<GetTimeOffRequestRequest>()),
+                "save" => await SaveTimeOffRequest(jsonData.FromJson<SaveTimeOffRequestRequest>()),
+                _      => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
         catch (System.Text.Json.JsonException ex)
@@ -52,6 +53,27 @@ public class TimeOffRequestsProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving time off requests: {ex.Message}" }.ToJson();
+        }
+    }
+
+    public async Task<string> SaveTimeOffRequest(SaveTimeOffRequestRequest request)
+    {
+        try
+        {
+            // Serialize request to JSON using camelCase to match usp_TimeOffRequests_Save OPENJSON contract
+            var json = request.ToJson();
+
+            var result = await _timeOffRequestsRepository.SaveTimeOffRequest(
+                json,
+                CurrentUser.LoginId,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error saving time off request: {ex.Message}" }.ToJson();
         }
     }
 }
