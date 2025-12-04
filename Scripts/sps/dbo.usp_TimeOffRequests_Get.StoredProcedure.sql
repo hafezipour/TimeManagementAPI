@@ -13,6 +13,7 @@ GO
 CREATE PROCEDURE [dbo].[usp_TimeOffRequests_Get]  
  @TimeOffRequestId int = NULL,  
  @TenantId int,  
+ @UserId int = NULL,
  @PageNumber int = 1,  
  @PageSize int = 10,  
  @SortColumn varchar(50) = 'DateCreated',  
@@ -53,6 +54,7 @@ BEGIN
  LEFT JOIN AccrualTypes at ON tor.AccrualTypeId = at.Id AND at.TenantId = @TenantId
   WHERE tor.TenantId = @TenantId  
    AND (@TimeOffRequestId IS NULL OR tor.Id = @TimeOffRequestId)  
+   AND (@UserId IS NULL OR tor.UserId = @UserId)
    AND (  
     @SearchTerm IS NULL OR   
     toc.Name LIKE '%' + @SearchTerm + '%' OR   

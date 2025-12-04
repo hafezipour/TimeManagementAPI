@@ -43,6 +43,7 @@ public class TimeOffRequestsProcessor : BaseProcessor
         {
             var result = await _timeOffRequestsRepository.GetTimeOffRequestsList(
                 request.TimeOffRequestId,
+                request.UserId,
                 CurrentUser.TenantID,
                 request.PageNumber ?? 1,
                 request.PageSize ?? 10,

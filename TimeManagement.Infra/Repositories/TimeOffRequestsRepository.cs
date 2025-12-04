@@ -13,7 +13,7 @@ public class TimeOffRequestsRepository
         _dbOperations = dbOperations;
     }
 
-    public async Task<string> GetTimeOffRequestsList(int? timeOffRequestId, int tenantId, int pageNumber = 1, int pageSize = 10, string sortColumn = "DateCreated", string sortDirection = "DESC", string searchTerm = null)
+    public async Task<string> GetTimeOffRequestsList(int? timeOffRequestId, int? userId, int tenantId, int pageNumber = 1, int pageSize = 10, string sortColumn = "DateCreated", string sortDirection = "DESC", string searchTerm = null)
     {
         try
         {
@@ -21,6 +21,7 @@ public class TimeOffRequestsRepository
             {
                 new SqlParameterModel(){ Name = "TimeOffRequestId", Value = timeOffRequestId},
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId},
+                new SqlParameterModel(){ Name = "UserId", Value = userId},
                 new SqlParameterModel(){ Name = "PageNumber", Value = pageNumber},
                 new SqlParameterModel(){ Name = "PageSize", Value = pageSize},
                 new SqlParameterModel(){ Name = "SortColumn", Value = sortColumn},

@@ -3,6 +3,7 @@ namespace TimeManagement.Application.DTOs.TimeOffRequests;
 public class GetTimeOffRequestRequest
 {
     public int? TimeOffRequestId { get; set; }
+    public int? UserId { get; set; }
     public int? PageNumber { get; set; }
     public int? PageSize { get; set; }
     public string? SortColumn { get; set; }
