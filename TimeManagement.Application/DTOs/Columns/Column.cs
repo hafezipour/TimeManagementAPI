@@ -24,6 +24,8 @@ namespace TimeManagement.Domain.Models
 
         public DateTimeOffset? DateUpdated { get; set; }
 
+        public bool? IsSystem { get; set; }
+
         public List<GridColumn> GridColumns { get; set; }
 
         public List<ColumnShift> ColumnShifts { get; set; }
