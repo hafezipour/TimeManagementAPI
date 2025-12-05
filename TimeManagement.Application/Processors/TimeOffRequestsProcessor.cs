@@ -123,7 +123,7 @@ public class TimeOffRequestsProcessor : BaseProcessor
         );
 
         // Parse candidates
-        var candidates = candidatesJson.FromJson<List<TimeOffRequestCandidate>>() ?? new List<TimeOffRequestCandidate>();
+        var candidates = candidatesJson.FromJson<List<TimeOffRequestsForUsers>>() ?? new List<TimeOffRequestsForUsers>();
 
         // Generate all occurrences for the new request
         var newOccurrences = GenerateOccurrences(

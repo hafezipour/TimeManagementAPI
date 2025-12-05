@@ -5,6 +5,7 @@ using TimeManagement.Application.DTOs;
 using TimeManagement.Application.DTOs.Columns;
 using TimeManagement.Application.DTOs.ShiftAssignments;
 using TimeManagement.Application.DTOs.Shifts;
+using TimeManagement.Application.DTOs.TimeOffRequests;
 using TimeManagement.Application.Enums;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Application.Services;
@@ -20,15 +21,17 @@ public class ShiftProcessor : BaseProcessor
     private readonly ScheduleEvaluator _scheduleEvaluator;
     private readonly IServiceProvider _serviceProvider;
     private readonly ShiftAssignmentRepository _shiftAssignmentRepository;
+    private readonly TimeOffRequestsRepository _timeOffRequestsRepository;
     private ColumnProcessor _columnProcessor;
 
-    public ShiftProcessor(IServiceProvider serviceProvider, ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor, ScheduleEvaluator scheduleEvaluator, ShiftAssignmentRepository shiftAssignmentRepository)
+    public ShiftProcessor(IServiceProvider serviceProvider, ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor, ScheduleEvaluator scheduleEvaluator, ShiftAssignmentRepository shiftAssignmentRepository, TimeOffRequestsRepository timeOffRequestsRepository)
     {
         _shiftsRepository = shiftsRepository;
         _scheduleProcessor = scheduleProcessor;
         _scheduleEvaluator = scheduleEvaluator;
         _serviceProvider = serviceProvider;
         _shiftAssignmentRepository = shiftAssignmentRepository;
+        _timeOffRequestsRepository = timeOffRequestsRepository;
     }
 
     private ColumnProcessor ColumnProcessor => _columnProcessor ??= _serviceProvider.GetRequiredService<ColumnProcessor>();
@@ -256,11 +259,39 @@ public class ShiftProcessor : BaseProcessor
 
     #region Shifts
 
-    private void SetHereTheTimeOffs(List<Column> columns)
+    private async Task SetHereTheTimeOffs(List<Column> columns, GetScheduledShiftsRequest request)
     {
         var column = columns.Where(c => c.IsSystem == true).FirstOrDefault();
-        //column.TimeOffRequests = ;
+        if (column == null)
+        {
+            return;
+        }
 
+        // Calculate end date as end of day from StartDate
+        var startDate = request.StartDate.Date;
+        var endDate = startDate.AddDays(1).AddTicks(-1); // End of the day (23:59:59.9999999)
+
+        // Fetch time off requests for all users within the date range
+        var candidatesJson = await _timeOffRequestsRepository.GetTimeOffRequestsForUsers(
+            null, // null userIds means fetch for all users
+            startDate,
+            null, // excludeId is null
+            CurrentUser.TenantID
+        );
+
+        // Parse candidates
+        var allTimeOffRequests = candidatesJson.FromJson<List<TimeOffRequestsForUsers>>() ?? new List<TimeOffRequestsForUsers>();
+        
+        // Filter time off requests to only include those that are valid for the date range
+        // A time off request is valid if it overlaps with the StartDate to endDate range
+        // Overlap condition: StartFrom <= endDate AND (ValidUntil is null OR ValidUntil >= startDate)
+        var filteredTimeOffRequests = allTimeOffRequests.Where(tor =>
+            tor.StartFrom.HasValue &&
+            tor.StartFrom.Value <= endDate && 
+            (tor.ValidUntil == null || tor.ValidUntil.Value >= startDate)
+        ).ToList();
+        
+        column.TimeOffRequests = filteredTimeOffRequests;
     }
 
     /// <summary>
@@ -306,7 +337,7 @@ public class ShiftProcessor : BaseProcessor
 
                 #region Add here the holidays
 
-                SetHereTheTimeOffs(columns);
+                await SetHereTheTimeOffs(columns, request);
 
                 #endregion
 

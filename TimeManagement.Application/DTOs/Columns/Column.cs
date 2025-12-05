@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using TimeManagement.Application.DTOs.Columns;
 using TimeManagement.Application.DTOs.Shifts;
+using TimeManagement.Application.DTOs.TimeOffRequests;
 
 namespace TimeManagement.Domain.Models
 {
@@ -30,5 +31,6 @@ namespace TimeManagement.Domain.Models
 
         public List<ColumnShift> ColumnShifts { get; set; }
         public List<SchedulingShift> SchedulingShifts { get; set; }
+        public List<TimeOffRequestsForUsers> TimeOffRequests { get; set; }
     }
 }
