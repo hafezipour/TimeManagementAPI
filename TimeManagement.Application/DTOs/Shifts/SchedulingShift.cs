@@ -61,6 +61,7 @@ namespace TimeManagement.Domain.Models
         // Additional properties can be added as needed
         public DateTime? EvaluationDate { get; set; }
 
+
     }
     public class ShiftGroupAssignment
     {

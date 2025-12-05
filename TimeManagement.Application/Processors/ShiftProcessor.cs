@@ -296,6 +296,8 @@ public class ShiftProcessor : BaseProcessor
                     item.SchedulingShifts = shifts;
                 }
                 await SetEmployeeAssignmentsForShiftsAsync(columns.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
+                
+                
                 //return columns.ToJson();
             }
             else if (request.ViewType == "week")
