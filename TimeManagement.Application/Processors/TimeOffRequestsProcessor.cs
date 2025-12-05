@@ -113,11 +113,6 @@ public class TimeOffRequestsProcessor : BaseProcessor
     private async Task<List<OverlappingTimeOffRequest>> CheckTimeOffOverlap(CheckTimeOffOverlapRequest request)
     {
         var overlappingRequests = new List<OverlappingTimeOffRequest>();
-        
-        if (request.UserIds == null || !request.UserIds.Any())
-        {
-            return overlappingRequests;
-        }
 
         // Fetch candidate entries from database
         var candidatesJson = await _timeOffRequestsRepository.GetTimeOffRequestsForUsers(
