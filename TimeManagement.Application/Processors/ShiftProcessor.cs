@@ -256,6 +256,13 @@ public class ShiftProcessor : BaseProcessor
 
     #region Shifts
 
+    private void SetHereTheTimeOffs(List<Column> columns)
+    {
+        var column = columns.Where(c => c.IsSystem == true).FirstOrDefault();
+        //column.TimeOffRequests = ;
+
+    }
+
     /// <summary>
     /// Get scheduled shifts with filters (date range, view type, etc.)
     /// </summary>
@@ -296,8 +303,13 @@ public class ShiftProcessor : BaseProcessor
                     item.SchedulingShifts = shifts;
                 }
                 await SetEmployeeAssignmentsForShiftsAsync(columns.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
-                
-                
+
+                #region Add here the holidays
+
+                SetHereTheTimeOffs(columns);
+
+                #endregion
+
                 //return columns.ToJson();
             }
             else if (request.ViewType == "week")

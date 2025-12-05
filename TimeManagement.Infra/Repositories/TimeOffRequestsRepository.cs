@@ -117,13 +117,21 @@ public class TimeOffRequestsRepository
         }
     }
 
-    public async Task<string> CheckOverlap(int userId, DateTime fromDate, int? excludeId, int tenantId)
+    public async Task<string> GetTimeOffRequestsForUsers(List<int> userIds, DateTime fromDate, int? excludeId, int tenantId)
     {
         try
         {
+            // Convert list of user IDs to JSON string for the stored procedure
+            // If the list is null or empty, pass NULL to the SP (which will not filter by user IDs)
+            object userIdsJsonValue = null;
+            if (userIds != null && userIds.Any())
+            {
+                userIdsJsonValue = System.Text.Json.JsonSerializer.Serialize(userIds);
+            }
+            
             List<SqlParameterModel> param = new List<SqlParameterModel>()
             {
-                new SqlParameterModel(){ Name = "UserId", Value = userId},
+                new SqlParameterModel(){ Name = "UserIdsJson", Value = userIdsJsonValue},
                 new SqlParameterModel(){ Name = "FromDate", Value = fromDate.Date},
                 new SqlParameterModel(){ Name = "ExcludeId", Value = excludeId},
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}

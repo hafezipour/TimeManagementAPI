@@ -67,86 +67,24 @@ public class TimeOffRequestsProcessor : BaseProcessor
             // Check for overlap before saving (only for new requests, not updates)
             if (request.Id == null || request.Id == 0)
             {
-                if (request.UserId.HasValue)
+                var overlapRequest = new CheckTimeOffOverlapRequest
                 {
-                    // Fetch candidate entries from database
-                    var candidatesJson = await _timeOffRequestsRepository.CheckOverlap(
-                        request.UserId.Value,
-                        request.FromDate,
-                        null, // excludeId is null for new requests
-                        CurrentUser.TenantID
-                    );
-
-                    // Parse candidates
-                    var candidates = candidatesJson.FromJson<List<TimeOffRequestCandidate>>() ?? new List<TimeOffRequestCandidate>();
-
-                    // Generate all occurrences for the new request
-                    var newOccurrences = GenerateOccurrences(
-                        request.FromDate.Date,
-                        request.ToDate.Date,
-                        request.FromTime,
-                        request.ToTime
-                    );
-
-                    // Generate all occurrences for existing requests and check for overlap
-                    var overlappingRequests = new List<OverlappingTimeOffRequest>();
-                    
-                    foreach (var candidate in candidates)
-                    {
-                        if (candidate.StartFrom.HasValue && candidate.ValidUntil.HasValue && 
-                            candidate.StartTime.HasValue && candidate.EndTime.HasValue)
-                        {
-                            var existingOccurrences = GenerateOccurrences(
-                                candidate.StartFrom.Value.Date,
-                                candidate.ValidUntil.Value.Date,
-                                candidate.StartTime.Value,
-                                candidate.EndTime.Value
-                            );
-
-                            // Find all overlapping occurrences for this candidate
-                            var overlappingOccurrences = new List<TimeOffOccurrence>();
-                            
-                            foreach (var newOcc in newOccurrences)
-                            {
-                                foreach (var existingOcc in existingOccurrences)
-                                {
-                                    // Two datetime ranges overlap if: newStart < existingEnd AND newEnd > existingStart
-                                    if (newOcc.StartDateTime < existingOcc.EndDateTime && newOcc.EndDateTime > existingOcc.StartDateTime)
-                                    {
-                                        overlappingOccurrences.Add(existingOcc);
-                                    }
-                                }
-                            }
-
-                            // If any overlaps found, add this candidate to the list
-                            if (overlappingOccurrences.Any())
-                            {
-                                overlappingRequests.Add(new OverlappingTimeOffRequest
-                                {
-                                    Id = candidate.Id,
-                                    TimeOffTypeName = candidate.TimeOffTypeName,
-                                    AccrualTypeName = candidate.AccrualTypeName,
-                                    StartFrom = candidate.StartFrom,
-                                    ValidUntil = candidate.ValidUntil,
-                                    StartTime = candidate.StartTime,
-                                    EndTime = candidate.EndTime,
-                                    OverlappingOccurrences = overlappingOccurrences
-                                        .GroupBy(o => new { o.StartDateTime, o.EndDateTime })
-                                        .Select(g => g.First())
-                                        .ToList()
-                                });
-                            }
-                        }
-                    }
-
-                    if (overlappingRequests.Any())
-                    {
-                        return new { 
-                            success = false, 
-                            message = "This user is already scheduled for the time off we are adding.",
-                            overlappingRequests = overlappingRequests
-                        }.ToJson();
-                    }
+                    UserIds = request.UserId.HasValue ? new List<int> { request.UserId.Value } : new List<int>(),
+                    FromDate = request.FromDate,
+                    ToDate = request.ToDate,
+                    FromTime = request.FromTime,
+                    ToTime = request.ToTime,
+                    ExcludeId = null // excludeId is null for new requests
+                };
+                
+                var overlappingRequests = await CheckTimeOffOverlap(overlapRequest);
+                if (overlappingRequests.Any())
+                {
+                    return new { 
+                        success = false, 
+                        message = "This user is already scheduled for the time off we are adding.",
+                        overlappingRequests = overlappingRequests
+                    }.ToJson();
                 }
             }
 
@@ -165,6 +103,91 @@ public class TimeOffRequestsProcessor : BaseProcessor
         {
             return new { success = false, message = $"Error saving time off request: {ex.Message}" }.ToJson();
         }
+    }
+
+    /// <summary>
+    /// Check for overlapping time off requests for given users
+    /// </summary>
+    /// <param name="request">The overlap check request containing user IDs and date/time ranges</param>
+    /// <returns>List of overlapping time off requests, empty list if no overlaps</returns>
+    private async Task<List<OverlappingTimeOffRequest>> CheckTimeOffOverlap(CheckTimeOffOverlapRequest request)
+    {
+        var overlappingRequests = new List<OverlappingTimeOffRequest>();
+        
+        if (request.UserIds == null || !request.UserIds.Any())
+        {
+            return overlappingRequests;
+        }
+
+        // Fetch candidate entries from database
+        var candidatesJson = await _timeOffRequestsRepository.GetTimeOffRequestsForUsers(
+            request.UserIds,
+            request.FromDate,
+            request.ExcludeId,
+            CurrentUser.TenantID
+        );
+
+        // Parse candidates
+        var candidates = candidatesJson.FromJson<List<TimeOffRequestCandidate>>() ?? new List<TimeOffRequestCandidate>();
+
+        // Generate all occurrences for the new request
+        var newOccurrences = GenerateOccurrences(
+            request.FromDate.Date,
+            request.ToDate.Date,
+            request.FromTime,
+            request.ToTime
+        );
+
+        // Generate all occurrences for existing requests and check for overlap
+        foreach (var candidate in candidates)
+        {
+            if (candidate.StartFrom.HasValue && candidate.ValidUntil.HasValue && 
+                candidate.StartTime.HasValue && candidate.EndTime.HasValue)
+            {
+                var existingOccurrences = GenerateOccurrences(
+                    candidate.StartFrom.Value.Date,
+                    candidate.ValidUntil.Value.Date,
+                    candidate.StartTime.Value,
+                    candidate.EndTime.Value
+                );
+
+                // Find all overlapping occurrences for this candidate
+                var overlappingOccurrences = new List<TimeOffOccurrence>();
+                
+                foreach (var newOcc in newOccurrences)
+                {
+                    foreach (var existingOcc in existingOccurrences)
+                    {
+                        // Two datetime ranges overlap if: newStart < existingEnd AND newEnd > existingStart
+                        if (newOcc.StartDateTime < existingOcc.EndDateTime && newOcc.EndDateTime > existingOcc.StartDateTime)
+                        {
+                            overlappingOccurrences.Add(existingOcc);
+                        }
+                    }
+                }
+
+                // If any overlaps found, add this candidate to the list
+                if (overlappingOccurrences.Any())
+                {
+                    overlappingRequests.Add(new OverlappingTimeOffRequest
+                    {
+                        Id = candidate.Id,
+                        TimeOffTypeName = candidate.TimeOffTypeName,
+                        AccrualTypeName = candidate.AccrualTypeName,
+                        StartFrom = candidate.StartFrom,
+                        ValidUntil = candidate.ValidUntil,
+                        StartTime = candidate.StartTime,
+                        EndTime = candidate.EndTime,
+                        OverlappingOccurrences = overlappingOccurrences
+                            .GroupBy(o => new { o.StartDateTime, o.EndDateTime })
+                            .Select(g => g.First())
+                            .ToList()
+                    });
+                }
+            }
+        }
+
+        return overlappingRequests;
     }
 
     public async Task<string> ApproveTimeOffRequest(ApproveTimeOffRequestRequest request)
