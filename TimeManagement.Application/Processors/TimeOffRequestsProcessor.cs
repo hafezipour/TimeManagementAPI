@@ -115,10 +115,12 @@ public class TimeOffRequestsProcessor : BaseProcessor
         var overlappingRequests = new List<OverlappingTimeOffRequest>();
 
         // Fetch candidate entries from database
+        // StatusFilter = null means fetch both Pending (1) and Approved (2) for overlap checking
         var candidatesJson = await _timeOffRequestsRepository.GetTimeOffRequestsForUsers(
             request.UserIds,
             request.FromDate,
             request.ExcludeId,
+            null, // StatusFilter = null (both Pending and Approved) for overlap checking
             CurrentUser.TenantID
         );
 

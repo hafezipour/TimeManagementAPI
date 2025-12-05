@@ -272,10 +272,12 @@ public class ShiftProcessor : BaseProcessor
         var endDate = startDate.AddDays(1).AddTicks(-1); // End of the day (23:59:59.9999999)
 
         // Fetch time off requests for all users within the date range
+        // StatusFilter = 2 means only fetch Approved requests (not Pending) for columns display
         var candidatesJson = await _timeOffRequestsRepository.GetTimeOffRequestsForUsers(
             null, // null userIds means fetch for all users
             startDate,
             null, // excludeId is null
+            2, // StatusFilter = 2 (Approved only) for columns display
             CurrentUser.TenantID
         );
 

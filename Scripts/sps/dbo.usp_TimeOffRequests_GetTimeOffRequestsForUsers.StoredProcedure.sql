@@ -14,6 +14,7 @@ CREATE PROCEDURE [dbo].[usp_TimeOffRequests_GetTimeOffRequestsForUsers]
     @UserIdsJson NVARCHAR(MAX) = NULL, -- JSON array of user IDs: [1, 2, 3]. If NULL or empty, don't filter by user IDs
     @FromDate DATE,
     @ExcludeId INT = NULL, -- For update scenarios, exclude current request
+    @StatusFilter INT = NULL, -- If NULL, fetch both Pending (1) and Approved (2). If 2, fetch only Approved. If 1, fetch only Pending.
     @TenantId INT  
 AS  
 BEGIN  
@@ -56,7 +57,13 @@ BEGIN
     LEFT JOIN TimeOffCodes toc ON tor.TimeOffTypeId = toc.Id AND toc.TenantId = @TenantId
     LEFT JOIN AccrualTypes at ON tor.AccrualTypeId = at.Id AND at.TenantId = @TenantId
     WHERE tor.TenantId = @TenantId
-      AND tor.Status IN (1, 2) -- Pending or Approved
+      AND (
+          -- If StatusFilter is NULL, fetch both Pending (1) and Approved (2) - for overlap checking
+          (@StatusFilter IS NULL AND tor.Status IN (1, 2))
+          OR
+          -- If StatusFilter is specified, fetch only that status - for columns display (2 = Approved only)
+          (@StatusFilter IS NOT NULL AND tor.Status = @StatusFilter)
+      )
       AND (@ExcludeId IS NULL OR tor.Id <> @ExcludeId)
       AND (
           s.ValidUntil >= @FromDate

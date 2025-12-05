@@ -117,7 +117,7 @@ public class TimeOffRequestsRepository
         }
     }
 
-    public async Task<string> GetTimeOffRequestsForUsers(List<int> userIds, DateTime fromDate, int? excludeId, int tenantId)
+    public async Task<string> GetTimeOffRequestsForUsers(List<int> userIds, DateTime fromDate, int? excludeId, int? statusFilter, int tenantId)
     {
         try
         {
@@ -134,6 +134,7 @@ public class TimeOffRequestsRepository
                 new SqlParameterModel(){ Name = "UserIdsJson", Value = userIdsJsonValue},
                 new SqlParameterModel(){ Name = "FromDate", Value = fromDate.Date},
                 new SqlParameterModel(){ Name = "ExcludeId", Value = excludeId},
+                new SqlParameterModel(){ Name = "StatusFilter", Value = statusFilter},
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
 
