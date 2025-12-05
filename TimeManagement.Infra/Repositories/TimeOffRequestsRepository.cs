@@ -137,7 +137,7 @@ public class TimeOffRequestsRepository
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
 
-            var result = await _dbOperations.ExecuteDataSetAsync("usp_TimeOffRequests_CheckOverlap", param);
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_TimeOffRequests_GetTimeOffRequestsForUsers", param);
             return result;
         }
         catch (Exception ex)

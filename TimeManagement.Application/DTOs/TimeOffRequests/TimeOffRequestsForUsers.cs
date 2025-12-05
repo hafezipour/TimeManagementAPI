@@ -15,7 +15,10 @@ public class TimeOffRequestsForUsers
     public TimeSpan? EndTime { get; set; }
     public string? TimeOffTypeName { get; set; }
     public string? TimeOffTypeCode { get; set; }
+    public string? TimeOffTypeBackgroundColor { get; set; }
+    public string? TimeOffTypeTextColor { get; set; }
     public string? AccrualTypeName { get; set; }
+    public string? AccrualTypeCode { get; set; }
 }
 
 public class TimeOffOccurrence
