@@ -228,17 +228,24 @@ public class TimeOffRequestsProcessor : BaseProcessor
     {
         try
         {
-            // Get time off request details
-            var requestJson = await _timeOffRequestsRepository.GetTimeOffRequestsList(
-                timeOffRequestId, null, CurrentUser.TenantID, 1, 1, "DateCreated", "DESC", null);
+            // Get time off request with schedule info in one call
+            // Pass null userIds to get all requests, then filter by ID
+            var requestJson = await _timeOffRequestsRepository.GetTimeOffRequestsForUsers(
+                null, // null userIds means don't filter by user
+                DateTime.MinValue, // Use min date to get all requests
+                null, // Don't exclude any ID
+                null, // No status filter
+                CurrentUser.TenantID
+            );
+
+            var requests = requestJson.FromJson<List<TimeOffRequestsForUsers>>() ?? new List<TimeOffRequestsForUsers>();
+            var request = requests.FirstOrDefault(r => r.Id == timeOffRequestId);
             
-            var requests = requestJson.FromJson<List<TimeOffRequestResponse>>() ?? new List<TimeOffRequestResponse>();
-            if (!requests.Any())
+            if (request == null)
             {
                 return (false, "Time off request not found.");
             }
 
-            var request = requests.First();
             if (request.UserId == 0)
             {
                 return (false, "Time off request is missing required information.");
@@ -254,20 +261,9 @@ public class TimeOffRequestsProcessor : BaseProcessor
 
             var accrualTypeId = request.AccrualTypeId.Value;
 
-            // Get schedule info to calculate hours
-            var scheduleJson = await _timeOffRequestsRepository.GetTimeOffRequestsForUsers(
-                new List<int> { userId },
-                DateTime.MinValue,
-                null,
-                null,
-                CurrentUser.TenantID
-            );
-
-            var scheduleRequests = scheduleJson.FromJson<List<TimeOffRequestsForUsers>>() ?? new List<TimeOffRequestsForUsers>();
-            var scheduleRequest = scheduleRequests.FirstOrDefault(r => r.Id == timeOffRequestId);
-            
-            if (scheduleRequest == null || !scheduleRequest.StartFrom.HasValue || !scheduleRequest.ValidUntil.HasValue ||
-                !scheduleRequest.StartTime.HasValue || !scheduleRequest.EndTime.HasValue)
+            // Validate schedule information is present
+            if (!request.StartFrom.HasValue || !request.ValidUntil.HasValue ||
+                !request.StartTime.HasValue || !request.EndTime.HasValue)
             {
                 return (false, "Time off request schedule information is missing.");
             }
@@ -284,10 +280,10 @@ public class TimeOffRequestsProcessor : BaseProcessor
 
             // Calculate total hours/minutes using GenerateOccurrences
             var occurrences = GenerateOccurrences(
-                scheduleRequest.StartFrom.Value.Date,
-                scheduleRequest.ValidUntil.Value.Date,
-                scheduleRequest.StartTime.Value,
-                scheduleRequest.EndTime.Value
+                request.StartFrom.Value.Date,
+                request.ValidUntil.Value.Date,
+                request.StartTime.Value,
+                request.EndTime.Value
             );
 
             // Calculate total duration
