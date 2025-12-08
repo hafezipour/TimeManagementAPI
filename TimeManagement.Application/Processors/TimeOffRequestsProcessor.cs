@@ -300,30 +300,64 @@ public class TimeOffRequestsProcessor : BaseProcessor
                 totalMinutes += duration.TotalMinutes;
             }
 
-            // Prepare balance updates for each bank
-            var balanceUpdates = new List<object>();
-
-            foreach (var bank in banks)
+            // Calculate total required amount (same for all banks in the accrual type)
+            // Use first bank's unit and multiplier (assuming all banks in same accrual type have same settings)
+            decimal totalRequired;
+            if (banks.First().AccrueUnit == 2) // Minute
             {
-                // Determine deduction amount based on unit
+                totalRequired = (decimal)totalMinutes;
+            }
+            else // Hour (default)
+            {
+                totalRequired = (decimal)totalHours;
+            }
+
+            // Apply deduction multiplier
+            totalRequired *= banks.First().DeductionMultiplier;
+
+            // Calculate combined balance of all banks in this accrual type
+            decimal combinedBalance = banks.Sum(b => b.CurrentBalance);
+
+            // Check if combined balance is sufficient across all banks
+            if (combinedBalance < totalRequired)
+            {
+                return (false, $"Insufficient combined balance. Required: {totalRequired}, Available: {combinedBalance}");
+            }
+
+            // Prepare balance updates - deduct proportionally from all banks based on their balance ratio
+            var balanceUpdates = new List<object>();
+            decimal remainingToDeduct = totalRequired;
+
+            for (int i = 0; i < banks.Count; i++)
+            {
+                var bank = banks[i];
                 decimal deductionAmount;
-                if (bank.AccrueUnit == 2) // Minute
+
+                if (i == banks.Count - 1)
                 {
-                    deductionAmount = (decimal)totalMinutes;
+                    // Last bank gets the remainder to ensure exact deduction
+                    deductionAmount = remainingToDeduct;
                 }
-                else // Hour (default)
+                else
                 {
-                    deductionAmount = (decimal)totalHours;
+                    // Calculate proportional deduction based on this bank's share of total balance
+                    decimal bankShare = bank.CurrentBalance / combinedBalance;
+                    deductionAmount = totalRequired * bankShare;
+                    
+                    // Ensure we don't deduct more than the bank has
+                    if (deductionAmount > bank.CurrentBalance)
+                    {
+                        deductionAmount = bank.CurrentBalance;
+                    }
                 }
 
-                // Apply deduction multiplier
-                deductionAmount *= bank.DeductionMultiplier;
-
-                // Check if balance is sufficient
-                if (bank.CurrentBalance < deductionAmount)
+                // Final check: ensure we don't deduct more than available
+                if (deductionAmount > bank.CurrentBalance)
                 {
-                    return (false, $"Insufficient balance. Required: {deductionAmount}, Available: {bank.CurrentBalance}");
+                    deductionAmount = bank.CurrentBalance;
                 }
+
+                remainingToDeduct -= deductionAmount;
 
                 // Prepare balance update
                 balanceUpdates.Add(new
