@@ -287,9 +287,9 @@ public class TimeOffRequestsProcessor : BaseProcessor
             var bankReqs = banks.Select(b => new
             {
                 Bank = b,
-                Required = (b.AccrueUnit == 2 ? (decimal)totalMinutes : (decimal)totalHours) * b.DeductionMultiplier,
-                RequiredInHours = (b.AccrueUnit == 2 ? (decimal)totalMinutes : (decimal)totalHours) * b.DeductionMultiplier / (b.AccrueUnit == 2 ? 60m : 1m),
-                BalanceInHours = b.AccrueUnit == 2 ? b.CurrentBalance / 60m : b.CurrentBalance
+                Required = (b.AccrueUnit == (int)AccrueUnit.Minutes ? (decimal)totalMinutes : (decimal)totalHours) * b.DeductionMultiplier,
+                RequiredInHours = (b.AccrueUnit == (int)AccrueUnit.Minutes ? (decimal)totalMinutes : (decimal)totalHours) * b.DeductionMultiplier / (b.AccrueUnit == (int)AccrueUnit.Minutes ? 60m : 1m),
+                BalanceInHours = b.AccrueUnit == (int)AccrueUnit.Minutes ? b.CurrentBalance / 60m : b.CurrentBalance
             }).ToList();
 
             // Compare using normalized balances (all in hours)
@@ -315,7 +315,7 @@ public class TimeOffRequestsProcessor : BaseProcessor
                 remainingInHours -= amountInHours;
 
                 // Convert back to bank's original unit for deduction
-                decimal deductionAmount = br.Bank.AccrueUnit == 2 ? amountInHours * 60m : amountInHours;
+                decimal deductionAmount = br.Bank.AccrueUnit == (int)AccrueUnit.Minutes ? amountInHours * 60m : amountInHours;
 
                 balanceUpdates.Add(new
                 {
