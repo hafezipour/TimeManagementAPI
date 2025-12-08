@@ -115,5 +115,26 @@ public class AccrualBanksRepository
         }
     }
 
+    public async Task<string> GetAccrualBanksByAccrualType(int userId, int accrualTypeId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new()
+            {
+                new SqlParameterModel { Name = "UserId", Value = userId },
+                new SqlParameterModel { Name = "AccrualTypeId", Value = accrualTypeId },
+                new SqlParameterModel { Name = "TenantId", Value = tenantId }
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_GetByAccrualType", param);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
 }
 

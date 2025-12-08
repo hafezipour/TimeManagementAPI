@@ -1,16 +1,24 @@
 using TimeManagement.Application.DTOs.TimeOffRequests;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Infra.Repositories;
+using System.Text.Json;
 
 namespace TimeManagement.Application.Processors;
 
 public class TimeOffRequestsProcessor : BaseProcessor
 {
     private readonly TimeOffRequestsRepository _timeOffRequestsRepository;
+    private readonly AccrualBanksRepository _accrualBanksRepository;
+    private readonly AccrualTransactionsRepository _accrualTransactionsRepository;
 
-    public TimeOffRequestsProcessor(TimeOffRequestsRepository timeOffRequestsRepository)
+    public TimeOffRequestsProcessor(
+        TimeOffRequestsRepository timeOffRequestsRepository,
+        AccrualBanksRepository accrualBanksRepository,
+        AccrualTransactionsRepository accrualTransactionsRepository)
     {
         _timeOffRequestsRepository = timeOffRequestsRepository;
+        _accrualBanksRepository = accrualBanksRepository;
+        _accrualTransactionsRepository = accrualTransactionsRepository;
     }
 
     public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData)
@@ -191,6 +199,14 @@ public class TimeOffRequestsProcessor : BaseProcessor
     {
         try
         {
+            // Validate balance and create transactions before approving
+            var validationResult = await ValidateAndDeductBalance(request.Id);
+            if (!validationResult.Success)
+            {
+                return new { success = false, message = validationResult.Message }.ToJson();
+            }
+
+            // Approve the time off request
             var result = await _timeOffRequestsRepository.ApproveTimeOffRequest(
                 request.Id,
                 CurrentUser.LoginId,
@@ -202,6 +218,141 @@ public class TimeOffRequestsProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error approving time off request: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Validates balance availability and deducts from accrual banks before approving time off request
+    /// </summary>
+    private async Task<(bool Success, string Message)> ValidateAndDeductBalance(int timeOffRequestId)
+    {
+        try
+        {
+            // Get time off request details
+            var requestJson = await _timeOffRequestsRepository.GetTimeOffRequestsList(
+                timeOffRequestId, null, CurrentUser.TenantID, 1, 1, "DateCreated", "DESC", null);
+            
+            var requests = requestJson.FromJson<List<TimeOffRequestResponse>>() ?? new List<TimeOffRequestResponse>();
+            if (!requests.Any())
+            {
+                return (false, "Time off request not found.");
+            }
+
+            var request = requests.First();
+            if (request.UserId == 0)
+            {
+                return (false, "Time off request is missing required information.");
+            }
+
+            var userId = request.UserId;
+
+            // If no accrual type, no need to deduct balance
+            if (!request.AccrualTypeId.HasValue || request.AccrualTypeId.Value == 0)
+            {
+                return (true, string.Empty);
+            }
+
+            var accrualTypeId = request.AccrualTypeId.Value;
+
+            // Get schedule info to calculate hours
+            var scheduleJson = await _timeOffRequestsRepository.GetTimeOffRequestsForUsers(
+                new List<int> { userId },
+                DateTime.MinValue,
+                null,
+                null,
+                CurrentUser.TenantID
+            );
+
+            var scheduleRequests = scheduleJson.FromJson<List<TimeOffRequestsForUsers>>() ?? new List<TimeOffRequestsForUsers>();
+            var scheduleRequest = scheduleRequests.FirstOrDefault(r => r.Id == timeOffRequestId);
+            
+            if (scheduleRequest == null || !scheduleRequest.StartFrom.HasValue || !scheduleRequest.ValidUntil.HasValue ||
+                !scheduleRequest.StartTime.HasValue || !scheduleRequest.EndTime.HasValue)
+            {
+                return (false, "Time off request schedule information is missing.");
+            }
+
+            // Get accrual banks for this accrual type
+            var banksJson = await _accrualBanksRepository.GetAccrualBanksByAccrualType(
+                userId, accrualTypeId, CurrentUser.TenantID);
+
+            var banks = banksJson.FromJson<List<AccrualBankForDeduction>>() ?? new List<AccrualBankForDeduction>();
+            if (!banks.Any())
+            {
+                return (false, "No accrual banks found for this accrual type.");
+            }
+
+            // Calculate total hours/minutes using GenerateOccurrences
+            var occurrences = GenerateOccurrences(
+                scheduleRequest.StartFrom.Value.Date,
+                scheduleRequest.ValidUntil.Value.Date,
+                scheduleRequest.StartTime.Value,
+                scheduleRequest.EndTime.Value
+            );
+
+            // Calculate total duration
+            double totalHours = 0;
+            double totalMinutes = 0;
+            foreach (var occurrence in occurrences)
+            {
+                var duration = occurrence.EndDateTime - occurrence.StartDateTime;
+                totalHours += duration.TotalHours;
+                totalMinutes += duration.TotalMinutes;
+            }
+
+            // Prepare balance updates for each bank
+            var balanceUpdates = new List<object>();
+
+            foreach (var bank in banks)
+            {
+                // Determine deduction amount based on unit
+                decimal deductionAmount;
+                if (bank.AccrueUnit == 2) // Minute
+                {
+                    deductionAmount = (decimal)totalMinutes;
+                }
+                else // Hour (default)
+                {
+                    deductionAmount = (decimal)totalHours;
+                }
+
+                // Apply deduction multiplier
+                deductionAmount *= bank.DeductionMultiplier;
+
+                // Check if balance is sufficient
+                if (bank.CurrentBalance < deductionAmount)
+                {
+                    return (false, $"Insufficient balance. Required: {deductionAmount}, Available: {bank.CurrentBalance}");
+                }
+
+                // Prepare balance update
+                balanceUpdates.Add(new
+                {
+                    bankId = bank.Id,
+                    userId = bank.UserId,
+                    accrualProfileId = bank.AccrualProfileId,
+                    accrualRulesSlotId = bank.AccrualRulesSlotId,
+                    currentBalance = bank.CurrentBalance,
+                    @operator = "-",
+                    adjustmentAmount = deductionAmount,
+                    notes = $"Time off request #{timeOffRequestId} deduction"
+                });
+            }
+
+            // Update balances in bulk - this returns the result in the format needed for LogTransactions
+            var balanceUpdatesJson = JsonSerializer.Serialize(balanceUpdates);
+            var updateResult = await _accrualBanksRepository.UpdateBalances(
+                balanceUpdatesJson, CurrentUser.LoginId, CurrentUser.TenantID);
+
+            // Log transactions in bulk using the result from UpdateBalances
+            await _accrualTransactionsRepository.LogTransactions(
+                updateResult, CurrentUser.LoginId, CurrentUser.TenantID);
+
+            return (true, string.Empty);
+        }
+        catch (Exception ex)
+        {
+            return (false, $"Error validating balance: {ex.Message}");
         }
     }
 
