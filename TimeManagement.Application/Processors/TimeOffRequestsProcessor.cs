@@ -247,50 +247,20 @@ public class TimeOffRequestsProcessor : BaseProcessor
 
             var userId = requestInfo.UserId;
 
-            // Get time off request with schedule info using userId
-            // First get the request to obtain StartFrom date, then use that date
-            // Use DateCreated as initial fromDate to ensure we get the request
-            var initialFromDate = requestInfo.DateCreated?.Date ?? DateTime.Today.AddYears(-10);
-            var requestJson = await _timeOffRequestsRepository.GetTimeOffRequestsForUsers(
-                new List<int> { userId },
-                initialFromDate,
-                null, // Don't exclude any ID
-                null, // No status filter
-                CurrentUser.TenantID
-            );
-
-            var requests = requestJson.FromJson<List<TimeOffRequestsForUsers>>() ?? new List<TimeOffRequestsForUsers>();
-            var request = requests.FirstOrDefault(r => r.Id == timeOffRequestId);
-            
-            if (request == null)
-            {
-                return (false, "Time off request not found.");
-            }
-
-            // Validate schedule information is present
-            if (!request.StartFrom.HasValue || !request.ValidUntil.HasValue ||
-                !request.StartTime.HasValue || !request.EndTime.HasValue)
+            // Validate schedule information is present in the request from GetTimeOffRequestsList
+            if (!requestInfo.StartFrom.HasValue || !requestInfo.ValidUntil.HasValue ||
+                !requestInfo.StartTime.HasValue || !requestInfo.EndTime.HasValue)
             {
                 return (false, "Time off request schedule information is missing.");
             }
-            
-            // Now we have the request with StartFrom date: request.StartFrom.Value.Date
-            // This is the actual time off request start date that should be used
 
             // If no accrual type, no need to deduct balance
-            if (!request.AccrualTypeId.HasValue || request.AccrualTypeId.Value == 0)
+            if (!requestInfo.AccrualTypeId.HasValue || requestInfo.AccrualTypeId.Value == 0)
             {
                 return (true, string.Empty);
             }
 
-            var accrualTypeId = request.AccrualTypeId.Value;
-
-            // Validate schedule information is present
-            if (!request.StartFrom.HasValue || !request.ValidUntil.HasValue ||
-                !request.StartTime.HasValue || !request.EndTime.HasValue)
-            {
-                return (false, "Time off request schedule information is missing.");
-            }
+            var accrualTypeId = requestInfo.AccrualTypeId.Value;
 
             // Get accrual banks for this accrual type
             var banksJson = await _accrualBanksRepository.GetAccrualBanksByAccrualType(
@@ -303,11 +273,12 @@ public class TimeOffRequestsProcessor : BaseProcessor
             }
 
             // Calculate total hours/minutes using GenerateOccurrences
+            // Use StartFrom date from the time off request
             var occurrences = GenerateOccurrences(
-                request.StartFrom.Value.Date,
-                request.ValidUntil.Value.Date,
-                request.StartTime.Value,
-                request.EndTime.Value
+                requestInfo.StartFrom.Value.Date,
+                requestInfo.ValidUntil.Value.Date,
+                requestInfo.StartTime.Value,
+                requestInfo.EndTime.Value
             );
 
             // Calculate total duration

@@ -9,5 +9,9 @@ public class TimeOffRequestResponse
     public int? Status { get; set; }
     public string? Notes { get; set; }
     public DateTime? DateCreated { get; set; }
+    public DateTime? StartFrom { get; set; }
+    public DateTime? ValidUntil { get; set; }
+    public TimeSpan? StartTime { get; set; }
+    public TimeSpan? EndTime { get; set; }
     public int? TotalCount { get; set; }
 }
