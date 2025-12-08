@@ -13,7 +13,7 @@ public class AccrualTransactionsRepository
         _dbOperations = dbOperations;
     }
 
-    public async Task<string> LogTransactions(string json, int createdBy, int tenantId)
+    public async Task<string> LogTransactions(string json, int createdBy, int tenantId, int? sourceTypeId = null, int? sourceId = null)
     {
         try
         {
@@ -23,6 +23,16 @@ public class AccrualTransactionsRepository
                 new SqlParameterModel { Name = "CreatedBy", Value = createdBy },
                 new SqlParameterModel { Name = "TenantId", Value = tenantId }
             };
+
+            // Add optional SourceTypeID and SourceID parameters if provided
+            if (sourceTypeId.HasValue)
+            {
+                param.Add(new SqlParameterModel { Name = "SourceTypeID", Value = sourceTypeId.Value });
+            }
+            if (sourceId.HasValue)
+            {
+                param.Add(new SqlParameterModel { Name = "SourceID", Value = sourceId.Value });
+            }
 
             var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualBanks_LogTransactions", param);
             

@@ -1,5 +1,6 @@
 using TimeManagement.Application.DTOs.TimeOffRequests;
 using TimeManagement.Application.Extensions;
+using TimeManagement.Application.Enums;
 using TimeManagement.Infra.Repositories;
 using System.Text.Json;
 
@@ -228,11 +229,31 @@ public class TimeOffRequestsProcessor : BaseProcessor
     {
         try
         {
-            // Get time off request with schedule info in one call
-            // Pass null userIds to get all requests, then filter by ID
+            // First get the time off request by ID to get userId
+            var requestListJson = await _timeOffRequestsRepository.GetTimeOffRequestsList(
+                timeOffRequestId, null, CurrentUser.TenantID, 1, 1, "DateCreated", "DESC", null);
+            
+            var requestList = requestListJson.FromJson<List<TimeOffRequestResponse>>() ?? new List<TimeOffRequestResponse>();
+            if (!requestList.Any())
+            {
+                return (false, "Time off request not found.");
+            }
+
+            var requestInfo = requestList.First();
+            if (requestInfo.UserId == 0)
+            {
+                return (false, "Time off request is missing required information.");
+            }
+
+            var userId = requestInfo.UserId;
+
+            // Get time off request with schedule info using userId
+            // First get the request to obtain StartFrom date, then use that date
+            // Use DateCreated as initial fromDate to ensure we get the request
+            var initialFromDate = requestInfo.DateCreated?.Date ?? DateTime.Today.AddYears(-10);
             var requestJson = await _timeOffRequestsRepository.GetTimeOffRequestsForUsers(
-                null, // null userIds means don't filter by user
-                DateTime.MinValue, // Use min date to get all requests
+                new List<int> { userId },
+                initialFromDate,
                 null, // Don't exclude any ID
                 null, // No status filter
                 CurrentUser.TenantID
@@ -246,12 +267,15 @@ public class TimeOffRequestsProcessor : BaseProcessor
                 return (false, "Time off request not found.");
             }
 
-            if (request.UserId == 0)
+            // Validate schedule information is present
+            if (!request.StartFrom.HasValue || !request.ValidUntil.HasValue ||
+                !request.StartTime.HasValue || !request.EndTime.HasValue)
             {
-                return (false, "Time off request is missing required information.");
+                return (false, "Time off request schedule information is missing.");
             }
-
-            var userId = request.UserId;
+            
+            // Now we have the request with StartFrom date: request.StartFrom.Value.Date
+            // This is the actual time off request start date that should be used
 
             // If no accrual type, no need to deduct balance
             if (!request.AccrualTypeId.HasValue || request.AccrualTypeId.Value == 0)
@@ -375,8 +399,13 @@ public class TimeOffRequestsProcessor : BaseProcessor
                 balanceUpdatesJson, CurrentUser.LoginId, CurrentUser.TenantID);
 
             // Log transactions in bulk using the result from UpdateBalances
+            // Pass SourceTypeID = 3 (TimeOffRequest) and SourceID = timeOffRequestId
             await _accrualTransactionsRepository.LogTransactions(
-                updateResult, CurrentUser.LoginId, CurrentUser.TenantID);
+                updateResult, 
+                CurrentUser.LoginId, 
+                CurrentUser.TenantID,
+                (int)AccrualTransactionSourceType.TimeOffRequest,
+                timeOffRequestId);
 
             return (true, string.Empty);
         }
