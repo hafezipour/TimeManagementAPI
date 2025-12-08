@@ -28,12 +28,12 @@ public class TimeOffRequestsProcessor : BaseProcessor
         {
             return methodName.ToLower() switch
             {
-                "get"         => await GetTimeOffRequestsList(jsonData.FromJson<GetTimeOffRequestRequest>()),
-                "save"        => await SaveTimeOffRequest(jsonData.FromJson<SaveTimeOffRequestRequest>()),
-                "approve"     => await ApproveTimeOffRequest(jsonData.FromJson<ApproveTimeOffRequestRequest>()),
-                "reject"      => await RejectTimeOffRequest(jsonData.FromJson<RejectTimeOffRequestRequest>()),
-                "delete"      => await DeleteTimeOffRequest(jsonData.FromJson<DeleteTimeOffRequestRequest>()),
-                _             => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
+                "get" => await GetTimeOffRequestsList(jsonData.FromJson<GetTimeOffRequestRequest>()),
+                "save" => await SaveTimeOffRequest(jsonData.FromJson<SaveTimeOffRequestRequest>()),
+                "approve" => await ApproveTimeOffRequest(jsonData.FromJson<ApproveTimeOffRequestRequest>()),
+                "reject" => await RejectTimeOffRequest(jsonData.FromJson<RejectTimeOffRequestRequest>()),
+                "delete" => await DeleteTimeOffRequest(jsonData.FromJson<DeleteTimeOffRequestRequest>()),
+                _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
         catch (System.Text.Json.JsonException ex)
@@ -85,12 +85,13 @@ public class TimeOffRequestsProcessor : BaseProcessor
                     ToTime = request.ToTime,
                     ExcludeId = null // excludeId is null for new requests
                 };
-                
+
                 var overlappingRequests = await CheckTimeOffOverlap(overlapRequest);
                 if (overlappingRequests.Any())
                 {
-                    return new { 
-                        success = false, 
+                    return new
+                    {
+                        success = false,
                         message = "This user is already scheduled for the time off we are adding.",
                         overlappingRequests = overlappingRequests
                     }.ToJson();
@@ -147,7 +148,7 @@ public class TimeOffRequestsProcessor : BaseProcessor
         // Generate all occurrences for existing requests and check for overlap
         foreach (var candidate in candidates)
         {
-            if (candidate.StartFrom.HasValue && candidate.ValidUntil.HasValue && 
+            if (candidate.StartFrom.HasValue && candidate.ValidUntil.HasValue &&
                 candidate.StartTime.HasValue && candidate.EndTime.HasValue)
             {
                 var existingOccurrences = GenerateOccurrences(
@@ -159,7 +160,7 @@ public class TimeOffRequestsProcessor : BaseProcessor
 
                 // Find all overlapping occurrences for this candidate
                 var overlappingOccurrences = new List<TimeOffOccurrence>();
-                
+
                 foreach (var newOcc in newOccurrences)
                 {
                     foreach (var existingOcc in existingOccurrences)
@@ -232,7 +233,7 @@ public class TimeOffRequestsProcessor : BaseProcessor
             // First get the time off request by ID to get userId
             var requestListJson = await _timeOffRequestsRepository.GetTimeOffRequestsList(
                 timeOffRequestId, null, CurrentUser.TenantID, 1, 1, "DateCreated", "DESC", null);
-            
+
             var requestList = requestListJson.FromJson<List<TimeOffRequestResponse>>() ?? new List<TimeOffRequestResponse>();
             if (!requestList.Any())
             {
@@ -281,41 +282,54 @@ public class TimeOffRequestsProcessor : BaseProcessor
             );
 
             double totalHours = occurrences.Sum(o => (o.EndDateTime - o.StartDateTime).TotalHours);
-            double totalMinutes = occurrences.Sum(o => (o.EndDateTime - o.StartDateTime).TotalMinutes);
+            decimal totalHoursDecimal = (decimal)totalHours;
 
-            // Calculate required amount and normalized values (in hours) for each bank
+            // Calculate normalized values (in hours) for each bank
+            // DeductionMultiplier only affects available balance, not required hours
             var bankReqs = banks.Select(b => new
             {
                 Bank = b,
-                Required = (b.AccrueUnit == (int)AccrueUnit.Minutes ? (decimal)totalMinutes : (decimal)totalHours) * b.DeductionMultiplier,
-                RequiredInHours = (b.AccrueUnit == (int)AccrueUnit.Minutes ? (decimal)totalMinutes : (decimal)totalHours) * b.DeductionMultiplier / (b.AccrueUnit == (int)AccrueUnit.Minutes ? 60m : 1m),
-                BalanceInHours = b.AccrueUnit == (int)AccrueUnit.Minutes ? b.CurrentBalance / 60m : b.CurrentBalance
+                DeductionMultiplier = b.DeductionMultiplier,
+                // Balance normalized to hours, then adjusted by DeductionMultiplier
+                BalanceInHours = (b.AccrueUnit == (int)AccrueUnit.Minutes
+                    ? b.CurrentBalance / 60m
+                    : b.CurrentBalance) * b.DeductionMultiplier
             }).ToList();
 
-            // Compare using normalized balances (all in hours)
-            decimal combinedBalanceInHours = bankReqs.Sum(br => br.BalanceInHours);
-            decimal combinedRequiredInHours = bankReqs.Sum(br => br.RequiredInHours);
+            // Total required hours stay the same (no multiplier applied)
+            decimal totalRequiredInHours = totalHoursDecimal;
 
-            if (combinedBalanceInHours < combinedRequiredInHours)
+            // Sum all adjusted balances (with DeductionMultiplier applied)
+            decimal combinedBalanceInHours = bankReqs.Sum(br => br.BalanceInHours);
+
+            if (combinedBalanceInHours < totalRequiredInHours)
             {
-                return (false, $"Insufficient combined balance. Required: {combinedRequiredInHours} hours, Available: {combinedBalanceInHours} hours");
+                return (false, $"Insufficient combined balance. Required: {totalRequiredInHours} hours, Available: {combinedBalanceInHours} hours");
             }
 
-            // Deduct proportionally from all banks based on their balance ratio
+            // Deduct proportionally from all banks based on their adjusted balance ratio
+            // Deduction is in actual hours, but proportion is based on adjusted balances
             var balanceUpdates = new List<object>();
-            decimal remainingInHours = combinedRequiredInHours;
+            decimal remainingInActualHours = totalRequiredInHours;
 
             for (int i = 0; i < bankReqs.Count; i++)
             {
                 var br = bankReqs[i];
-                decimal amountInHours = i == bankReqs.Count - 1 
-                    ? remainingInHours 
-                    : Math.Min(br.RequiredInHours * (br.BalanceInHours / combinedBalanceInHours), br.BalanceInHours);
+                // Calculate proportional deduction: actual hours proportional to adjusted balance ratio
+                decimal actualBalanceInHours = br.Bank.AccrueUnit == (int)AccrueUnit.Minutes 
+                    ? br.Bank.CurrentBalance / 60m 
+                    : br.Bank.CurrentBalance;
                 
-                remainingInHours -= amountInHours;
+                decimal amountInActualHours = i == bankReqs.Count - 1
+                    ? remainingInActualHours
+                    : Math.Min(totalRequiredInHours * (br.BalanceInHours / combinedBalanceInHours), actualBalanceInHours);
 
-                // Convert back to bank's original unit for deduction
-                decimal deductionAmount = br.Bank.AccrueUnit == (int)AccrueUnit.Minutes ? amountInHours * 60m : amountInHours;
+                remainingInActualHours -= amountInActualHours;
+
+                // Convert to bank's original unit for deduction
+                decimal deductionAmount = br.Bank.AccrueUnit == (int)AccrueUnit.Minutes 
+                    ? amountInActualHours * 60m 
+                    : amountInActualHours;
 
                 balanceUpdates.Add(new
                 {
@@ -338,8 +352,8 @@ public class TimeOffRequestsProcessor : BaseProcessor
             // Log transactions in bulk using the result from UpdateBalances
             // Pass SourceTypeID = 3 (TimeOffRequest) and SourceID = timeOffRequestId
             await _accrualTransactionsRepository.LogTransactions(
-                updateResult, 
-                CurrentUser.LoginId, 
+                updateResult,
+                CurrentUser.LoginId,
                 CurrentUser.TenantID,
                 (int)AccrualTransactionSourceType.TimeOffRequest,
                 timeOffRequestId);
