@@ -273,7 +273,6 @@ public class TimeOffRequestsProcessor : BaseProcessor
             }
 
             // Calculate total hours/minutes using GenerateOccurrences
-            // Use StartFrom date from the time off request
             var occurrences = GenerateOccurrences(
                 requestInfo.StartFrom.Value.Date,
                 requestInfo.ValidUntil.Value.Date,
@@ -281,83 +280,50 @@ public class TimeOffRequestsProcessor : BaseProcessor
                 requestInfo.EndTime.Value
             );
 
-            // Calculate total duration
-            double totalHours = 0;
-            double totalMinutes = 0;
-            foreach (var occurrence in occurrences)
+            double totalHours = occurrences.Sum(o => (o.EndDateTime - o.StartDateTime).TotalHours);
+            double totalMinutes = occurrences.Sum(o => (o.EndDateTime - o.StartDateTime).TotalMinutes);
+
+            // Calculate required amount and normalized values (in hours) for each bank
+            var bankReqs = banks.Select(b => new
             {
-                var duration = occurrence.EndDateTime - occurrence.StartDateTime;
-                totalHours += duration.TotalHours;
-                totalMinutes += duration.TotalMinutes;
+                Bank = b,
+                Required = (b.AccrueUnit == 2 ? (decimal)totalMinutes : (decimal)totalHours) * b.DeductionMultiplier,
+                RequiredInHours = (b.AccrueUnit == 2 ? (decimal)totalMinutes : (decimal)totalHours) * b.DeductionMultiplier / (b.AccrueUnit == 2 ? 60m : 1m),
+                BalanceInHours = b.AccrueUnit == 2 ? b.CurrentBalance / 60m : b.CurrentBalance
+            }).ToList();
+
+            // Compare using normalized balances (all in hours)
+            decimal combinedBalanceInHours = bankReqs.Sum(br => br.BalanceInHours);
+            decimal combinedRequiredInHours = bankReqs.Sum(br => br.RequiredInHours);
+
+            if (combinedBalanceInHours < combinedRequiredInHours)
+            {
+                return (false, $"Insufficient combined balance. Required: {combinedRequiredInHours} hours, Available: {combinedBalanceInHours} hours");
             }
 
-            // Calculate total required amount (same for all banks in the accrual type)
-            // Use first bank's unit and multiplier (assuming all banks in same accrual type have same settings)
-            decimal totalRequired;
-            if (banks.First().AccrueUnit == 2) // Minute
-            {
-                totalRequired = (decimal)totalMinutes;
-            }
-            else // Hour (default)
-            {
-                totalRequired = (decimal)totalHours;
-            }
-
-            // Apply deduction multiplier
-            totalRequired *= banks.First().DeductionMultiplier;
-
-            // Calculate combined balance of all banks in this accrual type
-            decimal combinedBalance = banks.Sum(b => b.CurrentBalance);
-
-            // Check if combined balance is sufficient across all banks
-            if (combinedBalance < totalRequired)
-            {
-                return (false, $"Insufficient combined balance. Required: {totalRequired}, Available: {combinedBalance}");
-            }
-
-            // Prepare balance updates - deduct proportionally from all banks based on their balance ratio
+            // Deduct proportionally from all banks based on their balance ratio
             var balanceUpdates = new List<object>();
-            decimal remainingToDeduct = totalRequired;
+            decimal remainingInHours = combinedRequiredInHours;
 
-            for (int i = 0; i < banks.Count; i++)
+            for (int i = 0; i < bankReqs.Count; i++)
             {
-                var bank = banks[i];
-                decimal deductionAmount;
+                var br = bankReqs[i];
+                decimal amountInHours = i == bankReqs.Count - 1 
+                    ? remainingInHours 
+                    : Math.Min(br.RequiredInHours * (br.BalanceInHours / combinedBalanceInHours), br.BalanceInHours);
+                
+                remainingInHours -= amountInHours;
 
-                if (i == banks.Count - 1)
-                {
-                    // Last bank gets the remainder to ensure exact deduction
-                    deductionAmount = remainingToDeduct;
-                }
-                else
-                {
-                    // Calculate proportional deduction based on this bank's share of total balance
-                    decimal bankShare = bank.CurrentBalance / combinedBalance;
-                    deductionAmount = totalRequired * bankShare;
-                    
-                    // Ensure we don't deduct more than the bank has
-                    if (deductionAmount > bank.CurrentBalance)
-                    {
-                        deductionAmount = bank.CurrentBalance;
-                    }
-                }
+                // Convert back to bank's original unit for deduction
+                decimal deductionAmount = br.Bank.AccrueUnit == 2 ? amountInHours * 60m : amountInHours;
 
-                // Final check: ensure we don't deduct more than available
-                if (deductionAmount > bank.CurrentBalance)
-                {
-                    deductionAmount = bank.CurrentBalance;
-                }
-
-                remainingToDeduct -= deductionAmount;
-
-                // Prepare balance update
                 balanceUpdates.Add(new
                 {
-                    bankId = bank.Id,
-                    userId = bank.UserId,
-                    accrualProfileId = bank.AccrualProfileId,
-                    accrualRulesSlotId = bank.AccrualRulesSlotId,
-                    currentBalance = bank.CurrentBalance,
+                    bankId = br.Bank.Id,
+                    userId = br.Bank.UserId,
+                    accrualProfileId = br.Bank.AccrualProfileId,
+                    accrualRulesSlotId = br.Bank.AccrualRulesSlotId,
+                    currentBalance = br.Bank.CurrentBalance,
                     @operator = "-",
                     adjustmentAmount = deductionAmount,
                     notes = $"Time off request #{timeOffRequestId} deduction"
