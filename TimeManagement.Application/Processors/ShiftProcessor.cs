@@ -541,7 +541,10 @@ public class ShiftProcessor : BaseProcessor
                                     assignmentSchedule,
                                     timeOffRequests
                                 );
+                                //if (timeOffStatus == TimeOffStatus.Partial || timeOffStatus == TimeOffStatus.Full)
+                                //{
 
+                                //}
                                 // Only add assignment if user is not on time off (None)
                                 if (timeOffStatus == TimeOffStatus.None)
                                 {
