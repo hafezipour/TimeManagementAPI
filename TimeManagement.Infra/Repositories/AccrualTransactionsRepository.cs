@@ -108,5 +108,26 @@ public class AccrualTransactionsRepository
             throw ex;
         }
     }
+
+    public async Task<string> GetTransactionsBySource(int sourceTypeId, int sourceId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new()
+            {
+                new SqlParameterModel { Name = "SourceTypeID", Value = sourceTypeId },
+                new SqlParameterModel { Name = "SourceID", Value = sourceId },
+                new SqlParameterModel { Name = "TenantId", Value = tenantId }
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_AccrualTransactions_GetBySource", param);
+            
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 

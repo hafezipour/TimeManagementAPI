@@ -12,7 +12,7 @@ public class TimeOffRequestsProcessor : BaseProcessor
     private readonly TimeOffRequestsRepository _timeOffRequestsRepository;
     private readonly AccrualBanksRepository _accrualBanksRepository;
     private readonly AccrualTransactionsProcessor _accrualTransactionsProcessor;
-    //private readonly AccrualTransactionsRepository _accrualTransactionsRepository;
+    private readonly AccrualTransactionsRepository _accrualTransactionsRepository;
     private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
@@ -22,14 +22,14 @@ public class TimeOffRequestsProcessor : BaseProcessor
     public TimeOffRequestsProcessor(
         TimeOffRequestsRepository timeOffRequestsRepository,
         AccrualBanksRepository accrualBanksRepository,
-        AccrualTransactionsProcessor accrualTransactionsProcessor
-        //AccrualTransactionsRepository accrualTransactionsRepository
+        AccrualTransactionsProcessor accrualTransactionsProcessor,
+        AccrualTransactionsRepository accrualTransactionsRepository
         )
     {
         _timeOffRequestsRepository = timeOffRequestsRepository;
         _accrualBanksRepository = accrualBanksRepository;
         _accrualTransactionsProcessor = accrualTransactionsProcessor;
-        //_accrualTransactionsRepository = accrualTransactionsRepository;
+        _accrualTransactionsRepository = accrualTransactionsRepository;
     }
 
     public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData)
@@ -399,6 +399,9 @@ public class TimeOffRequestsProcessor : BaseProcessor
     {
         try
         {
+            // Restore balance from existing transactions if request was approved
+            await RestoreBalanceFromTransactions(request.TimeOffRequestId);
+
             var result = await _timeOffRequestsRepository.DeleteTimeOffRequest(
                 request.TimeOffRequestId,
                 CurrentUser.LoginId,
@@ -411,6 +414,53 @@ public class TimeOffRequestsProcessor : BaseProcessor
         {
             return new { success = false, message = $"Error deleting time off request: {ex.Message}" }.ToJson();
         }
+    }
+
+    private async Task RestoreBalanceFromTransactions(int timeOffRequestId)
+    {
+        // Get original transactions for this time off request
+        var transactionsJson = await _accrualTransactionsRepository.GetTransactionsBySource(
+            (int)AccrualTransactionSourceType.TimeOffRequest,
+            timeOffRequestId,
+            CurrentUser.TenantID);
+
+        var transactions = transactionsJson.FromJson<List<AccrualTransactionForRestore>>() ?? new List<AccrualTransactionForRestore>();
+        if (!transactions.Any()) return;
+
+        // Restore balance by reversing transactions with deduction multiplier applied
+        var balanceUpdates = new List<object>();
+
+        foreach (var transaction in transactions)
+        {
+            // Reverse the amount (original was negative, restore is positive)
+            // Apply deduction multiplier to the restored amount
+            decimal restoreAmount = Math.Abs(transaction.Amount) * transaction.DeductionMultiplier;
+
+            balanceUpdates.Add(new
+            {
+                bankId = transaction.AccrualBankId,
+                userId = transaction.UserId,
+                accrualProfileId = transaction.AccrualProfileId,
+                accrualRulesSlotId = transaction.AccrualRulesSlotId,
+                currentBalance = transaction.CurrentBalance,
+                @operator = "+",
+                adjustmentAmount = restoreAmount,
+                notes = $"Time off request #{timeOffRequestId} deletion restore"
+            });
+        }
+
+        // Update balances
+        var balanceUpdatesJson = JsonSerializer.Serialize(balanceUpdates);
+        var updateResult = await _accrualBanksRepository.UpdateBalances(
+            balanceUpdatesJson, CurrentUser.LoginId, CurrentUser.TenantID);
+
+        // Log transactions with Adjusted source type
+        var dataTransactions = JsonSerializer.Deserialize<List<LogTransactionsRequest>>(updateResult, JsonOptions);
+        _accrualTransactionsProcessor.SetCurrentUser(CurrentUser);
+        await _accrualTransactionsProcessor.LogTransactions(
+            dataTransactions,
+            (int)AccrualTransactionSourceType.Adjusted,
+            timeOffRequestId);
     }
 
     /// <summary>
