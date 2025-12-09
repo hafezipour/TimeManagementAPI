@@ -11,5 +11,6 @@ public class LogTransactionsRequest
     public string Operator { get; set; } = string.Empty;
     public decimal AdjustmentAmount { get; set; }
     public string? Notes { get; set; }
+    public string Success { get; set; }
 }
 

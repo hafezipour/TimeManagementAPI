@@ -10,10 +10,10 @@ public class AccrualTransactionsRepository
 
     public AccrualTransactionsRepository(EfDbOperationsRepository dbOperations)
     {
-        _dbOperations = dbOperations;
+        _dbOperations = dbOperations; 
     }
 
-    public async Task<string> LogTransactions(string json, int createdBy, int tenantId, int? sourceTypeId = null, int? sourceId = null)
+    public async Task<string> LogTransactions(string json, int createdBy, int tenantId, int? sourceTypeId, int? sourceId)
     {
         try
         {

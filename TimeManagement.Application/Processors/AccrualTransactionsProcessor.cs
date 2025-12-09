@@ -43,13 +43,15 @@ public class AccrualTransactionsProcessor : BaseProcessor
 
     #region Log Transactions
 
-    public async Task<string> LogTransactions(List<LogTransactionsRequest> requests)
+    public async Task<string> LogTransactions(List<LogTransactionsRequest> requests, int? sourceTypeId, int? sourceId)
     {
         var json = requests.ToJson();
         return await _accrualTransactionsRepository.LogTransactions(
             json,
             CurrentUser.LoginId,
-            CurrentUser.TenantID);
+            CurrentUser.TenantID,
+            sourceTypeId,
+            sourceId);
     }
 
     #endregion

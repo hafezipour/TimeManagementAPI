@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using TimeManagement.Application.DTOs.AccrualProfiles;
 using TimeManagement.Application.DTOs.AccrualTracks;
 using TimeManagement.Application.DTOs.EmployeeAccrualSettings;
+using TimeManagement.Application.Enums;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Infra.Repositories;
 
@@ -104,11 +105,12 @@ public class AccrualBanksProcessor : BaseProcessor
             NewBalance = updateResponse.NewBalance,
             Operator = updateResponse.Operator,
             AdjustmentAmount = updateResponse.AdjustmentAmount,
-            Notes = updateResponse.Notes
+            Notes = updateResponse.Notes,
+            Success = "true"
         };
 
         _accrualTransactionsProcessor.SetCurrentUser(CurrentUser);
-        var logResult = await _accrualTransactionsProcessor.LogTransactions(new List<LogTransactionsRequest> { logRequest });
+        var logResult = await _accrualTransactionsProcessor.LogTransactions(new List<LogTransactionsRequest> { logRequest }, (int)AccrualTransactionSourceType.Adjusted, updateResponse.AccrualRulesSlotId);
 
         return logResult;
     }

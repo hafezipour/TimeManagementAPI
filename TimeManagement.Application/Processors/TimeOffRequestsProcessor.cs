@@ -1,8 +1,9 @@
-using TimeManagement.Application.DTOs.TimeOffRequests;
-using TimeManagement.Application.Extensions;
-using TimeManagement.Application.Enums;
-using TimeManagement.Infra.Repositories;
 using System.Text.Json;
+using TimeManagement.Application.DTOs.EmployeeAccrualSettings;
+using TimeManagement.Application.DTOs.TimeOffRequests;
+using TimeManagement.Application.Enums;
+using TimeManagement.Application.Extensions;
+using TimeManagement.Infra.Repositories;
 
 namespace TimeManagement.Application.Processors;
 
@@ -10,16 +11,25 @@ public class TimeOffRequestsProcessor : BaseProcessor
 {
     private readonly TimeOffRequestsRepository _timeOffRequestsRepository;
     private readonly AccrualBanksRepository _accrualBanksRepository;
-    private readonly AccrualTransactionsRepository _accrualTransactionsRepository;
+    private readonly AccrualTransactionsProcessor _accrualTransactionsProcessor;
+    //private readonly AccrualTransactionsRepository _accrualTransactionsRepository;
+    private static readonly JsonSerializerOptions JsonOptions = new JsonSerializerOptions
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        PropertyNameCaseInsensitive = true
+    };
 
     public TimeOffRequestsProcessor(
         TimeOffRequestsRepository timeOffRequestsRepository,
         AccrualBanksRepository accrualBanksRepository,
-        AccrualTransactionsRepository accrualTransactionsRepository)
+        AccrualTransactionsProcessor accrualTransactionsProcessor
+        //AccrualTransactionsRepository accrualTransactionsRepository
+        )
     {
         _timeOffRequestsRepository = timeOffRequestsRepository;
         _accrualBanksRepository = accrualBanksRepository;
-        _accrualTransactionsRepository = accrualTransactionsRepository;
+        _accrualTransactionsProcessor = accrualTransactionsProcessor;
+        //_accrualTransactionsRepository = accrualTransactionsRepository;
     }
 
     public async Task<string> ProcessRequest(string serviceName, string methodName, string jsonData)
@@ -349,12 +359,13 @@ public class TimeOffRequestsProcessor : BaseProcessor
             var updateResult = await _accrualBanksRepository.UpdateBalances(
                 balanceUpdatesJson, CurrentUser.LoginId, CurrentUser.TenantID);
 
+            var dataTransactions = JsonSerializer.Deserialize<List<LogTransactionsRequest>>(updateResult, JsonOptions);
+
             // Log transactions in bulk using the result from UpdateBalances
             // Pass SourceTypeID = 3 (TimeOffRequest) and SourceID = timeOffRequestId
-            await _accrualTransactionsRepository.LogTransactions(
-                updateResult,
-                CurrentUser.LoginId,
-                CurrentUser.TenantID,
+            _accrualTransactionsProcessor.SetCurrentUser(CurrentUser);
+            await _accrualTransactionsProcessor.LogTransactions(
+                dataTransactions,
                 (int)AccrualTransactionSourceType.TimeOffRequest,
                 timeOffRequestId);
 
