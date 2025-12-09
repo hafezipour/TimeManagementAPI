@@ -68,6 +68,24 @@ BEGIN
             RETURN
         END
 
+        -- Check for duplicate assignment (same work code and user, not deleted)
+        IF EXISTS (
+            SELECT 1
+            FROM EmployeeWorkCodeAssignment
+            WHERE TenantId = @TenantId
+                AND WorkCodeId = @WorkCodeId
+                AND UserId = @AssignmentUserId
+                AND Id != ISNULL(@Id, 0)
+                AND ISNULL(IsDeleted, 0) = 0
+        )
+        BEGIN
+            SELECT
+                CAST(0 AS bit) as success,
+                'This work code is already assigned to this employee' as message
+            FOR JSON PATH, WITHOUT_ARRAY_WRAPPER
+            ROLLBACK TRAN
+            RETURN
+        END
 
         -- Check if Employee Work Code Assignment exists
         IF EXISTS (SELECT 1 FROM EmployeeWorkCodeAssignment WHERE Id = @Id AND TenantId = @TenantId)
