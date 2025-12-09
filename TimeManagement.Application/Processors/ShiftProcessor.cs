@@ -319,6 +319,10 @@ public class ShiftProcessor : BaseProcessor
 
             List<CalendarDay> calendarDays = new List<CalendarDay>();
 
+            var timeOffStartDate = request.StartDate.Date;
+            var timeOffEndDate = request.EndDate.Date.AddDays(1).AddTicks(-1);
+            var filteredTimeOffRequests = await SetHereTheTimeOffs(timeOffStartDate, timeOffEndDate);
+
             List<Column> columns = new List<Column>();
             if (request.ViewType == "day")
             {
@@ -333,7 +337,7 @@ public class ShiftProcessor : BaseProcessor
                 #region Add here the holidays
 
                 var column = columns.Where(c => c.IsSystem == true).FirstOrDefault();
-                var filteredTimeOffRequests = await SetHereTheTimeOffs(request.StartDate.Date, request.StartDate.Date.AddDays(1).AddTicks(-1));
+                
                 column.TimeOffRequests = filteredTimeOffRequests;
 
                 #endregion
