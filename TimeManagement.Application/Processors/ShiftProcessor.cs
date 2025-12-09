@@ -546,7 +546,7 @@ public class ShiftProcessor : BaseProcessor
 
                                 //}
                                 // Only add assignment if user is not on time off (None)
-                                if (timeOffStatus == TimeOffStatus.None)
+                                if (timeOffStatus == TimeOffStatus.None || timeOffStatus == TimeOffStatus.Partial)
                                 {
                                     assignmentCopy.Schedules = assignmentSchedule;
                                     validAssignmentsForDate.Add(assignmentCopy);
