@@ -411,7 +411,7 @@ public class TimeOffRequestsProcessor : BaseProcessor
     /// - 14 Oct 2025 10pm - 15 Oct 2025 2am
     /// - 15 Oct 2025 10pm - 16 Oct 2025 2am
     /// </summary>
-    private List<TimeOffOccurrence> GenerateOccurrences(DateTime startDate, DateTime endDate, TimeSpan startTime, TimeSpan endTime)
+    public List<TimeOffOccurrence> GenerateOccurrences(DateTime startDate, DateTime endDate, TimeSpan startTime, TimeSpan endTime)
     {
         var occurrences = new List<TimeOffOccurrence>();
         var currentDate = startDate;
