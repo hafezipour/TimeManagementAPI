@@ -257,7 +257,7 @@ public class ShiftProcessor : BaseProcessor
         }
     }
 
-    #region Shifts
+    #region Shifts for Daily, weekly and monthly views including time off requests
 
     private async Task<List<TimeOffRequestsForUsers>> SetHereTheTimeOffs(DateTime startDate, DateTime endDate)
     {
@@ -332,12 +332,12 @@ public class ShiftProcessor : BaseProcessor
                     var shifts = await GetValidShiftsList(request.StartDate, item.SchedulingShifts);
                     item.SchedulingShifts = shifts;
                 }
-                await SetEmployeeAssignmentsForShiftsAsync(columns.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
+                await SetEmployeeAssignmentsForShiftsAsync(filteredTimeOffRequests, columns.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
 
                 #region Add here the holidays
 
                 var column = columns.Where(c => c.IsSystem == true).FirstOrDefault();
-                
+
                 column.TimeOffRequests = filteredTimeOffRequests;
 
                 #endregion
@@ -358,7 +358,7 @@ public class ShiftProcessor : BaseProcessor
                         SchedulingShifts = shifts
                     });
                 }
-                await SetEmployeeAssignmentsForShiftsAsync(calendarDays.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
+                await SetEmployeeAssignmentsForShiftsAsync(filteredTimeOffRequests, calendarDays.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
                 //return calendarDays.ToJson();
             }
             else if (request.ViewType == "month")
@@ -380,7 +380,7 @@ public class ShiftProcessor : BaseProcessor
                     });
 
                 }
-                await SetEmployeeAssignmentsForShiftsAsync(calendarDays.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
+                await SetEmployeeAssignmentsForShiftsAsync(filteredTimeOffRequests, calendarDays.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
                 //return calendarDays.ToJson();
             }
 
@@ -463,7 +463,7 @@ public class ShiftProcessor : BaseProcessor
     /// </summary>
     /// <param name="schedulingShiftsAll"></param>
     /// <returns></returns>
-    private async Task SetEmployeeAssignmentsForShiftsAsync(List<SchedulingShift> schedulingShiftsAll)
+    private async Task SetEmployeeAssignmentsForShiftsAsync(List<TimeOffRequestsForUsers> timeOffRequests, List<SchedulingShift> schedulingShiftsAll)
     {
         // Fetch ALL employee assignments at once
         List<ShiftAssignmentDetailDto> allAssignments = null;
