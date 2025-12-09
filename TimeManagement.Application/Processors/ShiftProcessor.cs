@@ -259,14 +259,8 @@ public class ShiftProcessor : BaseProcessor
 
     #region Shifts
 
-    private async Task SetHereTheTimeOffs(List<Column> columns, GetScheduledShiftsRequest request)
+    private async Task<List<TimeOffRequestsForUsers>> SetHereTheTimeOffs(GetScheduledShiftsRequest request)
     {
-        var column = columns.Where(c => c.IsSystem == true).FirstOrDefault();
-        if (column == null)
-        {
-            return;
-        }
-
         // Calculate end date as end of day from StartDate
         var startDate = request.StartDate.Date;
         var endDate = startDate.AddDays(1).AddTicks(-1); // End of the day (23:59:59.9999999)
@@ -283,17 +277,16 @@ public class ShiftProcessor : BaseProcessor
 
         // Parse candidates
         var allTimeOffRequests = candidatesJson.FromJson<List<TimeOffRequestsForUsers>>() ?? new List<TimeOffRequestsForUsers>();
-        
+
         // Filter time off requests to only include those that are valid for the date range
         // A time off request is valid if it overlaps with the StartDate to endDate range
         // Overlap condition: StartFrom <= endDate AND (ValidUntil is null OR ValidUntil >= startDate)
         var filteredTimeOffRequests = allTimeOffRequests.Where(tor =>
             tor.StartFrom.HasValue &&
-            tor.StartFrom.Value <= endDate && 
+            tor.StartFrom.Value <= endDate &&
             (tor.ValidUntil == null || tor.ValidUntil.Value >= startDate)
         ).ToList();
-        
-        column.TimeOffRequests = filteredTimeOffRequests;
+        return filteredTimeOffRequests;
     }
 
     /// <summary>
@@ -339,7 +332,9 @@ public class ShiftProcessor : BaseProcessor
 
                 #region Add here the holidays
 
-                await SetHereTheTimeOffs(columns, request);
+                var column = columns.Where(c => c.IsSystem == true).FirstOrDefault();
+                var filteredTimeOffRequests = await SetHereTheTimeOffs(request);
+                column.TimeOffRequests = filteredTimeOffRequests;
 
                 #endregion
 
