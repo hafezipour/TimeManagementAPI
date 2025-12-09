@@ -259,11 +259,11 @@ public class ShiftProcessor : BaseProcessor
 
     #region Shifts
 
-    private async Task<List<TimeOffRequestsForUsers>> SetHereTheTimeOffs(GetScheduledShiftsRequest request)
+    private async Task<List<TimeOffRequestsForUsers>> SetHereTheTimeOffs(DateTime startDate, DateTime endDate)
     {
         // Calculate end date as end of day from StartDate
-        var startDate = request.StartDate.Date;
-        var endDate = startDate.AddDays(1).AddTicks(-1); // End of the day (23:59:59.9999999)
+        //var startDate = request.StartDate.Date;
+        //var endDate = startDate.AddDays(1).AddTicks(-1); // End of the day (23:59:59.9999999)
 
         // Fetch time off requests for all users within the date range
         // StatusFilter = 2 means only fetch Approved requests (not Pending) for columns display
@@ -333,7 +333,7 @@ public class ShiftProcessor : BaseProcessor
                 #region Add here the holidays
 
                 var column = columns.Where(c => c.IsSystem == true).FirstOrDefault();
-                var filteredTimeOffRequests = await SetHereTheTimeOffs(request);
+                var filteredTimeOffRequests = await SetHereTheTimeOffs(request.StartDate.Date, request.StartDate.Date.AddDays(1).AddTicks(-1));
                 column.TimeOffRequests = filteredTimeOffRequests;
 
                 #endregion
