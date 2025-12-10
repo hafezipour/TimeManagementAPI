@@ -39,7 +39,7 @@ public class TimeOffRequestsProcessor : BaseProcessor
             return methodName.ToLower() switch
             {
                 "get" => await GetTimeOffRequestsList(jsonData.FromJson<GetTimeOffRequestRequest>()),
-                "getForScheduler" => await GetTimeOffRequestsForScheduler(jsonData.FromJson<GetTimeOffRequestsForSchedulerRequest>()),
+                "getforscheduler" => await GetTimeOffRequestsForScheduler(jsonData.FromJson<GetTimeOffRequestsForSchedulerRequest>()),
                 "save" => await SaveTimeOffRequest(jsonData.FromJson<SaveTimeOffRequestRequest>()),
                 "approve" => await ApproveTimeOffRequest(jsonData.FromJson<ApproveTimeOffRequestRequest>()),
                 "reject" => await RejectTimeOffRequest(jsonData.FromJson<RejectTimeOffRequestRequest>()),
@@ -123,11 +123,17 @@ public class TimeOffRequestsProcessor : BaseProcessor
                 ).ToList();
 
                 // Create scheduler events for each occurrence
+                int occurrenceIndex = 0;
                 foreach (var occurrence in filteredOccurrences)
                 {
+                    // Generate unique ID for each occurrence: timeOffRequestId + occurrence index
+                    // This ensures each day/occurrence has a unique ID for Kendo Scheduler
+                    var uniqueId = requestItem.Id * 10000 + occurrenceIndex;
+                    
                     schedulerEvents.Add(new
                     {
-                        id = requestItem.Id,
+                        id = uniqueId,
+                        timeOffRequestId = requestItem.Id, // Keep original ID for reference
                         title = requestItem.TimeOffTypeName ?? requestItem.TimeOffTypeCode ?? "Time Off",
                         start = occurrence.StartDateTime,
                         end = occurrence.EndDateTime,
@@ -139,9 +145,10 @@ public class TimeOffRequestsProcessor : BaseProcessor
                         timeOffTypeName = requestItem.TimeOffTypeName,
                         timeOffTypeCode = requestItem.TimeOffTypeCode,
                         accrualTypeName = requestItem.AccrualTypeName,
-                        accrualTypeCode = requestItem.AccrualTypeCode,
-                        timeOffRequestId = requestItem.Id
+                        accrualTypeCode = requestItem.AccrualTypeCode
                     });
+                    
+                    occurrenceIndex++;
                 }
             }
 
