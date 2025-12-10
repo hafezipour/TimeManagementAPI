@@ -146,5 +146,35 @@ public class TimeOffRequestsRepository
             throw ex;
         }
     }
+
+    public async Task<string> GetTimeOffRequestsForScheduler(List<int>? userIds, DateTime fromDate, DateTime toDate, int? statusFilter, int tenantId)
+    {
+        try
+        {
+            // Convert list of user IDs to JSON string for the stored procedure
+            // If the list is null or empty, pass NULL to the SP (which will not filter by user IDs)
+            object userIdsJsonValue = null;
+            if (userIds != null && userIds.Any())
+            {
+                userIdsJsonValue = System.Text.Json.JsonSerializer.Serialize(userIds);
+            }
+            
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "UserIdsJson", Value = userIdsJsonValue},
+                new SqlParameterModel(){ Name = "FromDate", Value = fromDate.Date},
+                new SqlParameterModel(){ Name = "ToDate", Value = toDate.Date},
+                new SqlParameterModel(){ Name = "StatusFilter", Value = statusFilter},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_TimeOffRequests_GetForScheduler", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 

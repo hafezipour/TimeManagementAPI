@@ -39,6 +39,7 @@ public class TimeOffRequestsProcessor : BaseProcessor
             return methodName.ToLower() switch
             {
                 "get" => await GetTimeOffRequestsList(jsonData.FromJson<GetTimeOffRequestRequest>()),
+                "getForScheduler" => await GetTimeOffRequestsForScheduler(jsonData.FromJson<GetTimeOffRequestsForSchedulerRequest>()),
                 "save" => await SaveTimeOffRequest(jsonData.FromJson<SaveTimeOffRequestRequest>()),
                 "approve" => await ApproveTimeOffRequest(jsonData.FromJson<ApproveTimeOffRequestRequest>()),
                 "reject" => await RejectTimeOffRequest(jsonData.FromJson<RejectTimeOffRequestRequest>()),
@@ -76,6 +77,79 @@ public class TimeOffRequestsProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving time off requests: {ex.Message}" }.ToJson();
+        }
+    }
+
+    public async Task<string> GetTimeOffRequestsForScheduler(GetTimeOffRequestsForSchedulerRequest request)
+    {
+        try
+        {
+            // Fetch raw data from stored procedure
+            var rawDataJson = await _timeOffRequestsRepository.GetTimeOffRequestsForScheduler(
+                request.UserIds,
+                request.FromDate,
+                request.ToDate,
+                request.StatusFilter,
+                CurrentUser.TenantID
+            );
+
+            // Deserialize the data
+            var timeOffRequests = rawDataJson.FromJson<List<TimeOffRequestsForUsers>>() ?? new List<TimeOffRequestsForUsers>();
+
+            // Create scheduler events by generating occurrences for each day
+            var schedulerEvents = new List<object>();
+
+            foreach (var requestItem in timeOffRequests)
+            {
+                // Skip if required fields are missing
+                if (!requestItem.StartFrom.HasValue || !requestItem.ValidUntil.HasValue ||
+                    !requestItem.StartTime.HasValue || !requestItem.EndTime.HasValue)
+                {
+                    continue;
+                }
+
+                // Generate occurrences for this time off request
+                var occurrences = GenerateOccurrences(
+                    requestItem.StartFrom.Value.Date,
+                    requestItem.ValidUntil.Value.Date,
+                    requestItem.StartTime.Value,
+                    requestItem.EndTime.Value
+                );
+
+                // Filter occurrences that fall within the requested date range
+                var filteredOccurrences = occurrences.Where(occ =>
+                    occ.StartDateTime.Date >= request.FromDate.Date &&
+                    occ.StartDateTime.Date <= request.ToDate.Date
+                ).ToList();
+
+                // Create scheduler events for each occurrence
+                foreach (var occurrence in filteredOccurrences)
+                {
+                    schedulerEvents.Add(new
+                    {
+                        id = requestItem.Id,
+                        title = requestItem.TimeOffTypeName ?? requestItem.TimeOffTypeCode ?? "Time Off",
+                        start = occurrence.StartDateTime,
+                        end = occurrence.EndDateTime,
+                        backgroundColor = requestItem.TimeOffTypeBackgroundColor ?? "#007bff",
+                        textColor = requestItem.TimeOffTypeTextColor ?? "#ffffff",
+                        notes = requestItem.Notes,
+                        userId = requestItem.UserId,
+                        status = requestItem.Status,
+                        timeOffTypeName = requestItem.TimeOffTypeName,
+                        timeOffTypeCode = requestItem.TimeOffTypeCode,
+                        accrualTypeName = requestItem.AccrualTypeName,
+                        accrualTypeCode = requestItem.AccrualTypeCode,
+                        timeOffRequestId = requestItem.Id
+                    });
+                }
+            }
+
+            return schedulerEvents.ToJson();
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving time off requests for scheduler: {ex.Message}" }.ToJson();
         }
     }
 
