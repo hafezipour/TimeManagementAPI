@@ -504,7 +504,7 @@ public class ShiftProcessor : BaseProcessor
     /// <param name="schedulingShiftsAll">List of scheduling shifts</param>
     /// <param name="employeeId">Optional employee ID to filter assignments</param>
     /// <returns></returns>
-    private async Task SetEmployeeAssignmentsForShiftsAsync(List<TimeOffRequestsForUsers> timeOffRequests, List<SchedulingShift> schedulingShiftsAll, int? employeeId = null)
+    private async Task SetEmployeeAssignmentsForShiftsAsync(List<TimeOffRequestsForUsers> timeOffRequests, List<SchedulingShift> schedulingShiftsAll, int? employeeId)
     {
         // Fetch employee assignments at once
         List<ShiftAssignmentDetailDto> allAssignments = null;
