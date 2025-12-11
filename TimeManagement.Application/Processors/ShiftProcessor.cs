@@ -313,7 +313,7 @@ public class ShiftProcessor : BaseProcessor
         try
         {
             // Validate request
-            if (request.LayoutId <= 0)
+            if (request.LayoutId <= 0 && request.ViewType == "day")
             {
                 return new { success = false, message = "Invalid LayoutId" }.ToJson();
             }
