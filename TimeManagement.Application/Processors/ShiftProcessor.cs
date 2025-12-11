@@ -268,16 +268,23 @@ public class ShiftProcessor : BaseProcessor
 
     #region Shifts for Daily, weekly and monthly views including time off requests
 
-    private async Task<List<TimeOffRequestsForUsers>> SetHereTheTimeOffs(DateTime startDate, DateTime endDate)
+    private async Task<List<TimeOffRequestsForUsers>> SetHereTheTimeOffs(DateTime startDate, DateTime endDate, int? employeeId = null)
     {
         // Calculate end date as end of day from StartDate
         //var startDate = request.StartDate.Date;
         //var endDate = startDate.AddDays(1).AddTicks(-1); // End of the day (23:59:59.9999999)
 
-        // Fetch time off requests for all users within the date range
+        // Prepare userIds list for filtering - if employeeId is provided, filter by that employee only
+        List<int> userIds = null;
+        if (employeeId.HasValue && employeeId.Value > 0)
+        {
+            userIds = new List<int> { employeeId.Value };
+        }
+
+        // Fetch time off requests for users within the date range
         // StatusFilter = 2 means only fetch Approved requests (not Pending) for columns display
         var candidatesJson = await _timeOffRequestsRepository.GetTimeOffRequestsForUsers(
-            null, // null userIds means fetch for all users
+            userIds, // Filter by employeeId if provided, otherwise null means fetch for all users
             startDate,
             null, // excludeId is null
             2, // StatusFilter = 2 (Approved only) for columns display
@@ -330,7 +337,7 @@ public class ShiftProcessor : BaseProcessor
 
             var timeOffStartDate = request.StartDate.Date;
             var timeOffEndDate = request.EndDate.Date.AddDays(1).AddTicks(-1);
-            var filteredTimeOffRequests = await SetHereTheTimeOffs(timeOffStartDate, timeOffEndDate);
+            var filteredTimeOffRequests = await SetHereTheTimeOffs(timeOffStartDate, timeOffEndDate, request.EmployeeId);
 
             List<Column> columns = new List<Column>();
             if (request.ViewType == "day")
@@ -341,7 +348,7 @@ public class ShiftProcessor : BaseProcessor
                     var shifts = await GetValidShiftsList(request.StartDate, item.SchedulingShifts);
                     item.SchedulingShifts = shifts;
                 }
-                await SetEmployeeAssignmentsForShiftsAsync(filteredTimeOffRequests, columns.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
+                await SetEmployeeAssignmentsForShiftsAsync(filteredTimeOffRequests, columns.SelectMany(c => c.SchedulingShifts).ToList(), request.EmployeeId);//its passed by reference, so it will get setted the assignments
 
                 #region Add here the holidays
 
@@ -367,7 +374,7 @@ public class ShiftProcessor : BaseProcessor
                         SchedulingShifts = shifts
                     });
                 }
-                await SetEmployeeAssignmentsForShiftsAsync(filteredTimeOffRequests, calendarDays.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
+                await SetEmployeeAssignmentsForShiftsAsync(filteredTimeOffRequests, calendarDays.SelectMany(c => c.SchedulingShifts).ToList(), request.EmployeeId);//its passed by reference, so it will get setted the assignments
                 //return calendarDays.ToJson();
             }
             else if (request.ViewType == "month")
@@ -389,8 +396,31 @@ public class ShiftProcessor : BaseProcessor
                     });
 
                 }
-                await SetEmployeeAssignmentsForShiftsAsync(filteredTimeOffRequests, calendarDays.SelectMany(c => c.SchedulingShifts).ToList());//its passed by reference, so it will get setted the assignments
+                await SetEmployeeAssignmentsForShiftsAsync(filteredTimeOffRequests, calendarDays.SelectMany(c => c.SchedulingShifts).ToList(), request.EmployeeId);//its passed by reference, so it will get setted the assignments
                 //return calendarDays.ToJson();
+            }
+
+            // Filter shifts to only include those with assignments for the selected employee (if EmployeeId is provided)
+            if (request.EmployeeId.HasValue && request.EmployeeId.Value > 0)
+            {
+                if (calendarDays != null && calendarDays.Count > 0)
+                {
+                    foreach (var day in calendarDays)
+                    {
+                        day.SchedulingShifts = day.SchedulingShifts
+                            .Where(s => s.UserAssignments != null && s.UserAssignments.Any())
+                            .ToList();
+                    }
+                }
+                else if (columns != null && columns.Count > 0)
+                {
+                    foreach (var column in columns)
+                    {
+                        column.SchedulingShifts = column.SchedulingShifts
+                            .Where(s => s.UserAssignments != null && s.UserAssignments.Any())
+                            .ToList();
+                    }
+                }
             }
 
             var data = new GetScheduledShiftsResponse
@@ -402,7 +432,7 @@ public class ShiftProcessor : BaseProcessor
                 UserIds = calendarDays != null && calendarDays.Count > 0 ?
                                       (
                                            calendarDays.SelectMany(cd => cd.SchedulingShifts)
-                                          .Where(ss => ss.UserAssignments != null)
+                                          .Where(ss => ss.UserAssignments != null && ss.UserAssignments.Any())
                                           .SelectMany(ss => ss.UserAssignments)
                                           .Select(ua => ua.UserId)
                                           .Distinct()
@@ -410,7 +440,7 @@ public class ShiftProcessor : BaseProcessor
                                       ) :
                                       (
                                            columns.SelectMany(cd => cd.SchedulingShifts)
-                                          .Where(ss => ss.UserAssignments != null)
+                                          .Where(ss => ss.UserAssignments != null && ss.UserAssignments.Any())
                                           .SelectMany(ss => ss.UserAssignments)
                                           .Select(ua => ua.UserId)
                                           .Distinct().ToList()
@@ -470,17 +500,27 @@ public class ShiftProcessor : BaseProcessor
     /// <summary>
     /// set the employees assigned onto the shifts
     /// </summary>
-    /// <param name="schedulingShiftsAll"></param>
+    /// <param name="timeOffRequests">List of time off requests</param>
+    /// <param name="schedulingShiftsAll">List of scheduling shifts</param>
+    /// <param name="employeeId">Optional employee ID to filter assignments</param>
     /// <returns></returns>
-    private async Task SetEmployeeAssignmentsForShiftsAsync(List<TimeOffRequestsForUsers> timeOffRequests, List<SchedulingShift> schedulingShiftsAll)
+    private async Task SetEmployeeAssignmentsForShiftsAsync(List<TimeOffRequestsForUsers> timeOffRequests, List<SchedulingShift> schedulingShiftsAll, int? employeeId = null)
     {
-        // Fetch ALL employee assignments at once
+        // Fetch employee assignments at once
         List<ShiftAssignmentDetailDto> allAssignments = null;
         List<DTOs.Schedules.ScheduleResponse> allSchedules = null;
 
         // Get comma-separated shift IDs using extension method
         string shiftIds = schedulingShiftsAll.Select(c => c.Id).Distinct().ToCommaSeparatedString();
-        var assignmentsJson = await _shiftAssignmentRepository.Get(null, shiftIds, CurrentUser.TenantID);
+        
+        // Prepare userIds string for filtering - if employeeId is provided, filter by that employee only
+        string userIds = null;
+        if (employeeId.HasValue && employeeId.Value > 0)
+        {
+            userIds = employeeId.Value.ToString();
+        }
+        
+        var assignmentsJson = await _shiftAssignmentRepository.Get(userIds, shiftIds, CurrentUser.TenantID);
         allAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(assignmentsJson);
 
         if (allAssignments != null && allAssignments.Any())
