@@ -19,7 +19,7 @@ public class GetScheduledShiftsRequest
     
     public int? LocationId { get; set; }
     
-    public int? EmployeeId { get; set; }
+    public List<int>? EmployeeIds { get; set; }
 }
 
 
