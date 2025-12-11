@@ -65,7 +65,7 @@ public class ShiftProcessor : BaseProcessor
                 "getbyid" => await GetShift(jsonData.FromJson<GetShiftRequest>()),
                 "getshortlist" => await GetShiftsShortList(),
                 "getunassigned" => await GetUnassignedShifts(jsonData.FromJson<GetUnassignedShiftsRequest>()),
-                "getschedulingshifts" => await GetSchedulingShifts(),
+                "getschedulingshifts" => await GetSchedulingShifts(null),
                 "getscheduledshifts" => await GetScheduledShifts(jsonData.FromJson<GetScheduledShiftsRequest>()),
                 "updateslotpositions" => await UpdateSlotPositions(jsonData.FromJson<UpdateSlotPositionsRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
@@ -223,11 +223,11 @@ public class ShiftProcessor : BaseProcessor
     /// <summary>
     /// Get scheduling shifts for a tenant
     /// </summary>
-    public async Task<string> GetSchedulingShifts()
+    public async Task<string> GetSchedulingShifts(GetScheduledShiftsRequest request)
     {
         try
         {
-            var result = await _shiftsRepository.GetSchedulingShifts(CurrentUser.TenantID);
+            var result = await _shiftsRepository.GetSchedulingShifts(request.EmployeeIds, CurrentUser.TenantID);
             return result;
         }
         catch (Exception ex)
@@ -239,12 +239,12 @@ public class ShiftProcessor : BaseProcessor
     /// <summary>
     /// Get scheduling shifts for a tenant
     /// </summary>
-    public async Task<List<SchedulingShift>> GetSchedulingShiftsList()
+    public async Task<List<SchedulingShift>> GetSchedulingShiftsList(GetScheduledShiftsRequest request)
     {
         try
         {
             _scheduleProcessor.SetCurrentUser(CurrentUser);
-            var result = await GetSchedulingShifts();
+            var result = await GetSchedulingShifts(request);
             var shifts = JsonConvert.DeserializeObject<List<SchedulingShift>>(result);
 
             List<DTOs.Schedules.ScheduleResponse> schList = new List<DTOs.Schedules.ScheduleResponse>();
@@ -358,7 +358,7 @@ public class ShiftProcessor : BaseProcessor
             }
             else if (request.ViewType == "week")
             {
-                var schedulingShifts = await GetSchedulingShiftsList();
+                var schedulingShifts = await GetSchedulingShiftsList(request);
                 for (int i = 0; i < 7; i++)
                 {
                     var date = request.StartDate.AddDays(i);
@@ -375,7 +375,7 @@ public class ShiftProcessor : BaseProcessor
             }
             else if (request.ViewType == "month")
             {
-                var schedulingShifts = await GetSchedulingShiftsList();
+                var schedulingShifts = await GetSchedulingShiftsList(request);
                 int numberOfDays = (request.EndDate - request.StartDate).Days + 1;
 
                 // Loop through each day in the month view
@@ -406,6 +406,10 @@ public class ShiftProcessor : BaseProcessor
                         day.SchedulingShifts = day.SchedulingShifts
                             .Where(s => s.UserAssignments != null && s.UserAssignments.Any())
                             .ToList();
+                    }
+                    if (request.IsAssignmentScreen == true)
+                    {
+                        calendarDays = calendarDays.Where(c => c.SchedulingShifts?.Count > 0).ToList();
                     }
                 }
                 else if (columns != null && columns.Count > 0)

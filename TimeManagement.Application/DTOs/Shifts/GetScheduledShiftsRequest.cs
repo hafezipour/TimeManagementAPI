@@ -20,6 +20,8 @@ public class GetScheduledShiftsRequest
     public int? LocationId { get; set; }
     
     public List<int>? EmployeeIds { get; set; }
+    public List<int>? ShiftIds { get; set; }//currently not in use, but can be used for filters or fetching data for selective shift(s) only in futures
+    public bool? IsAssignmentScreen { get; set; }
 }
 
 

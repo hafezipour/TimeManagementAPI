@@ -167,13 +167,14 @@ public class ShiftsRepository
     /// <summary>
     /// Get scheduling shifts for a tenant
     /// </summary>
-    public async Task<string> GetSchedulingShifts(int tenantId)
+    public async Task<string> GetSchedulingShifts(List<int>? employeeIds, int tenantId)
     {
         try
         {
             List<SqlParameterModel> param = new List<SqlParameterModel>()
             {
-                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId},
+                new SqlParameterModel(){ Name = "EmployeeIds", Value = employeeIds?.Count > 0 ? string.Join(',', employeeIds) : ""}
             };
             return await _dbOperations.ExecuteDataSetAsync("usp_Shifts_GetSchedulingShifts", param);
         }

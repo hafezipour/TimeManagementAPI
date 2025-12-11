@@ -70,7 +70,7 @@ public class ColumnProcessor : BaseProcessor
             ShiftProcessor.SetCurrentUser(this.CurrentUser);
             var result = await _columnRepository.GetColumns(CurrentUser.TenantID, request.LayoutId);
             var columns = JsonConvert.DeserializeObject<List<Column>>(result);
-            var schedulingShifts = await ShiftProcessor.GetSchedulingShiftsList();
+            var schedulingShifts = await ShiftProcessor.GetSchedulingShiftsList(null);
 
             foreach (var column in columns)
             {
