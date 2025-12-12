@@ -490,6 +490,46 @@ public class ShiftProcessor : BaseProcessor
                 // This shift occurs on this date
                 // The schedule.StartTime and schedule.EndTime define the shift times
                 shiftCopy.EvaluationDate = date;
+                
+                // Set StartDate and EndDate based on shift schedule times (including time components)
+                if (shiftCopy.Schedules != null)
+                {
+                    // StartDate = date + start time
+                    if (shiftCopy.Schedules.StartTime.HasValue)
+                    {
+                        shiftCopy.StartDate = date.Date.Add(shiftCopy.Schedules.StartTime.Value);
+                    }
+                    else
+                    {
+                        shiftCopy.StartDate = date.Date;
+                    }
+                    
+                    // EndDate = date + end time (or next day if spans midnight)
+                    if (shiftCopy.Schedules.EndTime.HasValue)
+                    {
+                        if (shiftCopy.Schedules.StartTime.HasValue && 
+                            shiftCopy.Schedules.EndTime.Value < shiftCopy.Schedules.StartTime.Value)
+                        {
+                            // Shift spans midnight, so EndDate is on the next day
+                            shiftCopy.EndDate = date.Date.AddDays(1).Add(shiftCopy.Schedules.EndTime.Value);
+                        }
+                        else
+                        {
+                            // Same day
+                            shiftCopy.EndDate = date.Date.Add(shiftCopy.Schedules.EndTime.Value);
+                        }
+                    }
+                    else
+                    {
+                        shiftCopy.EndDate = date.Date;
+                    }
+                }
+                else
+                {
+                    shiftCopy.StartDate = date.Date;
+                    shiftCopy.EndDate = date.Date;
+                }
+                
                 result.Add(shiftCopy);
             }
         }
@@ -581,10 +621,40 @@ public class ShiftProcessor : BaseProcessor
                                     assignmentSchedule,
                                     timeOffRequests
                                 );
-                                if (timeOffStatus == TimeOffStatus.Full)
+                                
+                                // Set FromDate and ToDate based on assignment schedule times (including time components)
+                                var evaluationDate = (DateTime)shift.EvaluationDate;
+                                
+                                // FromDate = evaluation date + start time
+                                if (assignmentSchedule.StartTime.HasValue)
                                 {
-
+                                    assignmentCopy.FromDate = evaluationDate.Date.Add(assignmentSchedule.StartTime.Value);
                                 }
+                                else
+                                {
+                                    assignmentCopy.FromDate = evaluationDate.Date;
+                                }
+                                
+                                // ToDate = evaluation date + end time (or next day if spans midnight)
+                                if (assignmentSchedule.EndTime.HasValue)
+                                {
+                                    if (assignmentSchedule.StartTime.HasValue && 
+                                        assignmentSchedule.EndTime.Value < assignmentSchedule.StartTime.Value)
+                                    {
+                                        // Assignment spans midnight, so ToDate is on the next day
+                                        assignmentCopy.ToDate = evaluationDate.Date.AddDays(1).Add(assignmentSchedule.EndTime.Value);
+                                    }
+                                    else
+                                    {
+                                        // Same day
+                                        assignmentCopy.ToDate = evaluationDate.Date.Add(assignmentSchedule.EndTime.Value);
+                                    }
+                                }
+                                else
+                                {
+                                    assignmentCopy.ToDate = evaluationDate.Date;
+                                }
+                                
                                 assignmentCopy.Schedules = assignmentSchedule;
                                 assignmentCopy.TimeOffStatus = timeOffStatus;
                                 assignmentCopy.TimeOffRequests = timeOffEntries;

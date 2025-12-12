@@ -35,6 +35,10 @@ public class ShiftAssignmentDetailDto
     // Time off information
     public TimeOffStatus? TimeOffStatus { get; set; }
     public List<TimeOffRequestsForUsers>? TimeOffRequests { get; set; }
+    
+    // Assignment date range
+    public DateTime? FromDate { get; set; }
+    public DateTime? ToDate { get; set; }
 }
 
 public class AssignmentWorkCode
