@@ -581,7 +581,10 @@ public class ShiftProcessor : BaseProcessor
                                     assignmentSchedule,
                                     timeOffRequests
                                 );
+                                if (timeOffStatus == TimeOffStatus.Full)
+                                {
 
+                                }
                                 assignmentCopy.Schedules = assignmentSchedule;
                                 assignmentCopy.TimeOffStatus = timeOffStatus;
                                 assignmentCopy.TimeOffRequests = timeOffEntries;
