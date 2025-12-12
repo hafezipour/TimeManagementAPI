@@ -512,14 +512,14 @@ public class ShiftProcessor : BaseProcessor
 
         // Get comma-separated shift IDs using extension method
         string shiftIds = schedulingShiftsAll.Select(c => c.Id).Distinct().ToCommaSeparatedString();
-        
+
         // Prepare userIds string for filtering - if employeeIds is provided, filter by those employees
         string userIds = null;
         if (employeeIds != null && employeeIds.Any())
         {
             userIds = string.Join(",", employeeIds);
         }
-        
+
         var assignmentsJson = await _shiftAssignmentRepository.Get(userIds, shiftIds, CurrentUser.TenantID);
         allAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(assignmentsJson);
 
@@ -581,16 +581,9 @@ public class ShiftProcessor : BaseProcessor
                                     assignmentSchedule,
                                     timeOffRequests
                                 );
-                                //if (timeOffStatus == TimeOffStatus.Partial || timeOffStatus == TimeOffStatus.Full)
-                                //{
 
-                                //}
-                                // Only add assignment if user is not on time off (None)
-                                if (timeOffStatus == TimeOffStatus.None || timeOffStatus == TimeOffStatus.Partial)
-                                {
-                                    assignmentCopy.Schedules = assignmentSchedule;
-                                    validAssignmentsForDate.Add(assignmentCopy);
-                                }
+                                assignmentCopy.Schedules = assignmentSchedule;
+                                validAssignmentsForDate.Add(assignmentCopy);
                             }
                         }
                     }
@@ -682,9 +675,9 @@ public class ShiftProcessor : BaseProcessor
             {
                 // Check if assignment completely falls within this occurrence (Full time off)
                 // Assignment is completely within if: start >= occurrence start AND end <= occurrence end
-                bool isCompletelyWithin = evalStartDateTime >= occurrence.StartDateTime && 
+                bool isCompletelyWithin = evalStartDateTime >= occurrence.StartDateTime &&
                                          evalEndDateTime <= occurrence.EndDateTime;
-                
+
                 if (isCompletelyWithin)
                 {
                     return TimeOffStatus.Full;
@@ -693,9 +686,9 @@ public class ShiftProcessor : BaseProcessor
                 // Check if assignment has any overlap with this occurrence (Partial time off)
                 // Overlap occurs when: assignment starts before occurrence ends AND assignment ends after occurrence starts
                 // This catches ANY overlap, even if it's just 2 minutes
-                bool hasOverlap = evalStartDateTime < occurrence.EndDateTime && 
+                bool hasOverlap = evalStartDateTime < occurrence.EndDateTime &&
                                  evalEndDateTime > occurrence.StartDateTime;
-                
+
                 if (hasOverlap)
                 {
                     result = TimeOffStatus.Partial;
