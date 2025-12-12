@@ -165,7 +165,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
             });
             var scheduledShiftsResponseData = JsonConvert.DeserializeObject<GetScheduledShiftsResponse>(scheduledShiftsResponse);
 
-
+            List<ShiftAssignmentDetailDto> assignments = scheduledShiftsResponseData.Data.SelectMany(ds => ds.SchedulingShifts.Where(c => c.UserAssignments?.Count > 0).SelectMany(c => c.UserAssignments)).ToList();
             // Validate that the new schedule does not conflict with existing assignments
             var conflicts = _conflictService.DetectConflicts(request, existingAssignments, shiftAssignmentSchedules);
             if (conflicts != null && conflicts.Any())
