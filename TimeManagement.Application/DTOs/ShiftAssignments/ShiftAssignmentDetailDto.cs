@@ -1,4 +1,6 @@
 using TimeManagement.Application.DTOs.Schedules;
+using TimeManagement.Application.DTOs.TimeOffRequests;
+using TimeManagement.Application.Processors;
 
 namespace TimeManagement.Application.DTOs.ShiftAssignments;
 
@@ -29,6 +31,10 @@ public class ShiftAssignmentDetailDto
     public List<AssignmentJobCode>? JobCodes { get; set; }
     public List<AssignmentLabel>? Labels { get; set; }
     public ScheduleResponse Schedules { get; set; }
+    
+    // Time off information
+    public TimeOffStatus? TimeOffStatus { get; set; }
+    public List<TimeOffRequestsForUsers>? TimeOffRequests { get; set; }
 }
 
 public class AssignmentWorkCode

@@ -575,7 +575,7 @@ public class ShiftProcessor : BaseProcessor
                             if (timesAreValid)
                             {
                                 // Check if the user is on time off for the evaluation date
-                                TimeOffStatus timeOffStatus = IsUserOnTimeOff(
+                                var (timeOffStatus, timeOffEntries) = IsUserOnTimeOff(
                                     assignmentCopy.UserId,
                                     shift.EvaluationDate,
                                     assignmentSchedule,
@@ -583,6 +583,8 @@ public class ShiftProcessor : BaseProcessor
                                 );
 
                                 assignmentCopy.Schedules = assignmentSchedule;
+                                assignmentCopy.TimeOffStatus = timeOffStatus;
+                                assignmentCopy.TimeOffRequests = timeOffEntries;
                                 validAssignmentsForDate.Add(assignmentCopy);
                             }
                         }
@@ -600,8 +602,8 @@ public class ShiftProcessor : BaseProcessor
     /// <param name="evaluationDate">The evaluation date (nullable)</param>
     /// <param name="assignmentSchedule">The assignment's schedule with StartTime and EndTime</param>
     /// <param name="timeOffRequests">List of time off requests to check against</param>
-    /// <returns>TimeOffStatus indicating None, Partial, or Full time off</returns>
-    private TimeOffStatus IsUserOnTimeOff(
+    /// <returns>Tuple containing TimeOffStatus and list of matching time off requests</returns>
+    private (TimeOffStatus Status, List<TimeOffRequestsForUsers> TimeOffEntries) IsUserOnTimeOff(
         int userId,
         DateTime? evaluationDate,
         DTOs.Schedules.ScheduleResponse assignmentSchedule,
@@ -609,7 +611,7 @@ public class ShiftProcessor : BaseProcessor
     {
         if (!evaluationDate.HasValue)
         {
-            return TimeOffStatus.None;
+            return (TimeOffStatus.None, new List<TimeOffRequestsForUsers>());
         }
 
         var evalDate = evaluationDate.Value;
@@ -617,7 +619,7 @@ public class ShiftProcessor : BaseProcessor
         // Get assignment start and end DateTime for the evaluation date
         if (!assignmentSchedule.StartTime.HasValue || !assignmentSchedule.EndTime.HasValue)
         {
-            return TimeOffStatus.None;
+            return (TimeOffStatus.None, new List<TimeOffRequestsForUsers>());
         }
 
         var evalStartDateTime = evalDate.Date.Add(assignmentSchedule.StartTime.Value);
@@ -631,7 +633,8 @@ public class ShiftProcessor : BaseProcessor
             evalEndDateTime = evalDate.Date.AddDays(1).Add(assignmentSchedule.EndTime.Value);
         }
 
-        TimeOffStatus result = TimeOffStatus.None;
+        TimeOffStatus resultStatus = TimeOffStatus.None;
+        List<TimeOffRequestsForUsers> matchingTimeOffEntries = new List<TimeOffRequestsForUsers>();
 
         foreach (var tor in timeOffRequests)
         {
@@ -670,34 +673,48 @@ public class ShiftProcessor : BaseProcessor
                 tor.EndTime.Value
             );
 
+            bool hasOverlap = false;
+            bool isCompletelyWithin = false;
+
             // Check each occurrence for overlap
             foreach (var occurrence in occurrences)
             {
                 // Check if assignment completely falls within this occurrence (Full time off)
                 // Assignment is completely within if: start >= occurrence start AND end <= occurrence end
-                bool isCompletelyWithin = evalStartDateTime >= occurrence.StartDateTime &&
-                                         evalEndDateTime <= occurrence.EndDateTime;
+                isCompletelyWithin = evalStartDateTime >= occurrence.StartDateTime &&
+                                     evalEndDateTime <= occurrence.EndDateTime;
 
                 if (isCompletelyWithin)
                 {
-                    return TimeOffStatus.Full;
+                    resultStatus = TimeOffStatus.Full;
+                    hasOverlap = true;
+                    break; // Found a full match, no need to check other occurrences for this request
                 }
 
                 // Check if assignment has any overlap with this occurrence (Partial time off)
                 // Overlap occurs when: assignment starts before occurrence ends AND assignment ends after occurrence starts
                 // This catches ANY overlap, even if it's just 2 minutes
-                bool hasOverlap = evalStartDateTime < occurrence.EndDateTime &&
-                                 evalEndDateTime > occurrence.StartDateTime;
+                bool occurrenceHasOverlap = evalStartDateTime < occurrence.EndDateTime &&
+                                           evalEndDateTime > occurrence.StartDateTime;
 
-                if (hasOverlap)
+                if (occurrenceHasOverlap)
                 {
-                    result = TimeOffStatus.Partial;
-                    // Don't break here - continue checking other occurrences in case there's a Full match
+                    hasOverlap = true;
+                    if (resultStatus != TimeOffStatus.Full)
+                    {
+                        resultStatus = TimeOffStatus.Partial;
+                    }
                 }
+            }
+
+            // If this time off request has any overlap, add it to the matching entries
+            if (hasOverlap)
+            {
+                matchingTimeOffEntries.Add(tor);
             }
         }
 
-        return result;
+        return (resultStatus, matchingTimeOffEntries);
     }
 
     /// <summary>
