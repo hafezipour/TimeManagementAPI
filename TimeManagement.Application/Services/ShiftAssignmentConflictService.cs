@@ -151,6 +151,48 @@ public class ShiftAssignmentConflictService
         return conflicts.Count > 0 ? conflicts : null;
     }
 
+    /// <summary>
+    /// Detect schedule conflicts using precalculated occurrences from assignments (FromDate/ToDate) 
+    /// instead of generating from ScheduleResponse Schedules property.
+    /// </summary>
+    public List<ScheduleConflictDetail>? DetectConflicts2(
+        ScheduleEmployeeRequest request,
+        List<ShiftAssignmentDetailDto> assignments)
+    {
+        var newScheduleRequest = request.Schedules.First();
+        var newSchedule = ConvertToScheduleResponse(newScheduleRequest);
+        var rangeStart = newSchedule.StartFrom.Value.Date;
+        var rangeEnd = DetermineRangeEnd(newSchedule, rangeStart);
+        var scheduleOccurrences = GenerateOccurrences(newSchedule, rangeStart, rangeEnd);
+        var conflicts = new List<ScheduleConflictDetail>();
+
+        foreach (var assignment in assignments)
+        {
+            foreach (var occurrence in scheduleOccurrences)
+            {
+                if (assignment.FromDate.HasValue && assignment.ToDate.HasValue &&
+                    occurrence.Date >= assignment.FromDate.Value.Date && 
+                    occurrence.Date <= assignment.ToDate.Value.Date)
+                {
+                    conflicts.Add(new ScheduleConflictDetail
+                    {
+                        UserId = request.UserId,
+                        ExistingAssignmentId = assignment.Id,
+                        ExistingScheduleId = newSchedule.Id,
+                        RequestedScheduleId = newSchedule.Id,
+                        Date = occurrence.Date,
+                        ExistingShiftName = assignment.ShiftName,
+                        ExistingWindow = occurrence.Window,
+                        RequestedWindow = occurrence.Window,
+                        Reason = "Schedule overlap detected."
+                    });
+                }
+            }
+        }
+
+        return conflicts.Count > 0 ? conflicts : null;
+    }
+
     public List<ScheduleConflictDetail>? DetectAvailabilityConflicts(
         ScheduleEmployeeRequest request,
         List<AvailabilityDto>? availabilityWindows)
