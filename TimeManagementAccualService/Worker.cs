@@ -23,7 +23,7 @@ namespace TimeManagement.AccrualService
                     await _accrualEvaluator.Evaluate(stoppingToken);
                     
                     // Run every 5 minutes (300000 milliseconds)
-                    await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken);
+                    await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
                 }
                 catch (OperationCanceledException)
                 {
