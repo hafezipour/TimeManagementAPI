@@ -446,7 +446,7 @@ public class ShiftAssignmentConflictService
         return (end ?? horizonEnd).Date;
     }
 
-    private DateTime? GetScheduleEndDate(ScheduleResponse schedule)
+    public DateTime? GetScheduleEndDate(ScheduleResponse schedule)
     {
         if (schedule == null)
         {

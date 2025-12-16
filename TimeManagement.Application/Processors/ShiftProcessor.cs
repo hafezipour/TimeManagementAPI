@@ -11,6 +11,7 @@ using TimeManagement.Application.Extensions;
 using TimeManagement.Application.Services;
 using TimeManagement.Domain.Models;
 using TimeManagement.Infra.Repositories;
+using static Azure.Core.HttpHeader;
 
 namespace TimeManagement.Application.Processors;
 
@@ -31,8 +32,9 @@ public class ShiftProcessor : BaseProcessor
     private readonly TimeOffRequestsRepository _timeOffRequestsRepository;
     private readonly TimeOffRequestsProcessor _timeOffRequestsProcessor;
     private ColumnProcessor _columnProcessor;
+    private ShiftAssignmentConflictService _shiftAssignmentConflictService;
 
-    public ShiftProcessor(IServiceProvider serviceProvider, ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor, ScheduleEvaluator scheduleEvaluator, ShiftAssignmentRepository shiftAssignmentRepository, TimeOffRequestsRepository timeOffRequestsRepository, TimeOffRequestsProcessor timeOffRequestsProcessor)
+    public ShiftProcessor(ShiftAssignmentConflictService shiftAssignmentConflictService, IServiceProvider serviceProvider, ShiftsRepository shiftsRepository, ScheduleProcessor scheduleProcessor, ScheduleEvaluator scheduleEvaluator, ShiftAssignmentRepository shiftAssignmentRepository, TimeOffRequestsRepository timeOffRequestsRepository, TimeOffRequestsProcessor timeOffRequestsProcessor)
     {
         _shiftsRepository = shiftsRepository;
         _scheduleProcessor = scheduleProcessor;
@@ -41,6 +43,7 @@ public class ShiftProcessor : BaseProcessor
         _shiftAssignmentRepository = shiftAssignmentRepository;
         _timeOffRequestsRepository = timeOffRequestsRepository;
         _timeOffRequestsProcessor = timeOffRequestsProcessor;
+        _shiftAssignmentConflictService = shiftAssignmentConflictService;
     }
 
     private ColumnProcessor ColumnProcessor => _columnProcessor ??= _serviceProvider.GetRequiredService<ColumnProcessor>();
@@ -67,6 +70,7 @@ public class ShiftProcessor : BaseProcessor
                 "getunassigned" => await GetUnassignedShifts(jsonData.FromJson<GetUnassignedShiftsRequest>()),
                 "getschedulingshifts" => await GetSchedulingShifts(null),
                 "getscheduledshifts" => await GetScheduledShifts(jsonData.FromJson<GetScheduledShiftsRequest>()),
+                "getscheduledshifts-for-trade" => await GetScheduledShiftsForTrade(jsonData.FromJson<GetScheduledShiftsRequest>()),
                 "updateslotpositions" => await UpdateSlotPositions(jsonData.FromJson<UpdateSlotPositionsRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
@@ -300,6 +304,89 @@ public class ShiftProcessor : BaseProcessor
         ).ToList();
         return filteredTimeOffRequests;
     }
+    public async Task<string> GetScheduledShiftsForTrade(GetScheduledShiftsRequest request)
+    {
+        try
+        {
+            // Set current user for schedule processor
+            _scheduleProcessor.SetCurrentUser(this.CurrentUser);
+            ColumnProcessor.SetCurrentUser(this.CurrentUser);
+
+            var schedulingShifts = await GetSchedulingShiftsList(request);
+            int numberOfDays = (request.EndDate - request.StartDate).Days + 1;
+
+            List<CalendarDay> calendarDays = new List<CalendarDay>();
+
+            var timeOffStartDate = request.StartDate.Date;
+            var timeOffEndDate = request.EndDate.Date.AddDays(1).AddTicks(-1);
+            var filteredTimeOffRequests = await SetHereTheTimeOffs(timeOffStartDate, timeOffEndDate, request.EmployeeIds);
+            // Loop through each day in the month view
+            for (int i = 0; i < numberOfDays; i++)
+            {
+                var date = request.StartDate.AddDays(i);
+                var shifts = await GetValidShiftsList(date, schedulingShifts);
+                //SetEmployeeAssignmentsForShifts(allAssignments, shifts,);
+                calendarDays.Add(new CalendarDay
+                {
+                    DayNo = date.Day,
+                    MonthNo = date.Month,
+                    SchedulingShifts = shifts
+                });
+            }
+            await SetEmployeeAssignmentsForShiftsAsync(filteredTimeOffRequests, calendarDays.SelectMany(c => c.SchedulingShifts).ToList(), request.EmployeeIds);//its passed by reference, so it will get setted the assignments
+
+            if (request.EmployeeIds != null && request.EmployeeIds.Any())
+            {
+                foreach (var day in calendarDays)
+                {
+                    day.SchedulingShifts = day.SchedulingShifts
+                        .Where(s => s.UserAssignments != null && s.UserAssignments.Any())
+                        .ToList();
+                }
+                if (request.IsAssignmentScreen == true)
+                {
+                    calendarDays = calendarDays.Where(c => c.SchedulingShifts?.Count > 0).ToList();
+                }
+            }
+            calendarDays = calendarDays.Where(c => c.SchedulingShifts != null && c.SchedulingShifts.Count > 0).ToList();
+            var shiftsData = calendarDays.SelectMany(c => c.SchedulingShifts).DistinctBy(c => c.Id).ToList();
+            var a = shiftsData.Select(x => new
+            {
+                Shift = x,
+                UserAssignments = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments).Select(m => new
+                {
+                    Id = m.Id,
+                    ShiftId = m.ShiftId,
+                    UserId = m.UserId,
+                    Notes = m.Notes,
+                    Schedule = new
+                    {
+                        Id = m.Schedules.Id,
+                        SourceId = m.Schedules.SourceId,
+                        SourceType = m.Schedules.SourceType,
+                        StartFrom = m.Schedules.StartFrom,
+                        StartTime = m.Schedules.StartTime,
+                        EndDate = _shiftAssignmentConflictService.GetScheduleEndDate(m.Schedules),
+                        EndTime = m.Schedules.EndTime
+                    }
+                })).DistinctBy(c => c.Id).ToList(),
+                Occurances = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments).Select(m => new
+                {
+                    Id = m.Id,
+                    ShiftId = m.ShiftId,
+                    UserId = m.UserId,
+                    Notes = m.Notes,
+                    DayNo = c.DayNo,
+                    MonthNo = c.MonthNo
+                })).ToList(),
+            }).ToList();
+            return a.ToJson();
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving scheduled shifts: {ex.Message}" }.ToJson();
+        }
+    }
 
     /// <summary>
     /// Get scheduled shifts with filters (date range, view type, etc.)
@@ -390,7 +477,6 @@ public class ShiftProcessor : BaseProcessor
                         MonthNo = date.Month,
                         SchedulingShifts = shifts
                     });
-
                 }
                 await SetEmployeeAssignmentsForShiftsAsync(filteredTimeOffRequests, calendarDays.SelectMany(c => c.SchedulingShifts).ToList(), request.EmployeeIds);//its passed by reference, so it will get setted the assignments
                 //return calendarDays.ToJson();
@@ -490,7 +576,7 @@ public class ShiftProcessor : BaseProcessor
                 // This shift occurs on this date
                 // The schedule.StartTime and schedule.EndTime define the shift times
                 shiftCopy.EvaluationDate = date;
-                
+
                 // Set StartDate and EndDate based on shift schedule times (including time components)
                 if (shiftCopy.Schedules != null)
                 {
@@ -503,11 +589,11 @@ public class ShiftProcessor : BaseProcessor
                     {
                         shiftCopy.StartDate = date.Date;
                     }
-                    
+
                     // EndDate = date + end time (or next day if spans midnight)
                     if (shiftCopy.Schedules.EndTime.HasValue)
                     {
-                        if (shiftCopy.Schedules.StartTime.HasValue && 
+                        if (shiftCopy.Schedules.StartTime.HasValue &&
                             shiftCopy.Schedules.EndTime.Value < shiftCopy.Schedules.StartTime.Value)
                         {
                             // Shift spans midnight, so EndDate is on the next day
@@ -529,7 +615,7 @@ public class ShiftProcessor : BaseProcessor
                     shiftCopy.StartDate = date.Date;
                     shiftCopy.EndDate = date.Date;
                 }
-                
+
                 result.Add(shiftCopy);
             }
         }
@@ -621,10 +707,10 @@ public class ShiftProcessor : BaseProcessor
                                     assignmentSchedule,
                                     timeOffRequests
                                 );
-                                
+
                                 // Set FromDate and ToDate based on assignment schedule times (including time components)
                                 var evaluationDate = (DateTime)shift.EvaluationDate;
-                                
+
                                 // FromDate = evaluation date + start time
                                 if (assignmentSchedule.StartTime.HasValue)
                                 {
@@ -634,11 +720,11 @@ public class ShiftProcessor : BaseProcessor
                                 {
                                     assignmentCopy.FromDate = evaluationDate.Date;
                                 }
-                                
+
                                 // ToDate = evaluation date + end time (or next day if spans midnight)
                                 if (assignmentSchedule.EndTime.HasValue)
                                 {
-                                    if (assignmentSchedule.StartTime.HasValue && 
+                                    if (assignmentSchedule.StartTime.HasValue &&
                                         assignmentSchedule.EndTime.Value < assignmentSchedule.StartTime.Value)
                                     {
                                         // Assignment spans midnight, so ToDate is on the next day
@@ -654,7 +740,7 @@ public class ShiftProcessor : BaseProcessor
                                 {
                                     assignmentCopy.ToDate = evaluationDate.Date;
                                 }
-                                
+
                                 assignmentCopy.Schedules = assignmentSchedule;
                                 assignmentCopy.TimeOffStatus = timeOffStatus;
                                 assignmentCopy.TimeOffRequests = timeOffEntries;
