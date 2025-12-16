@@ -352,18 +352,21 @@ public class ShiftProcessor : BaseProcessor
             var shiftsData = calendarDays.SelectMany(c => c.SchedulingShifts).DistinctBy(c => c.Id).ToList();
             var a = shiftsData.Select(x => new
             {
-                Shift = x,
+                Shift = new
+                {
+                    Id = x.Id,
+                    nam = x.ShiftName,
+                    s = x.ShiftCode
+                },
                 UserAssignments = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments).Select(m => new
                 {
                     Id = m.Id,
-                    ShiftId = m.ShiftId,
+                    //ShiftId = m.ShiftId,
                     UserId = m.UserId,
                     Notes = m.Notes,
                     Schedule = new
                     {
                         Id = m.Schedules.Id,
-                        SourceId = m.Schedules.SourceId,
-                        SourceType = m.Schedules.SourceType,
                         StartFrom = m.Schedules.StartFrom,
                         StartTime = m.Schedules.StartTime,
                         EndDate = _shiftAssignmentConflictService.GetScheduleEndDate(m.Schedules),
@@ -373,9 +376,9 @@ public class ShiftProcessor : BaseProcessor
                 Occurances = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments).Select(m => new
                 {
                     Id = m.Id,
-                    ShiftId = m.ShiftId,
+                    //ShiftId = m.ShiftId,
                     UserId = m.UserId,
-                    Notes = m.Notes,
+                    //Notes = m.Notes,
                     DayNo = c.DayNo,
                     MonthNo = c.MonthNo
                 })).ToList(),
