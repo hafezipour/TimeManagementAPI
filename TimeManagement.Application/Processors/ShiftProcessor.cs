@@ -380,7 +380,8 @@ public class ShiftProcessor : BaseProcessor
                     UserId = m.UserId,
                     //Notes = m.Notes,
                     DayNo = c.DayNo,
-                    MonthNo = c.MonthNo
+                    MonthNo = c.MonthNo,
+                    YearNo = m.FromDate?.Year
                 })).ToList(),
             }).ToList();
             return a.ToJson();
