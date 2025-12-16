@@ -381,7 +381,8 @@ public class ShiftProcessor : BaseProcessor
                     //Notes = m.Notes,
                     DayNo = c.DayNo,
                     MonthNo = c.MonthNo,
-                    YearNo = m.FromDate?.Year
+                    YearNo = m.FromDate?.Year,
+                    EndDate = _shiftAssignmentConflictService.GetScheduleEndDate(m.Schedules),
                 })).ToList(),
             }).ToList();
             return a.ToJson();
