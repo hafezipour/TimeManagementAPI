@@ -26,6 +26,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     private readonly AssistantQualifiersProcessor _assistantQualifiersProcessor;
     private readonly TradeBoardSettingsProcessor _tradeBoardSettingsProcessor;
     private readonly ShiftAssignmentProcessor _shiftAssignmentProcessor;
+    private readonly ShiftTradesProcessor _shiftTradesProcessor;
     private readonly EmployeeAvailabilityProcessor _employeeAvailabilityProcessor;
     private readonly CustomTableValuesProcessor _customTableValuesProcessor;
     private readonly AccrualTypesProcessor _accrualTypesProcessor;
@@ -55,6 +56,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         AssistantQualifiersProcessor assistantQualifiersProcessor,
         TradeBoardSettingsProcessor tradeBoardSettingsProcessor,
         ShiftAssignmentProcessor shiftAssignmentProcessor,
+        ShiftTradesProcessor shiftTradesProcessor,
         EmployeeAvailabilityProcessor employeeAvailabilityProcessor,
         CustomTableValuesProcessor customTableValuesProcessor,
         AccrualTypesProcessor accrualTypesProcessor,
@@ -94,6 +96,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         _assistantQualifiersProcessor = assistantQualifiersProcessor;
         _tradeBoardSettingsProcessor = tradeBoardSettingsProcessor;
         _shiftAssignmentProcessor = shiftAssignmentProcessor;
+        _shiftTradesProcessor = shiftTradesProcessor;
         _employeeAvailabilityProcessor = employeeAvailabilityProcessor;
     }
 
@@ -294,6 +297,14 @@ public class HttpGrpcService : HttpService.HttpServiceBase
                 case "shiftassignment":
                     _shiftAssignmentProcessor.SetCurrentUser(authResult.User);
                     result = await _shiftAssignmentProcessor.ProcessRequest(
+                        request.ServiceName,
+                        request.MethodName,
+                        request.JsonData);
+                    break;
+
+                case "shifttrades":
+                    _shiftTradesProcessor.SetCurrentUser(authResult.User);
+                    result = await _shiftTradesProcessor.ProcessRequest(
                         request.ServiceName,
                         request.MethodName,
                         request.JsonData);

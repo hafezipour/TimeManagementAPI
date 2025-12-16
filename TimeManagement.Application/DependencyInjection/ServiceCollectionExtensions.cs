@@ -55,6 +55,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AssistantQualifiersProcessor>();
         services.AddScoped<TradeBoardSettingsProcessor>();
         services.AddScoped<ShiftAssignmentProcessor>();
+        services.AddScoped<ShiftTradesProcessor>();
         services.AddScoped<CustomTableValuesProcessor>();
         services.AddScoped<ValidateToken>();
         services.AddScoped<EmployeeAvailabilityProcessor>();
@@ -91,6 +92,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<AssistantQualifiersRepository>();
         services.AddScoped<TradeBoardSettingsRepository>();
         services.AddScoped<ShiftAssignmentRepository>();
+        services.AddScoped<ShiftTradesRepository>();
         services.AddScoped<CustomTableValuesRepository>();
         services.AddScoped<EmployeeAvailabilityRepository>();
         services.AddScoped<TimeOffCodesRepository>();
