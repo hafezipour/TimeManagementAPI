@@ -42,7 +42,6 @@ public class ShiftTradesProcessor : BaseProcessor
             return methodName.ToLower() switch
             {
                 "sendtraderequest" => await SendTradeRequest(jsonData.FromJson<SendTradeRequest>()),
-                "validatejobcodesandworkcodes" => await ValidateJobCodesAndWorkCodes(jsonData.FromJson<ValidateJobCodesAndWorkCodesRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -113,6 +112,31 @@ public class ShiftTradesProcessor : BaseProcessor
                 }
             }
 
+            // Validate job codes and work codes before sending trade request
+            var validationRequest = new ValidateJobCodesAndWorkCodesRequest
+            {
+                TradingEmployeeId = request.TradingEmployeeId.Value,
+                TradingShiftId = request.TradingShiftId.Value,
+                IsSwap = request.IsSwap,
+                AcceptingEmployeeId = request.AcceptingEmployeeId,
+                AcceptingShiftId = request.AcceptingShiftId
+            };
+
+            var validationData = await FetchValidationData(validationRequest);
+            var validationResult = ValidateAllDatasets(validationData);
+
+            // If validation fails, return validation result immediately
+            if (!validationResult.IsValid)
+            {
+                return new
+                {
+                    success = false,
+                    message = "Trade request validation failed",
+                    tradeRequestId = (int?)null,
+                    validationResult = validationResult
+                }.ToJson();
+            }
+
             // Convert request to JSON for repository
             var jsonData = JsonConvert.SerializeObject(request);
 
@@ -123,7 +147,20 @@ public class ShiftTradesProcessor : BaseProcessor
                 CurrentUser.TenantID
             );
 
-            return result;
+            // Parse repository result
+            var repositoryResponse = JsonConvert.DeserializeObject<dynamic>(result);
+            bool success = repositoryResponse?.success ?? false;
+            string message = repositoryResponse?.message?.ToString() ?? "Failed to process trade request";
+            int? tradeRequestId = repositoryResponse?.tradeRequestId != null ? (int?)repositoryResponse.tradeRequestId : null;
+
+            // Include validation result in response
+            return new
+            {
+                success = success,
+                message = message,
+                tradeRequestId = tradeRequestId,
+                validationResult = validationResult
+            }.ToJson();
         }
         catch (Exception ex)
         {
@@ -131,57 +168,7 @@ public class ShiftTradesProcessor : BaseProcessor
         }
     }
 
-    /// <summary>
-    /// Validate job codes and work codes for shift trade requests
-    /// </summary>
-    public async Task<string> ValidateJobCodesAndWorkCodes(ValidateJobCodesAndWorkCodesRequest request)
-    {
-        try
-        {
-            // Validate request
-            if (request == null)
-            {
-                return new { success = false, message = "Request is required" }.ToJson();
-            }
-
-            if (request.TradingEmployeeId <= 0)
-            {
-                return new { success = false, message = "Trading employee ID is required" }.ToJson();
-            }
-
-            if (request.TradingShiftId <= 0)
-            {
-                return new { success = false, message = "Trading shift ID is required" }.ToJson();
-            }
-
-            // If it's a swap, validate accepting user fields
-            if (request.IsSwap)
-            {
-                if (!request.AcceptingEmployeeId.HasValue || request.AcceptingEmployeeId.Value <= 0)
-                {
-                    return new { success = false, message = "Accepting employee ID is required for swap" }.ToJson();
-                }
-
-                if (!request.AcceptingShiftId.HasValue || request.AcceptingShiftId.Value <= 0)
-                {
-                    return new { success = false, message = "Accepting shift ID is required for swap" }.ToJson();
-                }
-            }
-
-            // Fetch all data using separate method
-            var validationData = await FetchValidationData(request);
-
-            // Perform validation using single method for all 4 datasets
-            var validationResult = ValidateAllDatasets(validationData);
-
-            return JsonConvert.SerializeObject(validationResult);
-        }
-        catch (Exception ex)
-        {
-            return new { success = false, message = $"Error validating job codes and work codes: {ex.Message}" }.ToJson();
-        }
-    }
-
+    
     /// <summary>
     /// Fetch all validation data from repositories
     /// </summary>
