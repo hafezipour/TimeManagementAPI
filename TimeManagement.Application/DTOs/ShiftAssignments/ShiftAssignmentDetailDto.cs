@@ -21,6 +21,13 @@ public class ShiftAssignmentDetailDto
     public DateTimeOffset DateCreated { get; set; }
     public DateTimeOffset? DateUpdated { get; set; }
     
+    // Trade-related fields
+    public bool? IsTraded { get; set; }
+    public int? TradingUserAssignmentId { get; set; }
+    public bool? IsSwap { get; set; }
+    public int? AcceptingUserAssignmentId { get; set; }
+    public int? TradeRequestId { get; set; }
+    
     // Shift information
     public string ShiftName { get; set; }
     public string ShiftCode { get; set; }
