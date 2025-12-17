@@ -65,7 +65,7 @@ public static class ServiceCollectionExtensions
         // Register application services
         services.AddScoped<ScheduleEvaluator>();
         services.AddScoped<ShiftAssignmentConflictService>();
-        services.AddScoped<ShiftAssignmentConflictExamples>();
+        //services.AddScoped<ShiftAssignmentConflictExamples>();
         services.AddSingleton<AccrualEvaluator>();
 
         // Register repositories

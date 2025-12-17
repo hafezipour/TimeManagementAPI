@@ -1,6 +1,8 @@
+using Azure.Core;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using TimeManagement.Application.DTOs.Schedules;
 using TimeManagement.Application.DTOs.ShiftAssignments;
@@ -58,7 +60,59 @@ public class ShiftAssignmentProcessor : BaseProcessor
             throw ex;
         }
     }
+    public async Task<List<ScheduleConflictDetail>> GetAssignmentConflictsAsync(ScheduleEmployeeRequest request)
+    {
+        _shiftProcessor.SetCurrentUser(this.CurrentUser);
+        // Build a ScheduleResponse from the first requested schedule so we can
+        // calculate the natural end date using the same rules as the evaluator.
+        ScheduleResponse? scheduleForEndDate = null;
+        var firstSchedule = request.Schedules?.FirstOrDefault();
 
+        if (firstSchedule != null)
+        {
+            scheduleForEndDate = new ScheduleResponse
+            {
+                // Carry over identifying metadata for conflict reporting.
+                Id = firstSchedule.Id ?? 0,
+                SourceType = firstSchedule.SourceType ?? (int)ScheduleSourceTypes.ShiftAssignment,
+                SourceId = firstSchedule.SourceId ?? 0,
+                StartFrom = firstSchedule.StartFrom,
+                ScheduleWithoutTimes = firstSchedule.ScheduleWithoutTimes,
+                ScheduleType = firstSchedule.ScheduleType,
+                RepeatEvery = firstSchedule.RepeatEvery,
+                EndType = Enum.IsDefined(typeof(EndType), firstSchedule.EndType)
+                    ? Enum.GetName(typeof(EndType), firstSchedule.EndType)
+                    : firstSchedule.EndType.ToString(CultureInfo.InvariantCulture),
+                ValidUntil = firstSchedule.ValidUntil.HasValue
+                    ? new DateTimeOffset(firstSchedule.ValidUntil.Value)
+                    : null,
+                MaxOccurrences = firstSchedule.MaxOccurrences,
+                IsActive = firstSchedule.IsActive,
+                Frequency = firstSchedule.Frequency?.Select(f => new ScheduleFrequencyResponse
+                {
+                    Day = f.Day,
+                    DayType = f.DayType
+                }).ToList()
+            };
+        }
+
+        var endDate = _conflictService.GetScheduleEndDate(scheduleForEndDate);
+        var scheduledShiftsResponse = await _shiftProcessor.GetScheduledShifts(new DTOs.Shifts.GetScheduledShiftsRequest()
+        {
+            LayoutId = 0,
+            StartDate = request.Schedules[0].StartFrom,
+            EndDate = endDate ?? request.Schedules[0].StartFrom.AddYears(5),
+            ViewType = "month",
+            EmployeeIds = new List<int> { request.UserId }
+        });
+        var scheduledShiftsResponseData = JsonConvert.DeserializeObject<GetScheduledShiftsResponse>(scheduledShiftsResponse);
+
+        List<ShiftAssignmentDetailDto> assignments = scheduledShiftsResponseData.Data.SelectMany(ds => ds.SchedulingShifts.Where(c => c.UserAssignments?.Count > 0).SelectMany(c => c.UserAssignments)).ToList();
+        // Validate that the new schedule does not conflict with existing assignments using precalculated occurrences
+        var conflicts = _conflictService.DetectConflicts2(request, assignments);
+
+        return conflicts;
+    }
     /// <summary>
     /// Schedule an employee to a shift
     /// </summary>
@@ -149,25 +203,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
 
             #region Assignment Conflicts
 
-            _shiftProcessor.SetCurrentUser(this.CurrentUser);
-            var endDate = _conflictService.GetScheduleEndDate(new ScheduleResponse
-            {
-
-                //request.Schedules[0].Frequency
-            });
-            var scheduledShiftsResponse = await _shiftProcessor.GetScheduledShifts(new DTOs.Shifts.GetScheduledShiftsRequest()
-            {
-                LayoutId = 0,
-                StartDate = request.Schedules[0].StartFrom,
-                EndDate = endDate ?? request.Schedules[0].StartFrom.AddYears(5),
-                ViewType = "month",
-                EmployeeIds = new List<int> { request.UserId }
-            });
-            var scheduledShiftsResponseData = JsonConvert.DeserializeObject<GetScheduledShiftsResponse>(scheduledShiftsResponse);
-
-            List<ShiftAssignmentDetailDto> assignments = scheduledShiftsResponseData.Data.SelectMany(ds => ds.SchedulingShifts.Where(c => c.UserAssignments?.Count > 0).SelectMany(c => c.UserAssignments)).ToList();
-            // Validate that the new schedule does not conflict with existing assignments using precalculated occurrences
-            var conflicts = _conflictService.DetectConflicts2(request, assignments);
+            var conflicts = await GetAssignmentConflictsAsync(request);
             if (conflicts != null && conflicts.Any())
             {
                 return new

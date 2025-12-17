@@ -6,18 +6,18 @@ using System.Threading.Tasks;
 
 namespace TimeManagement
 {
-    public class ScheduleConflictDetail
-    {
-        public int UserId { get; set; }
-        public int? ExistingAssignmentId { get; set; }
-        public int? ExistingScheduleId { get; set; }
-        public int? RequestedScheduleId { get; set; }
-        public DateTime Date { get; set; }
-        public string? ExistingShiftName { get; set; }
-        public TimeWindow ExistingWindow { get; set; } = new TimeWindow();
-        public TimeWindow RequestedWindow { get; set; } = new TimeWindow();
-        public string? Reason { get; set; }
-    }
+    //public class ScheduleConflictDetail
+    //{
+    //    public int UserId { get; set; }
+    //    public int? ExistingAssignmentId { get; set; }
+    //    public int? ExistingScheduleId { get; set; }
+    //    public int? RequestedScheduleId { get; set; }
+    //    public DateTime Date { get; set; }
+    //    public string? ExistingShiftName { get; set; }
+    //    public TimeWindow ExistingWindow { get; set; } = new TimeWindow();
+    //    public TimeWindow RequestedWindow { get; set; } = new TimeWindow();
+    //    public string? Reason { get; set; }
+    //}
 
     public class OccurrencePair
     {

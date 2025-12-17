@@ -8,11 +8,9 @@ namespace TimeManagement.Controllers;
 [Route("api/[controller]")]
 public class ShiftAssignmentConflictController : ControllerBase
 {
-    private readonly ShiftAssignmentConflictExamples _examples;
 
-    public ShiftAssignmentConflictController(ShiftAssignmentConflictExamples examples)
+    public ShiftAssignmentConflictController( )
     {
-        _examples = examples;
     }
 
     /// <summary>
@@ -24,7 +22,6 @@ public class ShiftAssignmentConflictController : ControllerBase
     {
         CustomLogger.Log(LogLevel.Error, new Exception() { }, "This is a test");//Just by default set here log level as error type
 
-        var html = _examples.BuildHtmlReport();
-        return Content(html, "text/html");
+        return Content("<h1>Welcome</h1>", "text/html");
     }
 }
