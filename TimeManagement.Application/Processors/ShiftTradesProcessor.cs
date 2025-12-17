@@ -515,7 +515,8 @@ public class ShiftTradesProcessor : BaseProcessor
                 UserId = request.AcceptingEmployeeId.Value,
                 JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
                 WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
-                Schedules = new List<ScheduleRequest> { schedule }
+                Schedules = new List<ScheduleRequest> { schedule },
+                TradingAssignmentId = request.AcceptingAssignmentId
             };
 
             var conflicts = await _shiftAssignmentProcessor.GetAssignmentConflictsAsync(conflictRequest);
@@ -577,7 +578,8 @@ public class ShiftTradesProcessor : BaseProcessor
                 UserId = request.TradingEmployeeId.Value,
                 JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
                 WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
-                Schedules = new List<ScheduleRequest> { schedule }
+                Schedules = new List<ScheduleRequest> { schedule },
+                TradingAssignmentId = request.TradingAssignmentId
             };
 
             var conflicts = await _shiftAssignmentProcessor.GetAssignmentConflictsAsync(conflictRequest);

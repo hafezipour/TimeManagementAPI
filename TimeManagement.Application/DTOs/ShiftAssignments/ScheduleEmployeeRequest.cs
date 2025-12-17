@@ -11,7 +11,7 @@ public class ScheduleEmployeeRequest
     public string? JobCodeIds { get; set; } // Comma-separated job code IDs
     public string? LabelIds { get; set; } // Comma-separated label IDs
     public string? Notes { get; set; }
-    public int? ExcludeAssignmentId { get; set; }
+    public int? TradingAssignmentId { get; set; }
     public List<ScheduleRequest>? Schedules { get; set; }
 }
 

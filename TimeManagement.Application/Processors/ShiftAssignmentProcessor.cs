@@ -107,7 +107,10 @@ public class ShiftAssignmentProcessor : BaseProcessor
         });
         var scheduledShiftsResponseData = JsonConvert.DeserializeObject<GetScheduledShiftsResponse>(scheduledShiftsResponse);
 
-        List<ShiftAssignmentDetailDto> assignments = scheduledShiftsResponseData.Data.SelectMany(ds => ds.SchedulingShifts.Where(c => c.UserAssignments?.Count > 0).SelectMany(c => c.UserAssignments)).ToList();
+        List<ShiftAssignmentDetailDto> assignments = scheduledShiftsResponseData.Data.SelectMany(ds => ds.SchedulingShifts
+            .Where(c => c.UserAssignments?.Count > 0)
+            .Where(c => request.TradingAssignmentId == null || !c.UserAssignments.Any(ua => ua.Id == request.TradingAssignmentId))
+            .SelectMany(c => c.UserAssignments)).ToList();
         // Validate that the new schedule does not conflict with existing assignments using precalculated occurrences
         var conflicts = _conflictService.DetectConflicts2(request, assignments);
 
