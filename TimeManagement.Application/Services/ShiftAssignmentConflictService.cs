@@ -23,6 +23,7 @@ public class ShiftAssignmentConflictService
         _scheduleEvaluator = scheduleEvaluator;
     }
 
+    [Obsolete("No more in use, need to remove it in future")]
     /// <summary>
     /// Detect schedule conflicts for the provided assignment request against existing assignments.
     /// </summary>

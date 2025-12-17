@@ -149,17 +149,17 @@ public class ShiftAssignmentProcessor : BaseProcessor
 
             #region Assignment Conflicts
 
-            // Filter schedules down to shift assignments for conflict detection (availability schedules fetched but unused for now)
-            var shiftAssignmentSchedules = schedules?
-                .Where(s => s.SourceType == (int)ScheduleSourceTypes.ShiftAssignment)
-                .ToList();
-
             _shiftProcessor.SetCurrentUser(this.CurrentUser);
+            var endDate = _conflictService.GetScheduleEndDate(new ScheduleResponse
+            {
+
+                //request.Schedules[0].Frequency
+            });
             var scheduledShiftsResponse = await _shiftProcessor.GetScheduledShifts(new DTOs.Shifts.GetScheduledShiftsRequest()
             {
                 LayoutId = 0,
                 StartDate = request.Schedules[0].StartFrom,
-                EndDate = request.Schedules[0].ValidUntil ?? request.Schedules[0].StartFrom.AddYears(10),
+                EndDate = endDate ?? request.Schedules[0].StartFrom.AddYears(5),
                 ViewType = "month",
                 EmployeeIds = new List<int> { request.UserId }
             });
