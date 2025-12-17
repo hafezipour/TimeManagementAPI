@@ -178,6 +178,173 @@ public class ShiftTradesProcessor : BaseProcessor
             string message = repositoryResponse?.message?.ToString() ?? "Failed to process trade request";
             int? tradeRequestId = repositoryResponse?.tradeRequestId != null ? (int?)repositoryResponse.tradeRequestId : null;
 
+            if (!success || !tradeRequestId.HasValue)
+            {
+                return new
+                {
+                    success = false,
+                    message = message,
+                    tradeRequestId = tradeRequestId,
+                    validationResult = validationResult
+                }.ToJson();
+            }
+
+            // Create shift assignments for both users after trade request is saved
+            _shiftAssignmentProcessor.SetCurrentUser(this.CurrentUser);
+            int? tradingAssignmentId = null;
+            int? acceptingAssignmentId = null;
+
+            // Create assignment for accepting employee (taking trading assignment)
+            if (request.TradingAssignmentId.HasValue && request.TradingDate.HasValue && 
+                request.AcceptingEmployeeId.HasValue && validationData.TradingAssignment != null)
+            {
+                // Filter job codes and work codes to only those the accepting employee has
+                var acceptingEmployeeJobCodeIds = validationData.AcceptingEmployeeJobCodes.Select(ejc => ejc.jobCodeId).ToList();
+                var acceptingEmployeeWorkCodeIds = validationData.AcceptingEmployeeWorkCodes.Select(ewc => ewc.workCodeId).ToList();
+
+                var filteredJobCodeIds = validationData.TradingAssignment.JobCodes?
+                    .Where(jc => acceptingEmployeeJobCodeIds.Contains(jc.Id))
+                    .Select(jc => jc.Id.ToString())
+                    .ToList() ?? new List<string>();
+
+                var filteredWorkCodeIds = validationData.TradingAssignment.WorkCodes?
+                    .Where(wc => acceptingEmployeeWorkCodeIds.Contains(wc.Id))
+                    .Select(wc => wc.Id.ToString())
+                    .ToList() ?? new List<string>();
+
+                // Build schedule: Daily type, StartFrom and ValidUntil same as selected date
+                var selectedDate = request.TradingDate.Value.Date;
+                var schedule = new ScheduleRequest
+                {
+                    ShiftId = request.TradingShiftId.Value,
+                    ScheduleType = (int)ScheduleType.Daily,
+                    RepeatEvery = 1,
+                    StartFrom = selectedDate,
+                    ValidUntil = selectedDate,
+                    EndType = (int)EndType.OnDate,
+                    IsActive = true,
+                    ScheduleWithoutTimes = false
+                };
+
+                // Use times from request if available
+                if (request.TradingUserAssignmentFromTime.HasValue && request.TradingUserAssignmentToTime.HasValue)
+                {
+                    schedule.StartTime = request.TradingUserAssignmentFromTime.Value.ToString(@"hh\:mm\:ss");
+                    schedule.EndTime = request.TradingUserAssignmentToTime.Value.ToString(@"hh\:mm\:ss");
+                    schedule.ScheduleWithoutTimes = false;
+                }
+                else
+                {
+                    schedule.ScheduleWithoutTimes = true;
+                }
+
+                var acceptingAssignmentRequest = new ScheduleEmployeeRequest
+                {
+                    ShiftId = request.TradingShiftId.Value,
+                    UserId = request.AcceptingEmployeeId.Value,
+                    JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
+                    WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
+                    Schedules = new List<ScheduleRequest> { schedule }
+                };
+
+                var acceptingAssignmentResult = await _shiftAssignmentProcessor.SaveAssignmentAndProcessSchedules(acceptingAssignmentRequest);
+                var acceptingAssignmentResponse = JsonConvert.DeserializeObject<dynamic>(acceptingAssignmentResult);
+                if (acceptingAssignmentResponse?.success == true && acceptingAssignmentResponse?.id != null)
+                {
+                    acceptingAssignmentId = (int?)acceptingAssignmentResponse.id;
+                }
+            }
+
+            // For swaps: Create assignment for trading employee (taking accepting assignment)
+            if (request.IsSwap && request.AcceptingAssignmentId.HasValue && request.AcceptingDate.HasValue &&
+                validationData.AcceptingAssignment != null && request.AcceptingShiftId.HasValue)
+            {
+                // Filter job codes and work codes to only those the trading employee has
+                var tradingEmployeeJobCodeIds = validationData.TradingEmployeeJobCodes.Select(ejc => ejc.jobCodeId).ToList();
+                var tradingEmployeeWorkCodeIds = validationData.TradingEmployeeWorkCodes.Select(ewc => ewc.workCodeId).ToList();
+
+                var filteredJobCodeIds = validationData.AcceptingAssignment.JobCodes?
+                    .Where(jc => tradingEmployeeJobCodeIds.Contains(jc.Id))
+                    .Select(jc => jc.Id.ToString())
+                    .ToList() ?? new List<string>();
+
+                var filteredWorkCodeIds = validationData.AcceptingAssignment.WorkCodes?
+                    .Where(wc => tradingEmployeeWorkCodeIds.Contains(wc.Id))
+                    .Select(wc => wc.Id.ToString())
+                    .ToList() ?? new List<string>();
+
+                // Build schedule: Daily type, StartFrom and ValidUntil same as selected date
+                var selectedDate = request.AcceptingDate.Value.Date;
+                var schedule = new ScheduleRequest
+                {
+                    ShiftId = request.AcceptingShiftId.Value,
+                    ScheduleType = (int)ScheduleType.Daily,
+                    RepeatEvery = 1,
+                    StartFrom = selectedDate,
+                    ValidUntil = selectedDate,
+                    EndType = (int)EndType.OnDate,
+                    IsActive = true,
+                    ScheduleWithoutTimes = false
+                };
+
+                // Use times from request if available
+                if (request.AcceptingUserAssignmentFromTime.HasValue && request.AcceptingUserAssignmentToTime.HasValue)
+                {
+                    schedule.StartTime = request.AcceptingUserAssignmentFromTime.Value.ToString(@"hh\:mm\:ss");
+                    schedule.EndTime = request.AcceptingUserAssignmentToTime.Value.ToString(@"hh\:mm\:ss");
+                    schedule.ScheduleWithoutTimes = false;
+                }
+                else
+                {
+                    schedule.ScheduleWithoutTimes = true;
+                }
+
+                var tradingAssignmentRequest = new ScheduleEmployeeRequest
+                {
+                    ShiftId = request.AcceptingShiftId.Value,
+                    UserId = request.TradingEmployeeId.Value,
+                    JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
+                    WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
+                    Schedules = new List<ScheduleRequest> { schedule }
+                };
+
+                var tradingAssignmentResult = await _shiftAssignmentProcessor.SaveAssignmentAndProcessSchedules(tradingAssignmentRequest);
+                var tradingAssignmentResponse = JsonConvert.DeserializeObject<dynamic>(tradingAssignmentResult);
+                if (tradingAssignmentResponse?.success == true && tradingAssignmentResponse?.id != null)
+                {
+                    tradingAssignmentId = (int?)tradingAssignmentResponse.id;
+                }
+            }
+
+            // Update assignments with trade-related fields
+            // Accepting assignment: accepting employee taking trading assignment
+            if (acceptingAssignmentId.HasValue)
+            {
+                await _shiftAssignmentRepository.UpdateTradeFields(
+                    acceptingAssignmentId.Value,
+                    isTraded: true,
+                    tradingUserAssignmentId: request.TradingAssignmentId, // Original trading assignment
+                    isSwap: request.IsSwap,
+                    acceptingUserAssignmentId: null, // This is the new accepting assignment
+                    tradeRequestId: tradeRequestId,
+                    userId: CurrentUser.LoginId,
+                    tenantId: CurrentUser.TenantID);
+            }
+
+            // Trading assignment: trading employee taking accepting assignment (swap only)
+            if (tradingAssignmentId.HasValue)
+            {
+                await _shiftAssignmentRepository.UpdateTradeFields(
+                    tradingAssignmentId.Value,
+                    isTraded: true,
+                    tradingUserAssignmentId: null, // This is the new trading assignment
+                    isSwap: request.IsSwap,
+                    acceptingUserAssignmentId: request.AcceptingAssignmentId, // Original accepting assignment
+                    tradeRequestId: tradeRequestId,
+                    userId: CurrentUser.LoginId,
+                    tenantId: CurrentUser.TenantID);
+            }
+
             // Include validation result in response
             return new
             {
@@ -193,7 +360,7 @@ public class ShiftTradesProcessor : BaseProcessor
         }
     }
 
-    
+
     /// <summary>
     /// Fetch all validation data from repositories
     /// </summary>
@@ -207,13 +374,13 @@ public class ShiftTradesProcessor : BaseProcessor
         // Dataset 1: Trading Employee Job Codes
         var tradingEmployeeJobCodesJson = await _employeeJobCodeAssignmentRepository.GetShortList(
             request.TradingEmployeeId, false, null, CurrentUser.TenantID);
-        validationData.TradingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(tradingEmployeeJobCodesJson)
+        validationData.TradingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(tradingEmployeeJobCodesJson) 
             ?? new List<EmployeeJobCodeAssignmentDto>();
 
         // Dataset 2: Trading Employee Work Codes
         var tradingEmployeeWorkCodesJson = await _employeeWorkCodeAssignmentRepository.GetShortList(
             request.TradingEmployeeId, false, null, CurrentUser.TenantID);
-        validationData.TradingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(tradingEmployeeWorkCodesJson)
+        validationData.TradingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(tradingEmployeeWorkCodesJson) 
             ?? new List<EmployeeWorkCodeAssignmentDto>();
 
         // Dataset 3: Trading Shift Job Codes and Work Codes
@@ -226,15 +393,15 @@ public class ShiftTradesProcessor : BaseProcessor
         validationData.TradingShiftJobCodes = tradingShift.JobCodes ?? new List<ShiftJobCode>();
         validationData.TradingShiftWorkCodes = tradingShift.WorkCodes ?? new List<ShiftWorkCode>();
 
-        var acceptingEmployeeJobCodesJson = await _employeeJobCodeAssignmentRepository.GetShortList(
+            var acceptingEmployeeJobCodesJson = await _employeeJobCodeAssignmentRepository.GetShortList(
                 request.AcceptingEmployeeId.Value, false, null, CurrentUser.TenantID);
-        validationData.AcceptingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(acceptingEmployeeJobCodesJson)
-            ?? new List<EmployeeJobCodeAssignmentDto>();
+            validationData.AcceptingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(acceptingEmployeeJobCodesJson) 
+                ?? new List<EmployeeJobCodeAssignmentDto>();
 
-        var acceptingEmployeeWorkCodesJson = await _employeeWorkCodeAssignmentRepository.GetShortList(
-            request.AcceptingEmployeeId.Value, false, null, CurrentUser.TenantID);
-        validationData.AcceptingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(acceptingEmployeeWorkCodesJson)
-            ?? new List<EmployeeWorkCodeAssignmentDto>();
+            var acceptingEmployeeWorkCodesJson = await _employeeWorkCodeAssignmentRepository.GetShortList(
+                request.AcceptingEmployeeId.Value, false, null, CurrentUser.TenantID);
+            validationData.AcceptingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(acceptingEmployeeWorkCodesJson) 
+                ?? new List<EmployeeWorkCodeAssignmentDto>();
 
         // Dataset 4: Accepting Employee and Shift (if swap)
         if (request.IsSwap && request.AcceptingEmployeeId.HasValue && request.AcceptingShiftId.HasValue)
@@ -303,8 +470,8 @@ public class ShiftTradesProcessor : BaseProcessor
                 !data.TradingEmployeeJobCodes.Any(ejc => ejc.jobCodeId == sjc.id)).ToList();
 
             if (missingJobCodes.Any())
-            {
-                isValid = false;
+                {
+                    isValid = false;
                 validationMessages.Add("Trading employee is missing required job codes for the shift.");
             }
         }
@@ -316,8 +483,8 @@ public class ShiftTradesProcessor : BaseProcessor
                 !data.TradingEmployeeWorkCodes.Any(ewc => ewc.workCodeId == swc.id)).ToList();
 
             if (missingWorkCodes.Any())
-            {
-                isValid = false;
+                {
+                    isValid = false;
                 validationMessages.Add("Trading employee is missing required work codes for the shift.");
             }
         }
@@ -335,8 +502,8 @@ public class ShiftTradesProcessor : BaseProcessor
                     !data.AcceptingEmployeeJobCodes.Any(ejc => ejc.jobCodeId == sjc.id)).ToList();
 
                 if (missingJobCodes.Any())
-                {
-                    isValid = false;
+                    {
+                        isValid = false;
                     validationMessages.Add("Accepting employee is missing required job codes for the shift.");
                 }
             }

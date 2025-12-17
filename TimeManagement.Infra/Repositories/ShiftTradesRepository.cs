@@ -15,24 +15,21 @@ public class ShiftTradesRepository
     }
 
     /// <summary>
-    /// Send a trade request (mock implementation)
+    /// Send a trade request
     /// </summary>
     public async Task<string> SendTradeRequest(string jsonData, int userId, int tenantId)
     {
         try
         {
-            // Mock implementation - just return success
-            // In real implementation, this would call a stored procedure
-            // var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftTrades_SendTradeRequest", param);
-            
-            var response = new
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
             {
-                success = true,
-                message = "Trade request sent successfully",
-                tradeRequestId = new Random().Next(1000, 9999) // Mock ID
+                new SqlParameterModel() { Name = "JsonData", Value = jsonData },
+                new SqlParameterModel() { Name = "UserId", Value = userId },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
             };
-
-            return Newtonsoft.Json.JsonConvert.SerializeObject(response);
+            
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftTrades_SendTradeRequest", param);
+            return result;
         }
         catch (Exception ex)
         {
