@@ -81,5 +81,27 @@ public class ShiftAssignmentRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Get shift assignments short list by assignment IDs (for trade validation)
+    /// Returns only: id, userId, jobCodes, workCodes
+    /// </summary>
+    public async Task<string> GetShortListByAssignmentIds(string assignmentIds, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel() { Name = "AssignmentIds", Value = assignmentIds },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
+            };
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftAssignment_GetShortListByAssignmentIds", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 

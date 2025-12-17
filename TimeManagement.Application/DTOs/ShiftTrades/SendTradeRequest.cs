@@ -1,4 +1,5 @@
 using TimeManagement.Domain.Models;
+using TimeManagement.Application.DTOs.ShiftAssignments;
 
 namespace TimeManagement.Application.DTOs.ShiftTrades;
 
@@ -26,6 +27,8 @@ public class ValidateJobCodesAndWorkCodesRequest
 {
     public int TradingEmployeeId { get; set; }
     public int TradingShiftId { get; set; }
+    public int? TradingAssignmentId { get; set; }
+    public int? AcceptingAssignmentId { get; set; }
     public int? AcceptingEmployeeId { get; set; }
     public int? AcceptingShiftId { get; set; }
     public bool IsSwap { get; set; }
@@ -54,10 +57,12 @@ public class ValidateJobCodesAndWorkCodesResponse
 {
     public bool IsValid { get; set; }
     public List<string> ValidationMessages { get; set; } = new List<string>();
-    //public List<JobCodeValidationResult>? TradingJobCodes { get; set; }
-    //public List<WorkCodeValidationResult>? TradingWorkCodes { get; set; }
-    //public List<JobCodeValidationResult>? AcceptingJobCodes { get; set; }
-    //public List<WorkCodeValidationResult>? AcceptingWorkCodes { get; set; }
+
+    // Assignment-level validation details (job codes and work codes)
+    public List<JobCodeValidationResult>? TradingAssignmentJobCodes { get; set; }
+    public List<WorkCodeValidationResult>? TradingAssignmentWorkCodes { get; set; }
+    public List<JobCodeValidationResult>? AcceptingAssignmentJobCodes { get; set; }
+    public List<WorkCodeValidationResult>? AcceptingAssignmentWorkCodes { get; set; }
 }
 
 // DTOs for employee job code and work code assignments from GetShortList
@@ -83,6 +88,16 @@ public class EmployeeWorkCodeAssignmentDto
     public bool isActive { get; set; }
 }
 
+// DTO for assignment short list (from usp_ShiftAssignment_GetShortListByAssignmentIds)
+// Note: Property names match the stored procedure output (camelCase)
+public class ShiftAssignmentShortListDto
+{
+    public int id { get; set; }
+    public int userId { get; set; }
+    public List<AssignmentWorkCode>? WorkCodes { get; set; }
+    public List<AssignmentJobCode>? JobCodes { get; set; }
+}
+
 // DTO containing all 4 datasets for validation
 public class ValidationDataDto
 {
@@ -95,5 +110,9 @@ public class ValidationDataDto
     public List<ShiftJobCode> AcceptingShiftJobCodes { get; set; } = new List<ShiftJobCode>();
     public List<ShiftWorkCode> AcceptingShiftWorkCodes { get; set; } = new List<ShiftWorkCode>();
     public bool IsSwap { get; set; }
+
+    // Assignment-level data for validation (using short list DTO)
+    public ShiftAssignmentShortListDto? TradingAssignment { get; set; }
+    public ShiftAssignmentShortListDto? AcceptingAssignment { get; set; }
 }
 

@@ -2,6 +2,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using TimeManagement.Application.DTOs.ShiftAssignments;
 using TimeManagement.Application.DTOs.ShiftTrades;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Infra.Repositories;
@@ -15,17 +16,20 @@ public class ShiftTradesProcessor : BaseProcessor
     private readonly EmployeeJobCodeAssignmentRepository _employeeJobCodeAssignmentRepository;
     private readonly EmployeeWorkCodeAssignmentRepository _employeeWorkCodeAssignmentRepository;
     private readonly ShiftsRepository _shiftsRepository;
+    private readonly ShiftAssignmentRepository _shiftAssignmentRepository;
 
     public ShiftTradesProcessor(
         ShiftTradesRepository shiftTradesRepository,
         EmployeeJobCodeAssignmentRepository employeeJobCodeAssignmentRepository,
         EmployeeWorkCodeAssignmentRepository employeeWorkCodeAssignmentRepository,
-        ShiftsRepository shiftsRepository)
+        ShiftsRepository shiftsRepository,
+        ShiftAssignmentRepository shiftAssignmentRepository)
     {
         _shiftTradesRepository = shiftTradesRepository;
         _employeeJobCodeAssignmentRepository = employeeJobCodeAssignmentRepository;
         _employeeWorkCodeAssignmentRepository = employeeWorkCodeAssignmentRepository;
         _shiftsRepository = shiftsRepository;
+        _shiftAssignmentRepository = shiftAssignmentRepository;
     }
 
     /// <summary>
@@ -117,9 +121,11 @@ public class ShiftTradesProcessor : BaseProcessor
             {
                 TradingEmployeeId = request.TradingEmployeeId.Value,
                 TradingShiftId = request.TradingShiftId.Value,
+                TradingAssignmentId = request.TradingAssignmentId,
                 IsSwap = request.IsSwap,
                 AcceptingEmployeeId = request.AcceptingEmployeeId,
-                AcceptingShiftId = request.AcceptingShiftId
+                AcceptingShiftId = request.AcceptingShiftId,
+                AcceptingAssignmentId = request.AcceptingAssignmentId
             };
 
             var validationData = await FetchValidationData(validationRequest);
@@ -182,13 +188,13 @@ public class ShiftTradesProcessor : BaseProcessor
         // Dataset 1: Trading Employee Job Codes
         var tradingEmployeeJobCodesJson = await _employeeJobCodeAssignmentRepository.GetShortList(
             request.TradingEmployeeId, false, null, CurrentUser.TenantID);
-        validationData.TradingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(tradingEmployeeJobCodesJson) 
+        validationData.TradingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(tradingEmployeeJobCodesJson)
             ?? new List<EmployeeJobCodeAssignmentDto>();
 
         // Dataset 2: Trading Employee Work Codes
         var tradingEmployeeWorkCodesJson = await _employeeWorkCodeAssignmentRepository.GetShortList(
             request.TradingEmployeeId, false, null, CurrentUser.TenantID);
-        validationData.TradingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(tradingEmployeeWorkCodesJson) 
+        validationData.TradingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(tradingEmployeeWorkCodesJson)
             ?? new List<EmployeeWorkCodeAssignmentDto>();
 
         // Dataset 3: Trading Shift Job Codes and Work Codes
@@ -206,12 +212,12 @@ public class ShiftTradesProcessor : BaseProcessor
         {
             var acceptingEmployeeJobCodesJson = await _employeeJobCodeAssignmentRepository.GetShortList(
                 request.AcceptingEmployeeId.Value, false, null, CurrentUser.TenantID);
-            validationData.AcceptingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(acceptingEmployeeJobCodesJson) 
+            validationData.AcceptingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(acceptingEmployeeJobCodesJson)
                 ?? new List<EmployeeJobCodeAssignmentDto>();
 
             var acceptingEmployeeWorkCodesJson = await _employeeWorkCodeAssignmentRepository.GetShortList(
                 request.AcceptingEmployeeId.Value, false, null, CurrentUser.TenantID);
-            validationData.AcceptingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(acceptingEmployeeWorkCodesJson) 
+            validationData.AcceptingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(acceptingEmployeeWorkCodesJson)
                 ?? new List<EmployeeWorkCodeAssignmentDto>();
 
             var acceptingShiftJson = await _shiftsRepository.GetShift(request.AcceptingShiftId.Value, CurrentUser.TenantID);
@@ -224,110 +230,94 @@ public class ShiftTradesProcessor : BaseProcessor
             validationData.AcceptingShiftWorkCodes = acceptingShift.WorkCodes ?? new List<ShiftWorkCode>();
         }
 
+        // Dataset 3b & 4b: Fetch assignments once for both trading and accepting (if they exist)
+        var assignmentIds = new List<int>();
+        if (request.TradingAssignmentId.HasValue)
+        {
+            assignmentIds.Add(request.TradingAssignmentId.Value);
+        }
+        if (request.IsSwap && request.AcceptingAssignmentId.HasValue)
+        {
+            assignmentIds.Add(request.AcceptingAssignmentId.Value);
+        }
+
+        if (assignmentIds.Any())
+        {
+            var assignmentIdsString = string.Join(",", assignmentIds);
+            var assignmentsJson = await _shiftAssignmentRepository.GetShortListByAssignmentIds(
+                assignmentIdsString, CurrentUser.TenantID);
+            var allAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentShortListDto>>(assignmentsJson)
+                ?? new List<ShiftAssignmentShortListDto>();
+
+            // Find trading assignment
+            if (request.TradingAssignmentId.HasValue)
+            {
+                validationData.TradingAssignment = allAssignments
+                    .FirstOrDefault(a => a.id == request.TradingAssignmentId.Value);
+            }
+
+            // Find accepting assignment
+            if (request.IsSwap && request.AcceptingAssignmentId.HasValue)
+            {
+                validationData.AcceptingAssignment = allAssignments
+                    .FirstOrDefault(a => a.id == request.AcceptingAssignmentId.Value);
+            }
+        }
+
         return validationData;
     }
 
     /// <summary>
-    /// Single method to validate all 4 datasets
+    /// Single method to validate all datasets (employee, shift, and assignment level)
     /// </summary>
     private ValidateJobCodesAndWorkCodesResponse ValidateAllDatasets(ValidationDataDto data)
     {
         bool isValid = true;
         List<string> validationMessages = new List<string>();
 
+        #region Shift-Level Validations: Trading Employee
+
         // Validate Trading Employee Job Codes (only if shift has job codes)
-        var tradingJobCodesResult = new List<JobCodeValidationResult>();
         if (data.TradingShiftJobCodes != null && data.TradingShiftJobCodes.Any())
         {
-            foreach (var shiftJobCode in data.TradingShiftJobCodes)
+            var missingJobCodes = data.TradingShiftJobCodes.Where(sjc =>
+                !data.TradingEmployeeJobCodes.Any(ejc => ejc.jobCodeId == sjc.id)).ToList();
+
+            if (missingJobCodes.Any())
             {
-                var employeeHasJobCode = data.TradingEmployeeJobCodes.Any(ejc => 
-                    ejc.jobCodeId == shiftJobCode.id);
-
-                tradingJobCodesResult.Add(new JobCodeValidationResult
-                {
-                    JobCodeId = shiftJobCode.id,
-                    JobCodeName = shiftJobCode.jobTitle,
-                    JobCode = shiftJobCode.jobCode,
-                    EmployeeHasJobCode = employeeHasJobCode,
-                    IsValid = employeeHasJobCode // All job codes are required
-                });
-
-                if (!employeeHasJobCode)
-                {
-                    isValid = false;
-                }
-            }
-
-            if (tradingJobCodesResult.Any(jc => !jc.IsValid))
-            {
+                isValid = false;
                 validationMessages.Add("Trading employee is missing required job codes for the shift.");
             }
         }
 
         // Validate Trading Employee Work Codes (only if shift has work codes)
-        var tradingWorkCodesResult = new List<WorkCodeValidationResult>();
         if (data.TradingShiftWorkCodes != null && data.TradingShiftWorkCodes.Any())
         {
-            foreach (var shiftWorkCode in data.TradingShiftWorkCodes)
+            var missingWorkCodes = data.TradingShiftWorkCodes.Where(swc =>
+                !data.TradingEmployeeWorkCodes.Any(ewc => ewc.workCodeId == swc.id)).ToList();
+
+            if (missingWorkCodes.Any())
             {
-                var employeeHasWorkCode = data.TradingEmployeeWorkCodes.Any(ewc => 
-                    ewc.workCodeId == shiftWorkCode.id);
-
-                // All work codes are required
-                tradingWorkCodesResult.Add(new WorkCodeValidationResult
-                {
-                    WorkCodeId = shiftWorkCode.id,
-                    WorkCodeName = shiftWorkCode.workCodeName,
-                    WorkCode = shiftWorkCode.workCode,
-                    IsRequired = true,
-                    EmployeeHasWorkCode = employeeHasWorkCode,
-                    IsValid = employeeHasWorkCode
-                });
-
-                if (!employeeHasWorkCode)
-                {
-                    isValid = false;
-                }
-            }
-
-            if (tradingWorkCodesResult.Any(wc => !wc.IsValid))
-            {
+                isValid = false;
                 validationMessages.Add("Trading employee is missing required work codes for the shift.");
             }
         }
 
-        // Validate Accepting Employee (if swap)
-        var acceptingJobCodesResult = new List<JobCodeValidationResult>();
-        var acceptingWorkCodesResult = new List<WorkCodeValidationResult>();
+        #endregion
+
+        #region Shift-Level Validations: Accepting Employee (Swap Only)
 
         if (data.IsSwap)
         {
             // Validate Accepting Employee Job Codes (only if shift has job codes)
             if (data.AcceptingShiftJobCodes != null && data.AcceptingShiftJobCodes.Any())
             {
-                foreach (var shiftJobCode in data.AcceptingShiftJobCodes)
+                var missingJobCodes = data.AcceptingShiftJobCodes.Where(sjc =>
+                    !data.AcceptingEmployeeJobCodes.Any(ejc => ejc.jobCodeId == sjc.id)).ToList();
+
+                if (missingJobCodes.Any())
                 {
-                    var employeeHasJobCode = data.AcceptingEmployeeJobCodes.Any(ejc => 
-                        ejc.jobCodeId == shiftJobCode.id);
-
-                    acceptingJobCodesResult.Add(new JobCodeValidationResult
-                    {
-                        JobCodeId = shiftJobCode.id,
-                        JobCodeName = shiftJobCode.jobTitle,
-                        JobCode = shiftJobCode.jobCode,
-                        EmployeeHasJobCode = employeeHasJobCode,
-                        IsValid = employeeHasJobCode // All job codes are required
-                    });
-
-                    if (!employeeHasJobCode)
-                    {
-                        isValid = false;
-                    }
-                }
-
-                if (acceptingJobCodesResult.Any(jc => !jc.IsValid))
-                {
+                    isValid = false;
                     validationMessages.Add("Accepting employee is missing required job codes for the shift.");
                 }
             }
@@ -335,44 +325,112 @@ public class ShiftTradesProcessor : BaseProcessor
             // Validate Accepting Employee Work Codes (only if shift has work codes)
             if (data.AcceptingShiftWorkCodes != null && data.AcceptingShiftWorkCodes.Any())
             {
-                foreach (var shiftWorkCode in data.AcceptingShiftWorkCodes)
+                var missingWorkCodes = data.AcceptingShiftWorkCodes.Where(swc =>
+                    !data.AcceptingEmployeeWorkCodes.Any(ewc => ewc.workCodeId == swc.id)).ToList();
+
+                if (missingWorkCodes.Any())
                 {
-                    var employeeHasWorkCode = data.AcceptingEmployeeWorkCodes.Any(ewc => 
-                        ewc.workCodeId == shiftWorkCode.id);
-
-                    // All work codes are required
-                    acceptingWorkCodesResult.Add(new WorkCodeValidationResult
-                    {
-                        WorkCodeId = shiftWorkCode.id,
-                        WorkCodeName = shiftWorkCode.workCodeName,
-                        WorkCode = shiftWorkCode.workCode,
-                        IsRequired = true,
-                        EmployeeHasWorkCode = employeeHasWorkCode,
-                        IsValid = employeeHasWorkCode
-                    });
-
-                    if (!employeeHasWorkCode)
-                    {
-                        isValid = false;
-                    }
-                }
-
-                if (acceptingWorkCodesResult.Any(wc => !wc.IsValid))
-                {
+                    isValid = false;
                     validationMessages.Add("Accepting employee is missing required work codes for the shift.");
                 }
             }
         }
 
+        #endregion
+
+        #region Assignment-Level Validations
+
+        if (data.TradingAssignment != null)
+        {
+            var tradingJobCodeIds = data.TradingAssignment.JobCodes?.Select(jc => jc.Id).ToList() ?? new List<int>();
+            var tradingWorkCodeIds = data.TradingAssignment.WorkCodes?.Select(wc => wc.Id).ToList() ?? new List<int>();
+
+            if (data.IsSwap)
+            {
+                // Swap: Check if trading assignment codes are present in accepting employee codes
+                if (tradingJobCodeIds.Any())
+                {
+                    var acceptingEmployeeHasAnyTradingJobCode = tradingJobCodeIds.Any(tjc =>
+                        data.AcceptingEmployeeJobCodes.Any(ejc => ejc.jobCodeId == tjc));
+
+                    if (!acceptingEmployeeHasAnyTradingJobCode)
+                    {
+                        isValid = false;
+                        validationMessages.Add("Accepting employee does not have any of the job codes assigned to the trading assignment.");
+                    }
+                }
+
+                if (tradingWorkCodeIds.Any())
+                {
+                    var acceptingEmployeeHasAnyTradingWorkCode = tradingWorkCodeIds.Any(twc =>
+                        data.AcceptingEmployeeWorkCodes.Any(ewc => ewc.workCodeId == twc));
+
+                    if (!acceptingEmployeeHasAnyTradingWorkCode)
+                    {
+                        isValid = false;
+                        validationMessages.Add("Accepting employee does not have any of the work codes assigned to the trading assignment.");
+                    }
+                }
+
+                // Swap: Check if accepting assignment codes are present in trading employee codes
+                if (data.AcceptingAssignment != null)
+                {
+                    var acceptingJobCodeIds = data.AcceptingAssignment.JobCodes?.Select(jc => jc.Id).ToList() ?? new List<int>();
+                    var acceptingWorkCodeIds = data.AcceptingAssignment.WorkCodes?.Select(wc => wc.Id).ToList() ?? new List<int>();
+
+                    if (acceptingJobCodeIds.Any())
+                    {
+                        var tradingEmployeeHasAnyAcceptingJobCode = acceptingJobCodeIds.Any(ajc =>
+                            data.TradingEmployeeJobCodes.Any(ejc => ejc.jobCodeId == ajc));
+
+                        if (!tradingEmployeeHasAnyAcceptingJobCode)
+                        {
+                            isValid = false;
+                            validationMessages.Add("Trading employee does not have any of the job codes assigned to the accepting assignment.");
+                        }
+                    }
+
+                    if (acceptingWorkCodeIds.Any())
+                    {
+                        var tradingEmployeeHasAnyAcceptingWorkCode = acceptingWorkCodeIds.Any(awc =>
+                            data.TradingEmployeeWorkCodes.Any(ewc => ewc.workCodeId == awc));
+
+                        if (!tradingEmployeeHasAnyAcceptingWorkCode)
+                        {
+                            isValid = false;
+                            validationMessages.Add("Trading employee does not have any of the work codes assigned to the accepting assignment.");
+                        }
+                    }
+                }
+            }
+            else
+            {
+                // One-way trade: Check if trading assignment codes are present in accepting employee codes (at least one should match)
+                var hasMatchingJobCode = tradingJobCodeIds.Any() && tradingJobCodeIds.Any(tjc =>
+                    data.AcceptingEmployeeJobCodes.Any(ejc => ejc.jobCodeId == tjc));
+
+                var hasMatchingWorkCode = tradingWorkCodeIds.Any() && tradingWorkCodeIds.Any(twc =>
+                    data.AcceptingEmployeeWorkCodes.Any(ewc => ewc.workCodeId == twc));
+
+                if (!hasMatchingJobCode && !hasMatchingWorkCode)
+                {
+                    isValid = false;
+                    validationMessages.Add("Accepting employee must have at least one job code or work code from the trading assignment.");
+                }
+            }
+        }
+
+        #endregion
+
+        #region Build Response
+
         return new ValidateJobCodesAndWorkCodesResponse
         {
             IsValid = isValid,
-            ValidationMessages = validationMessages,
-            //TradingJobCodes = tradingJobCodesResult,
-            //TradingWorkCodes = tradingWorkCodesResult,
-            //AcceptingJobCodes = acceptingJobCodesResult.Any() ? acceptingJobCodesResult : null,
-            //AcceptingWorkCodes = acceptingWorkCodesResult.Any() ? acceptingWorkCodesResult : null
+            ValidationMessages = validationMessages
         };
+
+        #endregion
     }
 }
 
