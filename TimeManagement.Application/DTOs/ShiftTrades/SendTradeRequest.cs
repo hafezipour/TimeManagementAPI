@@ -54,10 +54,10 @@ public class ValidateJobCodesAndWorkCodesResponse
 {
     public bool IsValid { get; set; }
     public List<string> ValidationMessages { get; set; } = new List<string>();
-    public List<JobCodeValidationResult>? TradingJobCodes { get; set; }
-    public List<WorkCodeValidationResult>? TradingWorkCodes { get; set; }
-    public List<JobCodeValidationResult>? AcceptingJobCodes { get; set; }
-    public List<WorkCodeValidationResult>? AcceptingWorkCodes { get; set; }
+    //public List<JobCodeValidationResult>? TradingJobCodes { get; set; }
+    //public List<WorkCodeValidationResult>? TradingWorkCodes { get; set; }
+    //public List<JobCodeValidationResult>? AcceptingJobCodes { get; set; }
+    //public List<WorkCodeValidationResult>? AcceptingWorkCodes { get; set; }
 }
 
 // DTOs for employee job code and work code assignments from GetShortList

@@ -381,10 +381,10 @@ public class ShiftTradesProcessor : BaseProcessor
         {
             IsValid = isValid,
             ValidationMessages = validationMessages,
-            TradingJobCodes = tradingJobCodesResult,
-            TradingWorkCodes = tradingWorkCodesResult,
-            AcceptingJobCodes = acceptingJobCodesResult.Any() ? acceptingJobCodesResult : null,
-            AcceptingWorkCodes = acceptingWorkCodesResult.Any() ? acceptingWorkCodesResult : null
+            //TradingJobCodes = tradingJobCodesResult,
+            //TradingWorkCodes = tradingWorkCodesResult,
+            //AcceptingJobCodes = acceptingJobCodesResult.Any() ? acceptingJobCodesResult : null,
+            //AcceptingWorkCodes = acceptingWorkCodesResult.Any() ? acceptingWorkCodesResult : null
         };
     }
 }
