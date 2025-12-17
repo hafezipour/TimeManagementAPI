@@ -1,3 +1,4 @@
+using System;
 using TimeManagement.Domain.Models;
 using TimeManagement.Application.DTOs.ShiftAssignments;
 
@@ -9,11 +10,15 @@ public class SendTradeRequest
     public int? TradingShiftId { get; set; }
     public int? TradingAssignmentId { get; set; }
     public DateTime? TradingDate { get; set; }
+    public TimeSpan? TradingUserAssignmentFromTime { get; set; }
+    public TimeSpan? TradingUserAssignmentToTime { get; set; }
     public bool IsSwap { get; set; }
     public int? AcceptingEmployeeId { get; set; }
     public int? AcceptingShiftId { get; set; }
     public int? AcceptingAssignmentId { get; set; }
     public DateTime? AcceptingDate { get; set; }
+    public TimeSpan? AcceptingUserAssignmentFromTime { get; set; }
+    public TimeSpan? AcceptingUserAssignmentToTime { get; set; }
 }
 
 public class SendTradeResponse

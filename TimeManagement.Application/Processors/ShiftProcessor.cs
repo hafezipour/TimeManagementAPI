@@ -406,7 +406,7 @@ public class ShiftProcessor : BaseProcessor
                 return new { success = false, message = "Invalid LayoutId" }.ToJson();
             }
 
-            if (request.StartDate >= request.EndDate && request.ViewType != "day")
+            if (request.StartDate > request.EndDate)
             {
                 return new { success = false, message = "StartDate must be before EndDate" }.ToJson();
             }

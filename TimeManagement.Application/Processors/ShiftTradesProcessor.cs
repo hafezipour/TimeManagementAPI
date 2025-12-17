@@ -1,9 +1,12 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using TimeManagement.Application.DTOs.ShiftAssignments;
 using TimeManagement.Application.DTOs.ShiftTrades;
+using TimeManagement.Application.DTOs.Schedules;
+using TimeManagement.Application.Enums;
 using TimeManagement.Application.Extensions;
 using TimeManagement.Infra.Repositories;
 using TimeManagement.Domain.Models;
@@ -17,19 +20,22 @@ public class ShiftTradesProcessor : BaseProcessor
     private readonly EmployeeWorkCodeAssignmentRepository _employeeWorkCodeAssignmentRepository;
     private readonly ShiftsRepository _shiftsRepository;
     private readonly ShiftAssignmentRepository _shiftAssignmentRepository;
+    private readonly ShiftAssignmentProcessor _shiftAssignmentProcessor;
 
     public ShiftTradesProcessor(
         ShiftTradesRepository shiftTradesRepository,
         EmployeeJobCodeAssignmentRepository employeeJobCodeAssignmentRepository,
         EmployeeWorkCodeAssignmentRepository employeeWorkCodeAssignmentRepository,
         ShiftsRepository shiftsRepository,
-        ShiftAssignmentRepository shiftAssignmentRepository)
+        ShiftAssignmentRepository shiftAssignmentRepository,
+        ShiftAssignmentProcessor shiftAssignmentProcessor)
     {
         _shiftTradesRepository = shiftTradesRepository;
         _employeeJobCodeAssignmentRepository = employeeJobCodeAssignmentRepository;
         _employeeWorkCodeAssignmentRepository = employeeWorkCodeAssignmentRepository;
         _shiftsRepository = shiftsRepository;
         _shiftAssignmentRepository = shiftAssignmentRepository;
+        _shiftAssignmentProcessor = shiftAssignmentProcessor;
     }
 
     /// <summary>
@@ -130,7 +136,20 @@ public class ShiftTradesProcessor : BaseProcessor
 
             var validationData = await FetchValidationData(validationRequest);
             var validationResult = ValidateAllDatasets(validationData);
-
+            
+            // Check assignment conflicts
+            var conflictResult = await CheckAssignmentConflicts(request, validationData, validationResult);
+            if (!conflictResult.IsValid)
+            {
+                return new
+                {
+                    success = false,
+                    message = "Trade request validation failed",
+                    tradeRequestId = (int?)null,
+                    validationResult = conflictResult
+                }.ToJson();
+            }
+            
             // If validation fails, return validation result immediately
             if (!validationResult.IsValid)
             {
@@ -431,6 +450,150 @@ public class ShiftTradesProcessor : BaseProcessor
         };
 
         #endregion
+    }
+
+    /// <summary>
+    /// Check assignment conflicts for trade requests
+    /// </summary>
+    private async Task<ValidateJobCodesAndWorkCodesResponse> CheckAssignmentConflicts(
+        SendTradeRequest request,
+        ValidationDataDto validationData,
+        ValidateJobCodesAndWorkCodesResponse validationResult)
+    {
+        _shiftAssignmentProcessor.SetCurrentUser(this.CurrentUser);
+        
+        bool isValid = validationResult.IsValid;
+        var validationMessages = new List<string>(validationResult.ValidationMessages);
+
+        // Check conflicts for trading assignment -> accepting employee (for both swap and one-way trade)
+        if (request.TradingAssignmentId.HasValue && request.TradingDate.HasValue && 
+            validationData.TradingAssignment != null && request.AcceptingEmployeeId.HasValue)
+        {
+            // Filter job codes and work codes to only those the accepting employee has
+            var acceptingEmployeeJobCodeIds = validationData.AcceptingEmployeeJobCodes.Select(ejc => ejc.jobCodeId).ToList();
+            var acceptingEmployeeWorkCodeIds = validationData.AcceptingEmployeeWorkCodes.Select(ewc => ewc.workCodeId).ToList();
+
+            var filteredJobCodeIds = validationData.TradingAssignment.JobCodes?
+                .Where(jc => acceptingEmployeeJobCodeIds.Contains(jc.Id))
+                .Select(jc => jc.Id.ToString())
+                .ToList() ?? new List<string>();
+
+            var filteredWorkCodeIds = validationData.TradingAssignment.WorkCodes?
+                .Where(wc => acceptingEmployeeWorkCodeIds.Contains(wc.Id))
+                .Select(wc => wc.Id.ToString())
+                .ToList() ?? new List<string>();
+
+            // Build schedule: Daily type, StartFrom and ValidUntil same as selected date
+            var selectedDate = request.TradingDate.Value.Date;
+            var schedule = new ScheduleRequest
+            {
+                ShiftId = request.TradingShiftId.Value,
+                ScheduleType = (int)ScheduleType.Daily,
+                RepeatEvery = 1,
+                StartFrom = selectedDate,
+                ValidUntil = selectedDate,
+                EndType = (int)EndType.OnDate,
+                IsActive = true,
+                ScheduleWithoutTimes = false
+            };
+
+            // Use times from request if available
+            if (request.TradingUserAssignmentFromTime.HasValue && request.TradingUserAssignmentToTime.HasValue)
+            {
+                schedule.StartTime = request.TradingUserAssignmentFromTime.Value.ToString(@"hh\:mm\:ss");
+                schedule.EndTime = request.TradingUserAssignmentToTime.Value.ToString(@"hh\:mm\:ss");
+                schedule.ScheduleWithoutTimes = false;
+            }
+            else
+            {
+                schedule.ScheduleWithoutTimes = true;
+            }
+
+            var conflictRequest = new ScheduleEmployeeRequest
+            {
+                ShiftId = request.TradingShiftId.Value,
+                UserId = request.AcceptingEmployeeId.Value,
+                JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
+                WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
+                Schedules = new List<ScheduleRequest> { schedule }
+            };
+
+            var conflicts = await _shiftAssignmentProcessor.GetAssignmentConflictsAsync(conflictRequest);
+            if (conflicts != null && conflicts.Any())
+            {
+                isValid = false;
+                validationMessages.Add($"Conflicts detected for accepting employee on {selectedDate:yyyy-MM-dd}. " +
+                    $"Conflicting assignments: {string.Join(", ", conflicts.Select(c => c.ExistingShiftName ?? "Unknown"))}");
+            }
+        }
+
+        // For swaps: Check conflicts for accepting assignment -> trading employee
+        if (request.IsSwap && request.AcceptingAssignmentId.HasValue && request.AcceptingDate.HasValue &&
+            validationData.AcceptingAssignment != null && request.AcceptingShiftId.HasValue)
+        {
+            // Filter job codes and work codes to only those the trading employee has
+            var tradingEmployeeJobCodeIds = validationData.TradingEmployeeJobCodes.Select(ejc => ejc.jobCodeId).ToList();
+            var tradingEmployeeWorkCodeIds = validationData.TradingEmployeeWorkCodes.Select(ewc => ewc.workCodeId).ToList();
+
+            var filteredJobCodeIds = validationData.AcceptingAssignment.JobCodes?
+                .Where(jc => tradingEmployeeJobCodeIds.Contains(jc.Id))
+                .Select(jc => jc.Id.ToString())
+                .ToList() ?? new List<string>();
+
+            var filteredWorkCodeIds = validationData.AcceptingAssignment.WorkCodes?
+                .Where(wc => tradingEmployeeWorkCodeIds.Contains(wc.Id))
+                .Select(wc => wc.Id.ToString())
+                .ToList() ?? new List<string>();
+
+            // Build schedule: Daily type, StartFrom and ValidUntil same as selected date
+            var selectedDate = request.AcceptingDate.Value.Date;
+            var schedule = new ScheduleRequest
+            {
+                ShiftId = request.AcceptingShiftId.Value,
+                ScheduleType = (int)ScheduleType.Daily,
+                RepeatEvery = 1,
+                StartFrom = selectedDate,
+                ValidUntil = selectedDate,
+                EndType = (int)EndType.OnDate,
+                IsActive = true,
+                ScheduleWithoutTimes = false
+            };
+
+            // Use times from request if available
+            if (request.AcceptingUserAssignmentFromTime.HasValue && request.AcceptingUserAssignmentToTime.HasValue)
+            {
+                schedule.StartTime = request.AcceptingUserAssignmentFromTime.Value.ToString(@"hh\:mm\:ss");
+                schedule.EndTime = request.AcceptingUserAssignmentToTime.Value.ToString(@"hh\:mm\:ss");
+                schedule.ScheduleWithoutTimes = false;
+            }
+            else
+            {
+                schedule.ScheduleWithoutTimes = true;
+            }
+
+            var conflictRequest = new ScheduleEmployeeRequest
+            {
+                ShiftId = request.AcceptingShiftId.Value,
+                UserId = request.TradingEmployeeId.Value,
+                JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
+                WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
+                Schedules = new List<ScheduleRequest> { schedule }
+            };
+
+            var conflicts = await _shiftAssignmentProcessor.GetAssignmentConflictsAsync(conflictRequest);
+            if (conflicts != null && conflicts.Any())
+            {
+                isValid = false;
+                validationMessages.Add($"Conflicts detected for trading employee on {selectedDate:yyyy-MM-dd}. " +
+                    $"Conflicting assignments: {string.Join(", ", conflicts.Select(c => c.ExistingShiftName ?? "Unknown"))}");
+            }
+        }
+
+        return new ValidateJobCodesAndWorkCodesResponse
+        {
+            IsValid = isValid,
+            ValidationMessages = validationMessages
+        };
     }
 }
 
