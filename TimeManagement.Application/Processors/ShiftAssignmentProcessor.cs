@@ -225,34 +225,43 @@ public class ShiftAssignmentProcessor : BaseProcessor
             #endregion
 
             // Now proceed with saving the new/updated assignment
-            var json = request.ToJson();
-            var result = await _shiftAssignmentRepository.ScheduleEmployee(json, CurrentUser.LoginId, CurrentUser.TenantID);
-
-            // Deserialize the result to get the assignment ID
-            var assignmentResponse = result.FromJson<ScheduleEmployeeResponse>();
-
-            // Process schedules if provided and assignment was successful
-            if (assignmentResponse?.Success == true && request.Schedules != null && request.Schedules.Any())
-            {
-                var schedule = request.Schedules[0];
-                schedule.SourceId = assignmentResponse.Id ?? 0; // Use the returned assignment ID
-
-                var scheduleResult = await _scheduleProcessor.Save(schedule);
-                var scheduleSaveResult = scheduleResult.FromJson<ScheduleSaveResult>();
-
-                var updateResultJson = await _shiftAssignmentRepository.UpdateScheduleId(
-                    assignmentResponse.Id.Value,
-                    scheduleSaveResult.Id.Value,
-                    CurrentUser.LoginId,
-                    CurrentUser.TenantID);
-            }
-
-            return assignmentResponse?.ToJson() ?? result;
+            var result = await SaveAssignmentAndProcessSchedules(request);
+            return result;
         }
         catch (Exception ex)
         {
             throw ex;
         }
+    }
+
+    /// <summary>
+    /// Save assignment and process schedules if provided
+    /// </summary>
+    public async Task<string> SaveAssignmentAndProcessSchedules(ScheduleEmployeeRequest request)
+    {
+        var json = request.ToJson();
+        var result = await _shiftAssignmentRepository.ScheduleEmployee(json, CurrentUser.LoginId, CurrentUser.TenantID);
+
+        // Deserialize the result to get the assignment ID
+        var assignmentResponse = result.FromJson<ScheduleEmployeeResponse>();
+
+        // Process schedules if provided and assignment was successful
+        if (assignmentResponse?.Success == true && request.Schedules != null && request.Schedules.Any())
+        {
+            var schedule = request.Schedules[0];
+            schedule.SourceId = assignmentResponse.Id ?? 0; // Use the returned assignment ID
+
+            var scheduleResult = await _scheduleProcessor.Save(schedule);
+            var scheduleSaveResult = scheduleResult.FromJson<ScheduleSaveResult>();
+
+            var updateResultJson = await _shiftAssignmentRepository.UpdateScheduleId(
+                assignmentResponse.Id.Value,
+                scheduleSaveResult.Id.Value,
+                CurrentUser.LoginId,
+                CurrentUser.TenantID);
+        }
+
+        return assignmentResponse?.ToJson() ?? result;
     }
 
     /// <summary>
