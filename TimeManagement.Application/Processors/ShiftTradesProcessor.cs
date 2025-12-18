@@ -72,6 +72,8 @@ public class ShiftTradesProcessor : BaseProcessor
     {
         try
         {
+            #region Request Validation
+
             // Validate request
             if (request == null)
             {
@@ -122,6 +124,10 @@ public class ShiftTradesProcessor : BaseProcessor
                 }
             }
 
+            #endregion
+
+            #region Validation Data Fetching and Validation
+
             // Validate job codes and work codes before sending trade request
             var validationRequest = new ValidateJobCodesAndWorkCodesRequest
             {
@@ -162,6 +168,10 @@ public class ShiftTradesProcessor : BaseProcessor
                 }.ToJson();
             }
 
+            #endregion
+
+            #region Save Trade Request
+
             // Convert request to JSON for repository
             var jsonData = JsonConvert.SerializeObject(request);
 
@@ -188,6 +198,10 @@ public class ShiftTradesProcessor : BaseProcessor
                     validationResult = validationResult
                 }.ToJson();
             }
+
+            #endregion
+
+            #region Create Assignment for Accepting Employee
 
             // Create shift assignments for both users after trade request is saved
             _shiftAssignmentProcessor.SetCurrentUser(this.CurrentUser);
@@ -255,6 +269,10 @@ public class ShiftTradesProcessor : BaseProcessor
                 }
             }
 
+            #endregion
+
+            #region Create Assignment for Trading Employee (Swap)
+
             // For swaps: Create assignment for trading employee (taking accepting assignment)
             if (request.IsSwap && request.AcceptingAssignmentId.HasValue && request.AcceptingDate.HasValue &&
                 validationData.AcceptingAssignment != null && request.AcceptingShiftId.HasValue)
@@ -316,6 +334,10 @@ public class ShiftTradesProcessor : BaseProcessor
                 }
             }
 
+            #endregion
+
+            #region Update Assignments with Trade Fields
+
             // Update assignments with trade-related fields
             // Accepting assignment: accepting employee taking trading assignment
             if (acceptingAssignmentId.HasValue)
@@ -345,6 +367,10 @@ public class ShiftTradesProcessor : BaseProcessor
                     tenantId: CurrentUser.TenantID);
             }
 
+            #endregion
+
+            #region Return Response
+
             // Include validation result in response
             return new
             {
@@ -353,6 +379,8 @@ public class ShiftTradesProcessor : BaseProcessor
                 tradeRequestId = tradeRequestId,
                 validationResult = validationResult
             }.ToJson();
+
+            #endregion
         }
         catch (Exception ex)
         {
