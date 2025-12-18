@@ -42,7 +42,7 @@ public class ShiftAssignmentDetailDto
     // Time off information
     public TimeOffStatus? TimeOffStatus { get; set; }
     public List<TimeOffRequestsForUsers>? TimeOffRequests { get; set; }
-    public int? IsChild { get; set; }//This is to indicate its trade record or not
+    public bool? IsChild { get; set; }//This is to indicate its trade record or not
 
     // Assignment date range
 
