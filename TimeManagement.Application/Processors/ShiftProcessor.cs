@@ -351,7 +351,7 @@ public class ShiftProcessor : BaseProcessor
                     nam = x.ShiftName,
                     s = x.ShiftCode
                 },
-                UserAssignments = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments.Where(c => c.IsTraded != true)).Select(m => new
+                UserAssignments = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments.Where(c => c.IsTraded != true && c.TradeStatus != TradeStatus.Full)).Select(m => new
                 {
                     Id = m.Id,
                     //ShiftId = m.ShiftId,
@@ -366,7 +366,7 @@ public class ShiftProcessor : BaseProcessor
                         EndTime = m.Schedules.EndTime
                     }
                 })).DistinctBy(c => c.Id).ToList(),
-                Occurances = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments.Where(c => c.IsTraded != true)).Select(m => new
+                Occurances = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments.Where(c => c.IsTraded != true && c.TradeStatus != TradeStatus.Full)).Select(m => new
                 {
                     Id = m.Id,
                     //ShiftId = m.ShiftId,
@@ -644,10 +644,14 @@ public class ShiftProcessor : BaseProcessor
             userIds = string.Join(",", employeeIds);
         }
 
+
         var assignmentsJson = await _shiftAssignmentRepository.Get(userIds, shiftIds, CurrentUser.TenantID);
         var allAssignmentsIncludingChild = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(assignmentsJson);
         allAssignments = allAssignmentsIncludingChild.Where(c => c.IsChild != true).ToList();
-        var childAssignments = allAssignmentsIncludingChild.Where(c => c.IsChild == true).ToList();
+
+
+        var assignmentsJsonChild = await _shiftAssignmentRepository.GetChildByIds(allAssignments.Select(c => c.Id).ToCommaSeparatedString(), CurrentUser.TenantID);
+        var childAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentChildByIds>>(assignmentsJsonChild);
 
 
         if (allAssignments != null && allAssignments.Any())
@@ -752,7 +756,7 @@ public class ShiftProcessor : BaseProcessor
         }
     }
 
-    private TradeStatus HasBeenTraded(ShiftAssignmentDetailDto assignment, List<ShiftAssignmentDetailDto> childAssignments)
+    private TradeStatus HasBeenTraded(ShiftAssignmentDetailDto assignment, List<ShiftAssignmentChildByIds> childAssignments)
     {
         if (childAssignments == null || !childAssignments.Any())
         {

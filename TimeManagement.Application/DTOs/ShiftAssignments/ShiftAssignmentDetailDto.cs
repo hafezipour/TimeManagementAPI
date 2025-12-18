@@ -5,6 +5,16 @@ using TimeManagement.Application.Processors;
 
 namespace TimeManagement.Application.DTOs.ShiftAssignments;
 
+public class ShiftAssignmentChildByIds
+{
+    public int Id { get; set; }
+    public int? TradingUserAssignmentId { get; set; }
+    public int? AcceptingUserAssignmentId { get; set; }
+    public DateTime? StartFrom { get; set; }
+    public DateTime? ValidUntil { get; set; }
+    public TimeSpan? StartTime { get; set; }
+    public TimeSpan? EndTime { get; set; }
+}
 public class ShiftAssignmentDetailDto
 {
     public int Id { get; set; }

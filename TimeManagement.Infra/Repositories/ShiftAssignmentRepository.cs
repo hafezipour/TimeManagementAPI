@@ -81,6 +81,23 @@ public class ShiftAssignmentRepository
             throw ex;
         }
     }
+    public async Task<string> GetChildByIds(string ids, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel() { Name = "Ids", Value = ids },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
+            };
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftAssignment_Get_Childern_ByIds", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 
     /// <summary>
     /// Get shift assignments short list by assignment IDs (for trade validation)
