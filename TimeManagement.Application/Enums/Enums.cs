@@ -6,6 +6,18 @@ using System.Threading.Tasks;
 
 namespace TimeManagement.Application.Enums
 {
+    public enum TimeOffStatus
+    {
+        None = 0,
+        Partial = 1,
+        Full = 2
+    }
+    public enum TradeStatus
+    {
+        None = 0,
+        Partial = 1,
+        Full = 2
+    }
     public enum ScheduleSourceTypes
     {
         Shift = 1,

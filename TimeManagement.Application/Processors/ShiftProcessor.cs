@@ -15,13 +15,6 @@ using static Azure.Core.HttpHeader;
 
 namespace TimeManagement.Application.Processors;
 
-public enum TimeOffStatus
-{
-    None = 0,
-    Partial = 1,
-    Full = 2
-}
-
 public class ShiftProcessor : BaseProcessor
 {
     private readonly ShiftsRepository _shiftsRepository;
@@ -747,6 +740,7 @@ public class ShiftProcessor : BaseProcessor
 
                                 assignmentCopy.Schedules = assignmentSchedule;
                                 assignmentCopy.TimeOffStatus = timeOffStatus;
+                                assignmentCopy.TradeStatus = HasBeenTraded(assignment, childAssignments);
                                 assignmentCopy.TimeOffRequests = timeOffEntries;
                                 validAssignmentsForDate.Add(assignmentCopy);
                             }
@@ -756,6 +750,20 @@ public class ShiftProcessor : BaseProcessor
                 shift.UserAssignments = validAssignmentsForDate;
             }
         }
+    }
+
+    private TradeStatus HasBeenTraded(ShiftAssignmentDetailDto assignment, List<ShiftAssignmentDetailDto> childAssignments)
+    {
+        if (childAssignments == null || !childAssignments.Any())
+        {
+            return TradeStatus.None;
+        }
+        var tradeFound = childAssignments.Any(ca => ca.TradingUserAssignmentId == assignment.Id || ca.AcceptingUserAssignmentId == assignment.Id);
+        if (tradeFound == true)
+        {
+            return TradeStatus.Full;
+        }
+        return TradeStatus.None;
     }
 
     /// <summary>

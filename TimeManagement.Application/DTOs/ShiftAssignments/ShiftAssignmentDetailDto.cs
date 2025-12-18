@@ -1,5 +1,6 @@
 using TimeManagement.Application.DTOs.Schedules;
 using TimeManagement.Application.DTOs.TimeOffRequests;
+using TimeManagement.Application.Enums;
 using TimeManagement.Application.Processors;
 
 namespace TimeManagement.Application.DTOs.ShiftAssignments;
@@ -41,6 +42,8 @@ public class ShiftAssignmentDetailDto
     
     // Time off information
     public TimeOffStatus? TimeOffStatus { get; set; }
+    public TradeStatus? TradeStatus { get; set; }
+    
     public List<TimeOffRequestsForUsers>? TimeOffRequests { get; set; }
     public bool? IsChild { get; set; }//This is to indicate its trade record or not
 
