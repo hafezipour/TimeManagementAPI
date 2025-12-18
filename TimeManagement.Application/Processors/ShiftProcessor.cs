@@ -340,7 +340,7 @@ public class ShiftProcessor : BaseProcessor
                 foreach (var day in calendarDays)
                 {
                     day.SchedulingShifts = day.SchedulingShifts
-                        .Where(s => s.UserAssignments != null && s.UserAssignments.Any())
+                        .Where(s => s.UserAssignments != null && s.UserAssignments.Any(c => c.IsTraded != true))
                         .ToList();
                 }
                 if (request.IsAssignmentScreen == true)
@@ -358,7 +358,7 @@ public class ShiftProcessor : BaseProcessor
                     nam = x.ShiftName,
                     s = x.ShiftCode
                 },
-                UserAssignments = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments).Select(m => new
+                UserAssignments = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments.Where(c => c.IsTraded != true)).Select(m => new
                 {
                     Id = m.Id,
                     //ShiftId = m.ShiftId,
@@ -373,7 +373,7 @@ public class ShiftProcessor : BaseProcessor
                         EndTime = m.Schedules.EndTime
                     }
                 })).DistinctBy(c => c.Id).ToList(),
-                Occurances = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments).Select(m => new
+                Occurances = calendarDays.SelectMany(c => c.SchedulingShifts.Where(f => f.Id == x.Id).SelectMany(c => c.UserAssignments.Where(c => c.IsTraded != true)).Select(m => new
                 {
                     Id = m.Id,
                     //ShiftId = m.ShiftId,
