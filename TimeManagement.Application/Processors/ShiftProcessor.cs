@@ -744,7 +744,7 @@ public class ShiftProcessor : BaseProcessor
 
                                 assignmentCopy.Schedules = assignmentSchedule;
                                 assignmentCopy.TimeOffStatus = timeOffStatus;
-                                assignmentCopy.TradeStatus = HasBeenTraded(assignment, childAssignments);
+                                assignmentCopy.TradeStatus = HasBeenTraded(assignmentCopy, childAssignments);
                                 assignmentCopy.TimeOffRequests = timeOffEntries;
                                 validAssignmentsForDate.Add(assignmentCopy);
                             }
@@ -762,7 +762,8 @@ public class ShiftProcessor : BaseProcessor
         {
             return TradeStatus.None;
         }
-        var tradeFound = childAssignments.Any(ca => ca.TradingUserAssignmentId == assignment.Id || ca.AcceptingUserAssignmentId == assignment.Id);
+        var tradeFound = childAssignments.Any(ca => (ca.TradingUserAssignmentId == assignment.Id || ca.AcceptingUserAssignmentId == assignment.Id)
+                                                 && assignment.FromDate.Value.Date == ca.StartFrom.Value.Date);
         if (tradeFound == true)
         {
             return TradeStatus.Full;
