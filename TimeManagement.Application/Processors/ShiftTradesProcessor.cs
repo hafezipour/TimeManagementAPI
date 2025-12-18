@@ -257,9 +257,8 @@ public class ShiftTradesProcessor : BaseProcessor
                     JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
                     WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
                     Schedules = new List<ScheduleRequest> { schedule },
-                    // Trade-related fields
                     IsTraded = true,
-                    TradingUserAssignmentId = request.TradingAssignmentId, // Original trading assignment
+                    TradingUserAssignmentId = request.TradingAssignmentId,
                     IsSwap = request.IsSwap,
                     AcceptingUserAssignmentId = null, // This is the new accepting assignment
                     TradeRequestId = tradeRequestId
@@ -329,7 +328,6 @@ public class ShiftTradesProcessor : BaseProcessor
                     JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
                     WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
                     Schedules = new List<ScheduleRequest> { schedule },
-                    // Trade-related fields
                     IsTraded = true,
                     TradingUserAssignmentId = null, // This is the new trading assignment
                     IsSwap = request.IsSwap,
@@ -349,9 +347,34 @@ public class ShiftTradesProcessor : BaseProcessor
 
             #region Update Assignments with Trade Fields
 
-            // Note: Trade-related fields (IsTraded, TradingUserAssignmentId, IsSwap, AcceptingUserAssignmentId, TradeRequestId)
-            // are now saved directly during assignment creation via SaveAssignmentAndProcessSchedules.
-            // The UpdateTradeFields calls are no longer needed as the fields are set during INSERT.
+            // Update assignments with trade-related fields
+            // Accepting assignment: accepting employee taking trading assignment
+            if (acceptingAssignmentId.HasValue)
+            {
+                await _shiftAssignmentRepository.UpdateTradeFields(
+                    acceptingAssignmentId.Value,
+                    isTraded: true,
+                    tradingUserAssignmentId: request.TradingAssignmentId, // Original trading assignment
+                    isSwap: request.IsSwap,
+                    acceptingUserAssignmentId: null, // This is the new accepting assignment
+                    tradeRequestId: tradeRequestId,
+                    userId: CurrentUser.LoginId,
+                    tenantId: CurrentUser.TenantID);
+            }
+
+            // Trading assignment: trading employee taking accepting assignment (swap only)
+            if (tradingAssignmentId.HasValue)
+            {
+                await _shiftAssignmentRepository.UpdateTradeFields(
+                    tradingAssignmentId.Value,
+                    isTraded: true,
+                    tradingUserAssignmentId: null, // This is the new trading assignment
+                    isSwap: request.IsSwap,
+                    acceptingUserAssignmentId: request.AcceptingAssignmentId, // Original accepting assignment
+                    tradeRequestId: tradeRequestId,
+                    userId: CurrentUser.LoginId,
+                    tenantId: CurrentUser.TenantID);
+            }
 
             #endregion
 
