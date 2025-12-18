@@ -54,6 +54,7 @@ public class ShiftTradesProcessor : BaseProcessor
             {
                 "sendtraderequest" => await SendTradeRequest(jsonData.FromJson<SendTradeRequest>()),
                 "gettraderequests" => await GetTradeRequests(jsonData.FromJson<GetTradeRequestsRequest>()),
+                "deletetraderequest" => await DeleteTradeRequest(jsonData.FromJson<DeleteTradeRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -851,6 +852,31 @@ public class ShiftTradesProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving trade requests: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Delete a trade request and associated shift assignments
+    /// </summary>
+    public async Task<string> DeleteTradeRequest(DeleteTradeRequest request)
+    {
+        try
+        {
+            if (request == null || request.TradeRequestId <= 0)
+            {
+                return new { success = false, message = "Invalid trade request ID" }.ToJson();
+            }
+
+            var result = await _shiftTradesRepository.DeleteTradeRequest(
+                request.TradeRequestId,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error deleting trade request: {ex.Message}" }.ToJson();
         }
     }
 }

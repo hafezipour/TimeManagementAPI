@@ -62,5 +62,27 @@ public class ShiftTradesRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Delete a trade request and associated shift assignments
+    /// </summary>
+    public async Task<string> DeleteTradeRequest(int tradeRequestId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel() { Name = "TradeRequestId", Value = tradeRequestId },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
+            };
+            
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftTrades_DeleteTradeRequest", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
