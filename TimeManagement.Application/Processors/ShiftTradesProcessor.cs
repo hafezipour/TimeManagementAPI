@@ -55,6 +55,7 @@ public class ShiftTradesProcessor : BaseProcessor
                 "sendtraderequest" => await SendTradeRequest(jsonData.FromJson<SendTradeRequest>()),
                 "gettraderequests" => await GetTradeRequests(jsonData.FromJson<GetTradeRequestsRequest>()),
                 "deletetraderequest" => await DeleteTradeRequest(jsonData.FromJson<DeleteTradeRequest>()),
+                "denytraderequest" => await DenyTradeRequest(jsonData.FromJson<DenyTradeRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -840,6 +841,7 @@ public class ShiftTradesProcessor : BaseProcessor
 
             var result = await _shiftTradesRepository.GetTradeRequests(
                 request?.UserId,
+                request?.StatusCustomTableValueId,
                 pageNumber,
                 pageSize,
                 sortColumn,
@@ -877,6 +879,31 @@ public class ShiftTradesProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error deleting trade request: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Deny a trade request (set StatusCustomTableValueId to 3)
+    /// </summary>
+    public async Task<string> DenyTradeRequest(DenyTradeRequest request)
+    {
+        try
+        {
+            if (request == null || request.TradeRequestId <= 0)
+            {
+                return new { success = false, message = "Invalid trade request ID" }.ToJson();
+            }
+
+            var result = await _shiftTradesRepository.DenyTradeRequest(
+                request.TradeRequestId,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error denying trade request: {ex.Message}" }.ToJson();
         }
     }
 }

@@ -14,6 +14,7 @@ GO
 -- =============================================  
 CREATE OR ALTER PROCEDURE [dbo].[usp_ShiftTrades_GetTradeRequests]
     @UserId INT = NULL,
+    @StatusCustomTableValueId INT = NULL,
     @PageNumber INT = 1,
     @PageSize INT = 10,
     @SortColumn NVARCHAR(50) = 'DateCreated',
@@ -58,6 +59,7 @@ BEGIN
             AND ts.TenantId = @TenantId
         WHERE st.TenantId = @TenantId
             AND (@UserId IS NULL OR st.FromUserId = @UserId OR st.ToUserId = @UserId)
+            AND (@StatusCustomTableValueId IS NULL OR st.StatusCustomTableValueId = @StatusCustomTableValueId)
     )
     SELECT 
         _rows.id,

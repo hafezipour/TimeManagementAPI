@@ -40,13 +40,14 @@ public class ShiftTradesRepository
     /// <summary>
     /// Get trade requests with server-side paging
     /// </summary>
-    public async Task<string> GetTradeRequests(int? userId, int pageNumber, int pageSize, string sortColumn, string sortDirection, int tenantId)
+    public async Task<string> GetTradeRequests(int? userId, int? statusCustomTableValueId, int pageNumber, int pageSize, string sortColumn, string sortDirection, int tenantId)
     {
         try
         {
             List<SqlParameterModel> param = new List<SqlParameterModel>()
             {
                 new SqlParameterModel() { Name = "UserId", Value = userId ?? (object)DBNull.Value },
+                new SqlParameterModel() { Name = "StatusCustomTableValueId", Value = statusCustomTableValueId ?? (object)DBNull.Value },
                 new SqlParameterModel() { Name = "PageNumber", Value = pageNumber },
                 new SqlParameterModel() { Name = "PageSize", Value = pageSize },
                 new SqlParameterModel() { Name = "SortColumn", Value = sortColumn },
@@ -77,6 +78,28 @@ public class ShiftTradesRepository
             };
             
             var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftTrades_DeleteTradeRequest", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    /// <summary>
+    /// Deny a trade request (set StatusCustomTableValueId to 3)
+    /// </summary>
+    public async Task<string> DenyTradeRequest(int tradeRequestId, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel() { Name = "TradeRequestId", Value = tradeRequestId },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
+            };
+            
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftTrades_DenyTradeRequest", param);
             return result;
         }
         catch (Exception ex)
