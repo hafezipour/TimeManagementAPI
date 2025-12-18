@@ -36,6 +36,7 @@ BEGIN
             st.RequestedAt AS requestedAt,
             st.ApprovedAt AS approvedAt,
             st.DateCreated AS dateCreated,
+            ISNULL(saFrom.IsSwap, saTo.IsSwap) AS isSwap,
             -- From Assignment Schedule Fields
             fs.StartFrom AS fromScheduleStartFrom,
             fs.StartTime AS fromScheduleStartTime,
@@ -68,6 +69,7 @@ BEGIN
         _rows.requestedAt,
         _rows.approvedAt,
         _rows.dateCreated,
+        _rows.isSwap,
         _rows.fromScheduleStartFrom,
         _rows.fromScheduleStartTime,
         _rows.fromScheduleValidUntil,
@@ -83,22 +85,6 @@ BEGIN
         CASE WHEN @SortColumn = 'Id' AND @SortDirection = 'DESC' THEN _rows.id END DESC,
         CASE WHEN @SortColumn = 'DateCreated' AND @SortDirection = 'ASC' THEN _rows.dateCreated END ASC,
         CASE WHEN @SortColumn = 'DateCreated' AND @SortDirection = 'DESC' THEN _rows.dateCreated END DESC,
-        CASE WHEN @SortColumn = 'FromScheduleStartFrom' AND @SortDirection = 'ASC' THEN _rows.fromScheduleStartFrom END ASC,
-        CASE WHEN @SortColumn = 'FromScheduleStartFrom' AND @SortDirection = 'DESC' THEN _rows.fromScheduleStartFrom END DESC,
-        CASE WHEN @SortColumn = 'FromScheduleStartTime' AND @SortDirection = 'ASC' THEN _rows.fromScheduleStartTime END ASC,
-        CASE WHEN @SortColumn = 'FromScheduleStartTime' AND @SortDirection = 'DESC' THEN _rows.fromScheduleStartTime END DESC,
-        CASE WHEN @SortColumn = 'FromScheduleValidUntil' AND @SortDirection = 'ASC' THEN _rows.fromScheduleValidUntil END ASC,
-        CASE WHEN @SortColumn = 'FromScheduleValidUntil' AND @SortDirection = 'DESC' THEN _rows.fromScheduleValidUntil END DESC,
-        CASE WHEN @SortColumn = 'FromScheduleEndTime' AND @SortDirection = 'ASC' THEN _rows.fromScheduleEndTime END ASC,
-        CASE WHEN @SortColumn = 'FromScheduleEndTime' AND @SortDirection = 'DESC' THEN _rows.fromScheduleEndTime END DESC,
-        CASE WHEN @SortColumn = 'ToScheduleStartFrom' AND @SortDirection = 'ASC' THEN _rows.toScheduleStartFrom END ASC,
-        CASE WHEN @SortColumn = 'ToScheduleStartFrom' AND @SortDirection = 'DESC' THEN _rows.toScheduleStartFrom END DESC,
-        CASE WHEN @SortColumn = 'ToScheduleStartTime' AND @SortDirection = 'ASC' THEN _rows.toScheduleStartTime END ASC,
-        CASE WHEN @SortColumn = 'ToScheduleStartTime' AND @SortDirection = 'DESC' THEN _rows.toScheduleStartTime END DESC,
-        CASE WHEN @SortColumn = 'ToScheduleValidUntil' AND @SortDirection = 'ASC' THEN _rows.toScheduleValidUntil END ASC,
-        CASE WHEN @SortColumn = 'ToScheduleValidUntil' AND @SortDirection = 'DESC' THEN _rows.toScheduleValidUntil END DESC,
-        CASE WHEN @SortColumn = 'ToScheduleEndTime' AND @SortDirection = 'ASC' THEN _rows.toScheduleEndTime END ASC,
-        CASE WHEN @SortColumn = 'ToScheduleEndTime' AND @SortDirection = 'DESC' THEN _rows.toScheduleEndTime END DESC,
         _rows.dateCreated DESC
     OFFSET @Offset ROWS
     FETCH NEXT @PageSize ROWS ONLY
