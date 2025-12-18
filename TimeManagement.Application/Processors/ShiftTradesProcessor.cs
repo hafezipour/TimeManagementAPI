@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -52,6 +53,7 @@ public class ShiftTradesProcessor : BaseProcessor
             return methodName.ToLower() switch
             {
                 "sendtraderequest" => await SendTradeRequest(jsonData.FromJson<SendTradeRequest>()),
+                "gettraderequests" => await GetTradeRequests(jsonData.FromJson<GetTradeRequestsRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -821,6 +823,35 @@ public class ShiftTradesProcessor : BaseProcessor
             IsValid = isValid,
             ValidationMessages = validationMessages
         };
+    }
+
+    /// <summary>
+    /// Get trade requests with server-side paging
+    /// </summary>
+    public async Task<string> GetTradeRequests(GetTradeRequestsRequest request)
+    {
+        try
+        {
+            var pageNumber = request?.PageNumber ?? 1;
+            var pageSize = request?.PageSize ?? 10;
+            var sortColumn = request?.SortColumn ?? "DateCreated";
+            var sortDirection = request?.SortDirection ?? "DESC";
+
+            var result = await _shiftTradesRepository.GetTradeRequests(
+                request?.UserId,
+                pageNumber,
+                pageSize,
+                sortColumn,
+                sortDirection,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving trade requests: {ex.Message}" }.ToJson();
+        }
     }
 }
 

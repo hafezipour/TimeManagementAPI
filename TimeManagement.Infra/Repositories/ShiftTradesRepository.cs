@@ -36,5 +36,31 @@ public class ShiftTradesRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Get trade requests with server-side paging
+    /// </summary>
+    public async Task<string> GetTradeRequests(int? userId, int pageNumber, int pageSize, string sortColumn, string sortDirection, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel() { Name = "UserId", Value = userId ?? (object)DBNull.Value },
+                new SqlParameterModel() { Name = "PageNumber", Value = pageNumber },
+                new SqlParameterModel() { Name = "PageSize", Value = pageSize },
+                new SqlParameterModel() { Name = "SortColumn", Value = sortColumn },
+                new SqlParameterModel() { Name = "SortDirection", Value = sortDirection },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
+            };
+            
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftTrades_GetTradeRequests", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
