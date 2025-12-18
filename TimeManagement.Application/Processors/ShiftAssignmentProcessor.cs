@@ -250,7 +250,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
         {
             var schedule = request.Schedules[0];
             schedule.SourceId = assignmentResponse.Id ?? 0; // Use the returned assignment ID
-
+            
             var scheduleResult = await _scheduleProcessor.Save(schedule);
             var scheduleSaveResult = scheduleResult.FromJson<ScheduleSaveResult>();
 

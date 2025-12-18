@@ -13,5 +13,12 @@ public class ScheduleEmployeeRequest
     public string? Notes { get; set; }
     public int? TradingAssignmentId { get; set; }
     public List<ScheduleRequest>? Schedules { get; set; }
+    
+    // Trade-related fields (only used when called from ShiftTradesProcessor)
+    public bool? IsTraded { get; set; }
+    public int? TradingUserAssignmentId { get; set; }
+    public bool? IsSwap { get; set; }
+    public int? AcceptingUserAssignmentId { get; set; }
+    public int? TradeRequestId { get; set; }
 }
 
