@@ -205,186 +205,6 @@ public class ShiftTradesProcessor : BaseProcessor
 
             #endregion
 
-            #region Create Assignment for Accepting Employee
-
-            // Create shift assignments for both users after trade request is saved
-            _shiftAssignmentProcessor.SetCurrentUser(this.CurrentUser);
-            int? tradingAssignmentId = null;
-            int? acceptingAssignmentId = null;
-
-            // Create assignment for accepting employee (taking trading assignment)
-            if (request.TradingAssignmentId.HasValue && request.TradingDate.HasValue &&
-                request.AcceptingEmployeeId.HasValue && validationData.TradingAssignment != null)
-            {
-                // Filter job codes and work codes to only those the accepting employee has
-                var acceptingEmployeeJobCodeIds = validationData.AcceptingEmployeeJobCodes.Select(ejc => ejc.jobCodeId).ToList();
-                var acceptingEmployeeWorkCodeIds = validationData.AcceptingEmployeeWorkCodes.Select(ewc => ewc.workCodeId).ToList();
-
-                var filteredJobCodeIds = validationData.TradingAssignment.JobCodes?
-                    .Where(jc => acceptingEmployeeJobCodeIds.Contains(jc.Id))
-                    .Select(jc => jc.Id.ToString())
-                    .ToList() ?? new List<string>();
-
-                var filteredWorkCodeIds = validationData.TradingAssignment.WorkCodes?
-                    .Where(wc => acceptingEmployeeWorkCodeIds.Contains(wc.Id))
-                    .Select(wc => wc.Id.ToString())
-                    .ToList() ?? new List<string>();
-
-                // Build schedule: Daily type, StartFrom and ValidUntil same as selected date
-                var selectedDate = request.TradingDate.Value.Date;
-                var schedule = new ScheduleRequest
-                {
-                    ShiftId = request.TradingShiftId.Value,
-                    ScheduleType = (int)ScheduleType.Daily,
-                    RepeatEvery = 1,
-                    StartFrom = selectedDate,
-                    ValidUntil = selectedDate,
-                    EndType = (int)EndType.OnDate,
-                    IsActive = true,
-                    ScheduleWithoutTimes = false,
-                    SourceType = (int)ScheduleSourceTypes.ShiftAssignment
-                };
-
-                // Use times from request if available
-                if (request.TradingUserAssignmentFromTime.HasValue && request.TradingUserAssignmentToTime.HasValue)
-                {
-                    schedule.StartTime = request.TradingUserAssignmentFromTime.Value.ToString(@"hh\:mm\:ss");
-                    schedule.EndTime = request.TradingUserAssignmentToTime.Value.ToString(@"hh\:mm\:ss");
-                    schedule.ScheduleWithoutTimes = false;
-                }
-                else
-                {
-                    schedule.ScheduleWithoutTimes = true;
-                }
-
-                var acceptingAssignmentRequest = new ScheduleEmployeeRequest
-                {
-                    ShiftId = request.TradingShiftId.Value,
-                    UserId = request.AcceptingEmployeeId.Value,
-                    JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
-                    WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
-                    Schedules = new List<ScheduleRequest> { schedule },
-                    IsTraded = true,
-                    TradingUserAssignmentId = request.TradingAssignmentId,
-                    IsSwap = request.IsSwap,
-                    AcceptingUserAssignmentId = null, // This is the new accepting assignment
-                    TradeRequestId = tradeRequestId
-                };
-
-                var acceptingAssignmentResult = await _shiftAssignmentProcessor.SaveAssignmentAndProcessSchedules(acceptingAssignmentRequest);
-                var acceptingAssignmentResponse = JsonConvert.DeserializeObject<dynamic>(acceptingAssignmentResult);
-                if (acceptingAssignmentResponse?.success == true && acceptingAssignmentResponse?.id != null)
-                {
-                    acceptingAssignmentId = (int?)acceptingAssignmentResponse.id;
-                }
-            }
-
-            #endregion
-
-            #region Create Assignment for Trading Employee (Swap)
-
-            // For swaps: Create assignment for trading employee (taking accepting assignment)
-            if (request.IsSwap && request.AcceptingAssignmentId.HasValue && request.AcceptingDate.HasValue &&
-                validationData.AcceptingAssignment != null && request.AcceptingShiftId.HasValue)
-            {
-                // Filter job codes and work codes to only those the trading employee has
-                var tradingEmployeeJobCodeIds = validationData.TradingEmployeeJobCodes.Select(ejc => ejc.jobCodeId).ToList();
-                var tradingEmployeeWorkCodeIds = validationData.TradingEmployeeWorkCodes.Select(ewc => ewc.workCodeId).ToList();
-
-                var filteredJobCodeIds = validationData.AcceptingAssignment.JobCodes?
-                    .Where(jc => tradingEmployeeJobCodeIds.Contains(jc.Id))
-                    .Select(jc => jc.Id.ToString())
-                    .ToList() ?? new List<string>();
-
-                var filteredWorkCodeIds = validationData.AcceptingAssignment.WorkCodes?
-                    .Where(wc => tradingEmployeeWorkCodeIds.Contains(wc.Id))
-                    .Select(wc => wc.Id.ToString())
-                    .ToList() ?? new List<string>();
-
-                // Build schedule: Daily type, StartFrom and ValidUntil same as selected date
-                var selectedDate = request.AcceptingDate.Value.Date;
-                var schedule = new ScheduleRequest
-                {
-                    ShiftId = request.AcceptingShiftId.Value,
-                    ScheduleType = (int)ScheduleType.Daily,
-                    RepeatEvery = 1,
-                    StartFrom = selectedDate,
-                    ValidUntil = selectedDate,
-                    EndType = (int)EndType.OnDate,
-                    IsActive = true,
-                    ScheduleWithoutTimes = false,
-                    SourceType = (int)ScheduleSourceTypes.ShiftAssignment
-                };
-
-                // Use times from request if available
-                if (request.AcceptingUserAssignmentFromTime.HasValue && request.AcceptingUserAssignmentToTime.HasValue)
-                {
-                    schedule.StartTime = request.AcceptingUserAssignmentFromTime.Value.ToString(@"hh\:mm\:ss");
-                    schedule.EndTime = request.AcceptingUserAssignmentToTime.Value.ToString(@"hh\:mm\:ss");
-                    schedule.ScheduleWithoutTimes = false;
-                }
-                else
-                {
-                    schedule.ScheduleWithoutTimes = true;
-                }
-
-                var tradingAssignmentRequest = new ScheduleEmployeeRequest
-                {
-                    ShiftId = request.AcceptingShiftId.Value,
-                    UserId = request.TradingEmployeeId.Value,
-                    JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
-                    WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
-                    Schedules = new List<ScheduleRequest> { schedule },
-                    IsTraded = true,
-                    TradingUserAssignmentId = null, // This is the new trading assignment
-                    IsSwap = request.IsSwap,
-                    AcceptingUserAssignmentId = request.AcceptingAssignmentId, // Original accepting assignment
-                    TradeRequestId = tradeRequestId
-                };
-
-                var tradingAssignmentResult = await _shiftAssignmentProcessor.SaveAssignmentAndProcessSchedules(tradingAssignmentRequest);
-                var tradingAssignmentResponse = JsonConvert.DeserializeObject<dynamic>(tradingAssignmentResult);
-                if (tradingAssignmentResponse?.success == true && tradingAssignmentResponse?.id != null)
-                {
-                    tradingAssignmentId = (int?)tradingAssignmentResponse.id;
-                }
-            }
-
-            #endregion
-
-            #region Update Assignments with Trade Fields
-
-            // Update assignments with trade-related fields
-            // Accepting assignment: accepting employee taking trading assignment
-            if (acceptingAssignmentId.HasValue)
-            {
-                await _shiftAssignmentRepository.UpdateTradeFields(
-                    acceptingAssignmentId.Value,
-                    isTraded: true,
-                    tradingUserAssignmentId: request.TradingAssignmentId, // Original trading assignment
-                    isSwap: request.IsSwap,
-                    acceptingUserAssignmentId: null, // This is the new accepting assignment
-                    tradeRequestId: tradeRequestId,
-                    userId: CurrentUser.LoginId,
-                    tenantId: CurrentUser.TenantID);
-            }
-
-            // Trading assignment: trading employee taking accepting assignment (swap only)
-            if (tradingAssignmentId.HasValue)
-            {
-                await _shiftAssignmentRepository.UpdateTradeFields(
-                    tradingAssignmentId.Value,
-                    isTraded: true,
-                    tradingUserAssignmentId: null, // This is the new trading assignment
-                    isSwap: request.IsSwap,
-                    acceptingUserAssignmentId: request.AcceptingAssignmentId, // Original accepting assignment
-                    tradeRequestId: tradeRequestId,
-                    userId: CurrentUser.LoginId,
-                    tenantId: CurrentUser.TenantID);
-            }
-
-            #endregion
-
             #region Return Response
 
             // Include validation result in response
@@ -915,17 +735,245 @@ public class ShiftTradesProcessor : BaseProcessor
     /// <summary>
     /// Approve a trade request (set StatusCustomTableValueId to 2)
     /// </summary>
-    public async Task<string> ApproveTradeRequest(ApproveTradeRequest request)
+    public async Task<string> ApproveTradeRequest(ApproveTradeRequest approvalRequest)
     {
         try
         {
-            if (request == null || request.TradeRequestId <= 0)
+            if (approvalRequest == null || approvalRequest.TradeRequestId <= 0)
             {
                 return new { success = false, message = "Invalid trade request ID" }.ToJson();
             }
 
+            var data = await _shiftTradesRepository.GetTradesDataForApproval(approvalRequest.TradeRequestId.ToString(), CurrentUser.TenantID);
+            var request = (JsonConvert.DeserializeObject<List<SendTradeRequest>>(data)).FirstOrDefault();
+
+            #region Validation Data Fetching and Validation
+
+            // Validate job codes and work codes before sending trade request
+            var validationRequest = new ValidateJobCodesAndWorkCodesRequest
+            {
+                TradingEmployeeId = request.TradingEmployeeId.Value,
+                TradingShiftId = request.TradingShiftId.Value,
+                TradingAssignmentId = request.TradingAssignmentId,
+                IsSwap = request.IsSwap,
+                AcceptingEmployeeId = request.AcceptingEmployeeId,
+                AcceptingShiftId = request.AcceptingShiftId,
+                AcceptingAssignmentId = request.AcceptingAssignmentId
+            };
+
+            var validationData = await FetchValidationData(validationRequest);
+            var validationResult = ValidateAllDatasets(validationData);
+
+            // Check assignment conflicts
+            var conflictResult = await CheckAssignmentConflicts(request, validationData, validationResult);
+            if (!conflictResult.IsValid)
+            {
+                return new
+                {
+                    success = false,
+                    message = "Trade request validation failed",
+                    tradeRequestId = (int?)null,
+                    validationResult = conflictResult
+                }.ToJson();
+            }
+
+            // If validation fails, return validation result immediately
+            if (!validationResult.IsValid)
+            {
+                return new
+                {
+                    success = false,
+                    message = "Trade request validation failed",
+                    tradeRequestId = (int?)null,
+                    validationResult = validationResult
+                }.ToJson();
+            }
+
+            #endregion
+
+            #region Create Assignment for Accepting Employee
+
+            // Create shift assignments for both users after trade request is saved
+            _shiftAssignmentProcessor.SetCurrentUser(this.CurrentUser);
+            int? tradingAssignmentId = null;
+            int? acceptingAssignmentId = null;
+
+            // Create assignment for accepting employee (taking trading assignment)
+            if (request.TradingAssignmentId.HasValue && request.TradingDate.HasValue &&
+                request.AcceptingEmployeeId.HasValue && validationData.TradingAssignment != null)
+            {
+                // Filter job codes and work codes to only those the accepting employee has
+                var acceptingEmployeeJobCodeIds = validationData.AcceptingEmployeeJobCodes.Select(ejc => ejc.jobCodeId).ToList();
+                var acceptingEmployeeWorkCodeIds = validationData.AcceptingEmployeeWorkCodes.Select(ewc => ewc.workCodeId).ToList();
+
+                var filteredJobCodeIds = validationData.TradingAssignment.JobCodes?
+                    .Where(jc => acceptingEmployeeJobCodeIds.Contains(jc.Id))
+                    .Select(jc => jc.Id.ToString())
+                    .ToList() ?? new List<string>();
+
+                var filteredWorkCodeIds = validationData.TradingAssignment.WorkCodes?
+                    .Where(wc => acceptingEmployeeWorkCodeIds.Contains(wc.Id))
+                    .Select(wc => wc.Id.ToString())
+                    .ToList() ?? new List<string>();
+
+                // Build schedule: Daily type, StartFrom and ValidUntil same as selected date
+                var selectedDate = request.TradingDate.Value.Date;
+                var schedule = new ScheduleRequest
+                {
+                    ShiftId = request.TradingShiftId.Value,
+                    ScheduleType = (int)ScheduleType.Daily,
+                    RepeatEvery = 1,
+                    StartFrom = selectedDate,
+                    ValidUntil = selectedDate,
+                    EndType = (int)EndType.OnDate,
+                    IsActive = true,
+                    ScheduleWithoutTimes = false,
+                    SourceType = (int)ScheduleSourceTypes.ShiftAssignment
+                };
+
+                // Use times from request if available
+                if (request.TradingUserAssignmentFromTime.HasValue && request.TradingUserAssignmentToTime.HasValue)
+                {
+                    schedule.StartTime = request.TradingUserAssignmentFromTime.Value.ToString(@"hh\:mm\:ss");
+                    schedule.EndTime = request.TradingUserAssignmentToTime.Value.ToString(@"hh\:mm\:ss");
+                    schedule.ScheduleWithoutTimes = false;
+                }
+                else
+                {
+                    schedule.ScheduleWithoutTimes = true;
+                }
+
+                var acceptingAssignmentRequest = new ScheduleEmployeeRequest
+                {
+                    ShiftId = request.TradingShiftId.Value,
+                    UserId = request.AcceptingEmployeeId.Value,
+                    JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
+                    WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
+                    Schedules = new List<ScheduleRequest> { schedule },
+                    IsTraded = true,
+                    TradingUserAssignmentId = request.TradingAssignmentId,
+                    IsSwap = request.IsSwap,
+                    AcceptingUserAssignmentId = null, // This is the new accepting assignment
+                    TradeRequestId = approvalRequest.TradeRequestId
+                };
+
+                var acceptingAssignmentResult = await _shiftAssignmentProcessor.SaveAssignmentAndProcessSchedules(acceptingAssignmentRequest);
+                var acceptingAssignmentResponse = JsonConvert.DeserializeObject<dynamic>(acceptingAssignmentResult);
+                if (acceptingAssignmentResponse?.success == true && acceptingAssignmentResponse?.id != null)
+                {
+                    acceptingAssignmentId = (int?)acceptingAssignmentResponse.id;
+                }
+            }
+
+            #endregion
+
+            #region Create Assignment for Trading Employee (Swap)
+
+            // For swaps: Create assignment for trading employee (taking accepting assignment)
+            if (request.IsSwap && request.AcceptingAssignmentId.HasValue && request.AcceptingDate.HasValue &&
+                validationData.AcceptingAssignment != null && request.AcceptingShiftId.HasValue)
+            {
+                // Filter job codes and work codes to only those the trading employee has
+                var tradingEmployeeJobCodeIds = validationData.TradingEmployeeJobCodes.Select(ejc => ejc.jobCodeId).ToList();
+                var tradingEmployeeWorkCodeIds = validationData.TradingEmployeeWorkCodes.Select(ewc => ewc.workCodeId).ToList();
+
+                var filteredJobCodeIds = validationData.AcceptingAssignment.JobCodes?
+                    .Where(jc => tradingEmployeeJobCodeIds.Contains(jc.Id))
+                    .Select(jc => jc.Id.ToString())
+                    .ToList() ?? new List<string>();
+
+                var filteredWorkCodeIds = validationData.AcceptingAssignment.WorkCodes?
+                    .Where(wc => tradingEmployeeWorkCodeIds.Contains(wc.Id))
+                    .Select(wc => wc.Id.ToString())
+                    .ToList() ?? new List<string>();
+
+                // Build schedule: Daily type, StartFrom and ValidUntil same as selected date
+                var selectedDate = request.AcceptingDate.Value.Date;
+                var schedule = new ScheduleRequest
+                {
+                    ShiftId = request.AcceptingShiftId.Value,
+                    ScheduleType = (int)ScheduleType.Daily,
+                    RepeatEvery = 1,
+                    StartFrom = selectedDate,
+                    ValidUntil = selectedDate,
+                    EndType = (int)EndType.OnDate,
+                    IsActive = true,
+                    ScheduleWithoutTimes = false,
+                    SourceType = (int)ScheduleSourceTypes.ShiftAssignment
+                };
+
+                // Use times from request if available
+                if (request.AcceptingUserAssignmentFromTime.HasValue && request.AcceptingUserAssignmentToTime.HasValue)
+                {
+                    schedule.StartTime = request.AcceptingUserAssignmentFromTime.Value.ToString(@"hh\:mm\:ss");
+                    schedule.EndTime = request.AcceptingUserAssignmentToTime.Value.ToString(@"hh\:mm\:ss");
+                    schedule.ScheduleWithoutTimes = false;
+                }
+                else
+                {
+                    schedule.ScheduleWithoutTimes = true;
+                }
+
+                var tradingAssignmentRequest = new ScheduleEmployeeRequest
+                {
+                    ShiftId = request.AcceptingShiftId.Value,
+                    UserId = request.TradingEmployeeId.Value,
+                    JobCodeIds = filteredJobCodeIds.Any() ? string.Join(",", filteredJobCodeIds) : null,
+                    WorkCodeIds = filteredWorkCodeIds.Any() ? string.Join(",", filteredWorkCodeIds) : null,
+                    Schedules = new List<ScheduleRequest> { schedule },
+                    IsTraded = true,
+                    TradingUserAssignmentId = null, // This is the new trading assignment
+                    IsSwap = request.IsSwap,
+                    AcceptingUserAssignmentId = request.AcceptingAssignmentId, // Original accepting assignment
+                    TradeRequestId = approvalRequest.TradeRequestId
+                };
+
+                var tradingAssignmentResult = await _shiftAssignmentProcessor.SaveAssignmentAndProcessSchedules(tradingAssignmentRequest);
+                var tradingAssignmentResponse = JsonConvert.DeserializeObject<dynamic>(tradingAssignmentResult);
+                if (tradingAssignmentResponse?.success == true && tradingAssignmentResponse?.id != null)
+                {
+                    tradingAssignmentId = (int?)tradingAssignmentResponse.id;
+                }
+            }
+
+            #endregion
+
+            #region Update Assignments with Trade Fields
+
+            // Update assignments with trade-related fields
+            // Accepting assignment: accepting employee taking trading assignment
+            if (acceptingAssignmentId.HasValue)
+            {
+                await _shiftAssignmentRepository.UpdateTradeFields(
+                    acceptingAssignmentId.Value,
+                    isTraded: true,
+                    tradingUserAssignmentId: request.TradingAssignmentId, // Original trading assignment
+                    isSwap: request.IsSwap,
+                    acceptingUserAssignmentId: null, // This is the new accepting assignment
+                    tradeRequestId: approvalRequest.TradeRequestId,
+                    userId: CurrentUser.LoginId,
+                    tenantId: CurrentUser.TenantID);
+            }
+
+            // Trading assignment: trading employee taking accepting assignment (swap only)
+            if (tradingAssignmentId.HasValue)
+            {
+                await _shiftAssignmentRepository.UpdateTradeFields(
+                    tradingAssignmentId.Value,
+                    isTraded: true,
+                    tradingUserAssignmentId: null, // This is the new trading assignment
+                    isSwap: request.IsSwap,
+                    acceptingUserAssignmentId: request.AcceptingAssignmentId, // Original accepting assignment
+                    tradeRequestId: approvalRequest.TradeRequestId,
+                    userId: CurrentUser.LoginId,
+                    tenantId: CurrentUser.TenantID);
+            }
+
+            #endregion
+
+
             var result = await _shiftTradesRepository.ApproveTradeRequest(
-                request.TradeRequestId,
+                approvalRequest.TradeRequestId,
                 CurrentUser.TenantID
             );
 

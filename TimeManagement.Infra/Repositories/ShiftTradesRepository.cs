@@ -65,6 +65,28 @@ public class ShiftTradesRepository
     }
 
     /// <summary>
+    /// This is used to get the shift trades data for approval
+    /// </summary>
+    public async Task<string> GetTradesDataForApproval(string ids, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel() { Name = "Ids", Value = ids },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftTrades_GetDataForApproval", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    /// <summary>
     /// Delete a trade request and associated shift assignments
     /// </summary>
     public async Task<string> DeleteTradeRequest(int tradeRequestId, int tenantId)
@@ -85,7 +107,7 @@ public class ShiftTradesRepository
             throw ex;
         }
     }
-
+    
     /// <summary>
     /// Deny a trade request (set StatusCustomTableValueId to 3)
     /// </summary>
