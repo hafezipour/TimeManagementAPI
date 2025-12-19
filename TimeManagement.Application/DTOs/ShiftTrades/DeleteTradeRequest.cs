@@ -34,3 +34,20 @@ public class DenyTradeResponse
     public string Message { get; set; }
 }
 
+/// <summary>
+/// Request model for approving a trade request
+/// </summary>
+public class ApproveTradeRequest
+{
+    public int TradeRequestId { get; set; }
+}
+
+/// <summary>
+/// Response model for approving a trade request
+/// </summary>
+public class ApproveTradeResponse
+{
+    public bool Success { get; set; }
+    public string Message { get; set; }
+}
+
