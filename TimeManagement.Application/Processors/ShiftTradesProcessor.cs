@@ -224,7 +224,6 @@ public class ShiftTradesProcessor : BaseProcessor
         }
     }
 
-
     /// <summary>
     /// Fetch all validation data from repositories
     /// </summary>

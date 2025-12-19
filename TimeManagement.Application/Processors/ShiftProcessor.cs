@@ -644,15 +644,12 @@ public class ShiftProcessor : BaseProcessor
             userIds = string.Join(",", employeeIds);
         }
 
-
         var assignmentsJson = await _shiftAssignmentRepository.Get(userIds, shiftIds, CurrentUser.TenantID);
         var allAssignmentsIncludingChild = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(assignmentsJson);
         allAssignments = allAssignmentsIncludingChild.Where(c => c.IsChild != true).ToList();
 
-
         var assignmentsJsonChild = await _shiftAssignmentRepository.GetChildByIds(allAssignments.Select(c => c.Id).ToCommaSeparatedString(), CurrentUser.TenantID);
         var childAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentChildByIds>>(assignmentsJsonChild);
-
 
         if (allAssignments != null && allAssignments.Any())
         {
