@@ -131,6 +131,34 @@ public class ShiftTradesRepository
     }
 
     /// <summary>
+    /// Check if an approved trade conflict exists in ShiftAssignment table
+    /// </summary>
+    public async Task<string> CheckApprovedTradeConflict(
+        int shiftId,
+        DateTime date,
+        string shiftType,
+        int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel() { Name = "ShiftId", Value = shiftId },
+                new SqlParameterModel() { Name = "Date", Value = date },
+                new SqlParameterModel() { Name = "ShiftType", Value = shiftType },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
+            };
+            
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftTrades_CheckApprovedTradeConflict", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
+
+    /// <summary>
     /// Approve a trade request (set StatusCustomTableValueId to 2)
     /// </summary>
     public async Task<string> ApproveTradeRequest(int tradeRequestId, int tenantId)
