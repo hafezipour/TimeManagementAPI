@@ -22,7 +22,8 @@ namespace TimeManagement.Application.Enums
     {
         Shift = 1,
         StaffAvailability = 2,
-        ShiftAssignment = 3
+        ShiftAssignment = 3,
+        TimeOff = 4
     }
 
     /// <summary>

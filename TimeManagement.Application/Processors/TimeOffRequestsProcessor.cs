@@ -40,6 +40,7 @@ public class TimeOffRequestsProcessor : BaseProcessor
             {
                 "get" => await GetTimeOffRequestsList(jsonData.FromJson<GetTimeOffRequestRequest>()),
                 "getforscheduler" => await GetTimeOffRequestsForScheduler(jsonData.FromJson<GetTimeOffRequestsForSchedulerRequest>()),
+                "getstats" => await GetTimeOffRequestsStats(jsonData.FromJson<GetTimeOffRequestsStatsRequest>()),
                 "save" => await SaveTimeOffRequest(jsonData.FromJson<SaveTimeOffRequestRequest>()),
                 "approve" => await ApproveTimeOffRequest(jsonData.FromJson<ApproveTimeOffRequestRequest>()),
                 "reject" => await RejectTimeOffRequest(jsonData.FromJson<RejectTimeOffRequestRequest>()),
@@ -157,6 +158,23 @@ public class TimeOffRequestsProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving time off requests for scheduler: {ex.Message}" }.ToJson();
+        }
+    }
+
+    public async Task<string> GetTimeOffRequestsStats(GetTimeOffRequestsStatsRequest request)
+    {
+        try
+        {
+            var result = await _timeOffRequestsRepository.GetTimeOffRequestsStats(
+                request?.Date,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving time off requests stats: {ex.Message}" }.ToJson();
         }
     }
 

@@ -54,6 +54,7 @@ public class ShiftTradesProcessor : BaseProcessor
             {
                 "sendtraderequest" => await SendTradeRequest(jsonData.FromJson<SendTradeRequest>()),
                 "gettraderequests" => await GetTradeRequests(jsonData.FromJson<GetTradeRequestsRequest>()),
+                "getstats" => await GetShiftTradesStats(jsonData.FromJson<GetShiftTradesStatsRequest>()),
                 "deletetraderequest" => await DeleteTradeRequest(jsonData.FromJson<DeleteTradeRequest>()),
                 "denytraderequest" => await DenyTradeRequest(jsonData.FromJson<DenyTradeRequest>()),
                 "approvetraderequest" => await ApproveTradeRequest(jsonData.FromJson<ApproveTradeRequest>()),
@@ -678,6 +679,26 @@ public class ShiftTradesProcessor : BaseProcessor
         catch (Exception ex)
         {
             return new { success = false, message = $"Error retrieving trade requests: {ex.Message}" }.ToJson();
+        }
+    }
+
+    /// <summary>
+    /// Get Shift Trades statistics (Open, Approved, Denied)
+    /// </summary>
+    public async Task<string> GetShiftTradesStats(GetShiftTradesStatsRequest request)
+    {
+        try
+        {
+            var result = await _shiftTradesRepository.GetShiftTradesStats(
+                request?.Date,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error retrieving shift trades stats: {ex.Message}" }.ToJson();
         }
     }
 

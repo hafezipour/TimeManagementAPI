@@ -179,5 +179,27 @@ public class ShiftTradesRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Get Shift Trades statistics (Open, Approved, Denied)
+    /// </summary>
+    public async Task<string> GetShiftTradesStats(DateTime? date, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel() { Name = "Date", Value = date.HasValue ? (object)date.Value.Date : DBNull.Value },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
+            };
+            
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftTrades_GetStats", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 

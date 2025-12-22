@@ -176,5 +176,24 @@ public class TimeOffRequestsRepository
             throw ex;
         }
     }
+
+    public async Task<string> GetTimeOffRequestsStats(DateTime? date, int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel(){ Name = "Date", Value = date.HasValue ? (object)date.Value.Date : DBNull.Value},
+                new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
+            };
+
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_TimeOffRequests_GetStats", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
