@@ -5,3 +5,4 @@ public class GetShiftTradesStatsRequest
     public DateTime? Date { get; set; }
 }
 
+
