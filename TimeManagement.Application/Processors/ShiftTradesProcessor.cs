@@ -749,6 +749,41 @@ public class ShiftTradesProcessor : BaseProcessor
             return new { success = false, message = $"Error denying trade request: {ex.Message}" }.ToJson();
         }
     }
+    public async Task AvailabilityConflictsValidation(SendTradeRequest request)
+    {
+        _shiftAssignmentProcessor.SetCurrentUser(this.CurrentUser);
+        if (request.TradingDate != null)
+        {
+            var schedule2 = new ScheduleRequest
+            {
+                ShiftId = request.TradingShiftId.Value,
+                ScheduleType = (int)ScheduleType.Daily,
+                RepeatEvery = 1,
+                StartFrom = (DateTime)request.TradingDate,
+                ValidUntil = request.TradingDate,
+                EndType = (int)EndType.OnDate,
+                IsActive = true,
+                ScheduleWithoutTimes = false
+            };
+            var conflicts = await _shiftAssignmentProcessor.CheckAvailabilityConflicts(schedule2, (int)request.TradingEmployeeId);
+        }
+        if (request.AcceptingDate != null && request.IsSwap)
+        {
+            var schedule2 = new ScheduleRequest
+            {
+                ShiftId = request.TradingShiftId.Value,
+                ScheduleType = (int)ScheduleType.Daily,
+                RepeatEvery = 1,
+                StartFrom = (DateTime)request.AcceptingDate,
+                ValidUntil = request.AcceptingDate,
+                EndType = (int)EndType.OnDate,
+                IsActive = true,
+                ScheduleWithoutTimes = false
+            };
+            var conflicts = await _shiftAssignmentProcessor.CheckAvailabilityConflicts(schedule2, (int)request.AcceptingEmployeeId);
+        }
+
+    }
 
     /// <summary>
     /// Approve a trade request (set StatusCustomTableValueId to 2)
@@ -769,6 +804,7 @@ public class ShiftTradesProcessor : BaseProcessor
             {
                 return new { success = false, message = "Trade request data not found" }.ToJson();
             }
+
 
             #region Check for Approved Trade Conflicts in ShiftAssignment
 
