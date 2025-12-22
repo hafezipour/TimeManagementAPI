@@ -127,70 +127,10 @@ public class ShiftAssignmentProcessor : BaseProcessor
 
             #region Conflicts Checking and validations
 
-            #region Conflicts data gathering
-
-            // BEFORE SAVING: Fetch existing assignments for the user
-            var existingAssignmentsJson = await _shiftAssignmentRepository.Get(request.UserId.ToString(), null, CurrentUser.TenantID);
-            var existingAssignments = JsonConvert.DeserializeObject<List<ShiftAssignmentDetailDto>>(existingAssignmentsJson);
-
-            // Fetch schedules for all existing assignments
-            var assignmentIdList = existingAssignments
-                .Select(a => a.Id)
-                .Distinct()
-                .ToList();
-
-            var sourceIds = new List<int>();
-            sourceIds.AddRange(assignmentIdList);
-
-            // Include staff availability source ids (using the user id as the availability source for now)
-            if (request.UserId > 0)
-            {
-                sourceIds.Add(request.UserId);
-            }
-
-            var sourceTypes = new List<int>();
-            if (assignmentIdList.Any())
-            {
-                sourceTypes.Add((int)ScheduleSourceTypes.ShiftAssignment);
-            }
-            if (request.UserId > 0)
-            {
-                sourceTypes.Add((int)ScheduleSourceTypes.StaffAvailability);
-            }
-
-            List<ScheduleResponse>? schedules = null;
-
-            if (sourceIds.Any() && sourceTypes.Any())
-            {
-                var schedulesJson = await _scheduleProcessor.GetBySource(new GetScheduleRequest
-                {
-                    SourceIds = string.Join(",", sourceIds.Distinct()),
-                    SourceTypes = string.Join(",", sourceTypes.Distinct())
-                });
-
-                schedules = JsonConvert.DeserializeObject<List<ScheduleResponse>>(schedulesJson);
-            }
-
-            #endregion
-
             #region Availability Conflicts
 
-            var availabilitySchedules = schedules?
-            .Where(s => s.SourceType == (int)ScheduleSourceTypes.StaffAvailability)
-            .ToList();
-
-            var availabilityDtos = availabilitySchedules?.Select(s => new AvailabilityDto
-            {
-                Id = s.Id,
-                UserId = s.SourceId,
-                StartFrom = s.StartFrom,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                ValidUntil = s.ValidUntil
-            }).ToList();
-
-            var availabilityConflicts = _conflictService.DetectAvailabilityConflicts(request, availabilityDtos);
-            if (availabilityConflicts != null && availabilityConflicts.Any() && DateTime.Now < DateTime.Parse("2025-12-5"))
+            var availabilityConflicts = await CheckAvailabilityConflicts(request.Schedules.FirstOrDefault(), request.UserId);
+            if (availabilityConflicts != null && availabilityConflicts.Any() && DateTime.Now > DateTime.Parse("2025-12-31"))
             {
                 return new
                 {
@@ -221,7 +161,6 @@ public class ShiftAssignmentProcessor : BaseProcessor
 
             #endregion
 
-
             #endregion
 
             // Now proceed with saving the new/updated assignment
@@ -232,6 +171,29 @@ public class ShiftAssignmentProcessor : BaseProcessor
         {
             throw ex;
         }
+    }
+
+    private async Task<List<ScheduleConflictDetail>> CheckAvailabilityConflicts(ScheduleRequest newScheduleRequest, int userId)
+    {
+        var schedulesJson = await _scheduleProcessor.GetBySource(new GetScheduleRequest
+        {
+            SourceIds = string.Join(",", userId.ToString()),
+            SourceTypes = string.Join(",", ((int)ScheduleSourceTypes.StaffAvailability).ToString())
+        });
+        List<ScheduleResponse> availabilitySchedules = JsonConvert.DeserializeObject<List<ScheduleResponse>>(schedulesJson);
+
+        var availabilityDtos = availabilitySchedules?.Select(s => new AvailabilityDto
+        {
+            Id = s.Id,
+            UserId = s.SourceId,
+            StartFrom = s.StartFrom,
+            StartTime = s.StartTime,
+            EndTime = s.EndTime,
+            ValidUntil = s.ValidUntil
+        }).ToList();
+
+        var availabilityConflicts = _conflictService.DetectAvailabilityConflicts(userId, newScheduleRequest, availabilityDtos);
+        return availabilityConflicts;
     }
 
     /// <summary>
@@ -250,7 +212,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
         {
             var schedule = request.Schedules[0];
             schedule.SourceId = assignmentResponse.Id ?? 0; // Use the returned assignment ID
-            
+
             var scheduleResult = await _scheduleProcessor.Save(schedule);
             var scheduleSaveResult = scheduleResult.FromJson<ScheduleSaveResult>();
 

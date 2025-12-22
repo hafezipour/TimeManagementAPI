@@ -1,16 +1,17 @@
+using Azure.Core;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using TimeManagement.Application.DTOs.Schedules;
 using TimeManagement.Application.DTOs.ShiftAssignments;
 using TimeManagement.Application.DTOs.ShiftTrades;
-using TimeManagement.Application.DTOs.Schedules;
 using TimeManagement.Application.Enums;
 using TimeManagement.Application.Extensions;
-using TimeManagement.Infra.Repositories;
 using TimeManagement.Domain.Models;
+using TimeManagement.Infra.Repositories;
 
 namespace TimeManagement.Application.Processors;
 
@@ -238,13 +239,13 @@ public class ShiftTradesProcessor : BaseProcessor
         // Dataset 1: Trading Employee Job Codes
         var tradingEmployeeJobCodesJson = await _employeeJobCodeAssignmentRepository.GetShortList(
             request.TradingEmployeeId, false, null, CurrentUser.TenantID);
-        validationData.TradingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(tradingEmployeeJobCodesJson) 
+        validationData.TradingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(tradingEmployeeJobCodesJson)
             ?? new List<EmployeeJobCodeAssignmentDto>();
 
         // Dataset 2: Trading Employee Work Codes
         var tradingEmployeeWorkCodesJson = await _employeeWorkCodeAssignmentRepository.GetShortList(
             request.TradingEmployeeId, false, null, CurrentUser.TenantID);
-        validationData.TradingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(tradingEmployeeWorkCodesJson) 
+        validationData.TradingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(tradingEmployeeWorkCodesJson)
             ?? new List<EmployeeWorkCodeAssignmentDto>();
 
         // Dataset 3: Trading Shift Job Codes and Work Codes
@@ -257,15 +258,15 @@ public class ShiftTradesProcessor : BaseProcessor
         validationData.TradingShiftJobCodes = tradingShift.JobCodes ?? new List<ShiftJobCode>();
         validationData.TradingShiftWorkCodes = tradingShift.WorkCodes ?? new List<ShiftWorkCode>();
 
-            var acceptingEmployeeJobCodesJson = await _employeeJobCodeAssignmentRepository.GetShortList(
-                request.AcceptingEmployeeId.Value, false, null, CurrentUser.TenantID);
-            validationData.AcceptingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(acceptingEmployeeJobCodesJson) 
-                ?? new List<EmployeeJobCodeAssignmentDto>();
+        var acceptingEmployeeJobCodesJson = await _employeeJobCodeAssignmentRepository.GetShortList(
+            request.AcceptingEmployeeId.Value, false, null, CurrentUser.TenantID);
+        validationData.AcceptingEmployeeJobCodes = JsonConvert.DeserializeObject<List<EmployeeJobCodeAssignmentDto>>(acceptingEmployeeJobCodesJson)
+            ?? new List<EmployeeJobCodeAssignmentDto>();
 
-            var acceptingEmployeeWorkCodesJson = await _employeeWorkCodeAssignmentRepository.GetShortList(
-                request.AcceptingEmployeeId.Value, false, null, CurrentUser.TenantID);
-            validationData.AcceptingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(acceptingEmployeeWorkCodesJson) 
-                ?? new List<EmployeeWorkCodeAssignmentDto>();
+        var acceptingEmployeeWorkCodesJson = await _employeeWorkCodeAssignmentRepository.GetShortList(
+            request.AcceptingEmployeeId.Value, false, null, CurrentUser.TenantID);
+        validationData.AcceptingEmployeeWorkCodes = JsonConvert.DeserializeObject<List<EmployeeWorkCodeAssignmentDto>>(acceptingEmployeeWorkCodesJson)
+            ?? new List<EmployeeWorkCodeAssignmentDto>();
 
         // Dataset 4: Accepting Employee and Shift (if swap)
         if (request.IsSwap && request.AcceptingEmployeeId.HasValue && request.AcceptingShiftId.HasValue)
@@ -334,8 +335,8 @@ public class ShiftTradesProcessor : BaseProcessor
                 !data.TradingEmployeeJobCodes.Any(ejc => ejc.jobCodeId == sjc.id)).ToList();
 
             if (missingJobCodes.Any())
-                {
-                    isValid = false;
+            {
+                isValid = false;
                 validationMessages.Add("Trading employee is missing required job codes for the shift.");
             }
         }
@@ -347,8 +348,8 @@ public class ShiftTradesProcessor : BaseProcessor
                 !data.TradingEmployeeWorkCodes.Any(ewc => ewc.workCodeId == swc.id)).ToList();
 
             if (missingWorkCodes.Any())
-                {
-                    isValid = false;
+            {
+                isValid = false;
                 validationMessages.Add("Trading employee is missing required work codes for the shift.");
             }
         }
@@ -366,8 +367,8 @@ public class ShiftTradesProcessor : BaseProcessor
                     !data.AcceptingEmployeeJobCodes.Any(ejc => ejc.jobCodeId == sjc.id)).ToList();
 
                 if (missingJobCodes.Any())
-                    {
-                        isValid = false;
+                {
+                    isValid = false;
                     validationMessages.Add("Accepting employee is missing required job codes for the shift.");
                 }
             }
@@ -507,10 +508,7 @@ public class ShiftTradesProcessor : BaseProcessor
     /// <summary>
     /// Check assignment conflicts for trade requests
     /// </summary>
-    private async Task<ValidateJobCodesAndWorkCodesResponse> CheckAssignmentConflicts(
-        SendTradeRequest request,
-        ValidationDataDto validationData,
-        ValidateJobCodesAndWorkCodesResponse validationResult)
+    private async Task<ValidateJobCodesAndWorkCodesResponse> CheckAssignmentConflicts(SendTradeRequest request, ValidationDataDto validationData, ValidateJobCodesAndWorkCodesResponse validationResult)
     {
         _shiftAssignmentProcessor.SetCurrentUser(this.CurrentUser);
 

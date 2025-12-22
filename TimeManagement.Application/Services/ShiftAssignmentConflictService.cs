@@ -172,7 +172,7 @@ public class ShiftAssignmentConflictService
             foreach (var occurrence in scheduleOccurrences)
             {
                 if (assignment.FromDate.HasValue && assignment.ToDate.HasValue &&
-                    occurrence.Date >= assignment.FromDate.Value.Date && 
+                    occurrence.Date >= assignment.FromDate.Value.Date &&
                     occurrence.Date <= assignment.ToDate.Value.Date)
                 {
                     conflicts.Add(new ScheduleConflictDetail
@@ -194,30 +194,10 @@ public class ShiftAssignmentConflictService
         return conflicts.Count > 0 ? conflicts : null;
     }
 
-    public List<ScheduleConflictDetail>? DetectAvailabilityConflicts(
-        ScheduleEmployeeRequest request,
-        List<AvailabilityDto>? availabilityWindows)
+    public List<ScheduleConflictDetail>? DetectAvailabilityConflicts(int userId,ScheduleRequest newScheduleRequest, List<AvailabilityDto>? availabilityWindows)
     {
-        if (request?.Schedules == null || request.Schedules.Count == 0)
-        {
-            return null;
-        }
-
-        var newScheduleRequest = request.Schedules.First();
+        //var newScheduleRequest = request.Schedules.First();
         var newSchedule = ConvertToScheduleResponse(newScheduleRequest);
-
-        if (newSchedule == null || !newSchedule.StartFrom.HasValue)
-        {
-            return new List<ScheduleConflictDetail>
-            {
-                new ScheduleConflictDetail
-                {
-                    UserId = request.UserId,
-                    RequestedScheduleId = newSchedule?.Id,
-                    Reason = "Requested schedule is missing a valid start date."
-                }
-            };
-        }
 
         var rangeStart = newSchedule.StartFrom.Value.Date;
         var rangeEnd = DetermineRangeEnd(newSchedule, rangeStart);
@@ -233,7 +213,7 @@ public class ShiftAssignmentConflictService
             return newOccurrences
                 .Take(MaxAvailabilityConflictEntries)
                 .Select(occurrence => BuildAvailabilityConflictDetail(
-                    request.UserId,
+                    userId,
                     newSchedule,
                     occurrence,
                     null,
@@ -251,7 +231,7 @@ public class ShiftAssignmentConflictService
             if (coveringAvailability == null)
             {
                 conflicts.Add(BuildAvailabilityConflictDetail(
-                    request.UserId,
+                    userId,
                     newSchedule,
                     occurrence,
                     null,
