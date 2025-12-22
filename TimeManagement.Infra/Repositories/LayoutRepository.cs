@@ -9,7 +9,7 @@ namespace TimeManagement.Infra.Repositories;
 public class LayoutRepository
 {
     private readonly EfDbOperationsRepository _dbOperations;
-    
+
     public LayoutRepository(EfDbOperationsRepository dbOperations)
     {
         _dbOperations = dbOperations;
@@ -26,7 +26,8 @@ public class LayoutRepository
             {
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
-            return await _dbOperations.ExecuteDataSetAsync("usp_Layouts_GetShortList", param);
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_Layouts_GetShortList", param);
+            return result;
         }
         catch (Exception ex)
         {
@@ -68,7 +69,7 @@ public class LayoutRepository
                 new SqlParameterModel(){ Name = "UserId", Value = userId},
                 new SqlParameterModel(){ Name = "TenantId", Value = tenantId}
             };
-            var result =  await _dbOperations.ExecuteDataSetAsync("usp_Layouts_SaveGridCells", param);
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_Layouts_SaveGridCells", param);
             return result;
         }
         catch (Exception ex)
