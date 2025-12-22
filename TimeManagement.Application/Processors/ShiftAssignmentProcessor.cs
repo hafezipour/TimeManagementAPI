@@ -173,7 +173,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
         }
     }
 
-    private async Task<List<ScheduleConflictDetail>> CheckAvailabilityConflicts(ScheduleRequest newScheduleRequest, int userId)
+    public async Task<List<ScheduleConflictDetail>> CheckAvailabilityConflicts(ScheduleRequest newScheduleRequest, int userId)
     {
         var schedulesJson = await _scheduleProcessor.GetBySource(new GetScheduleRequest
         {
