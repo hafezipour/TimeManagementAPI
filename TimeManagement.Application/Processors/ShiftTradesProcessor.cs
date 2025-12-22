@@ -177,6 +177,23 @@ public class ShiftTradesProcessor : BaseProcessor
                 }.ToJson();
             }
 
+            #region Check Staff Availability Conflicts
+
+            // Check availability conflicts using the AvailabilityConflictsValidation method
+            var availabilityValidationResult = await AvailabilityConflictsValidation(request);
+            if (!availabilityValidationResult.IsValid)
+            {
+                return new
+                {
+                    success = false,
+                    message = "Trade request validation failed",
+                    tradeRequestId = (int?)null,
+                    validationResult = availabilityValidationResult
+                }.ToJson();
+            }
+
+            #endregion
+
             #endregion
 
             #region Save Trade Request
@@ -749,40 +766,95 @@ public class ShiftTradesProcessor : BaseProcessor
             return new { success = false, message = $"Error denying trade request: {ex.Message}" }.ToJson();
         }
     }
-    public async Task AvailabilityConflictsValidation(SendTradeRequest request)
+    public async Task<ValidateJobCodesAndWorkCodesResponse> AvailabilityConflictsValidation(SendTradeRequest request)
     {
         _shiftAssignmentProcessor.SetCurrentUser(this.CurrentUser);
-        if (request.TradingDate != null)
+        bool isValid = true;
+        var validationMessages = new List<string>();
+
+        // Check availability for accepting employee (taking trading assignment)
+        if (request.TradingDate.HasValue && request.TradingShiftId.HasValue && request.AcceptingEmployeeId.HasValue)
         {
-            var schedule2 = new ScheduleRequest
+            var tradingSchedule = new ScheduleRequest
             {
                 ShiftId = request.TradingShiftId.Value,
                 ScheduleType = (int)ScheduleType.Daily,
                 RepeatEvery = 1,
-                StartFrom = (DateTime)request.TradingDate,
-                ValidUntil = request.TradingDate,
+                StartFrom = request.TradingDate.Value.Date,
+                ValidUntil = request.TradingDate.Value.Date,
                 EndType = (int)EndType.OnDate,
                 IsActive = true,
                 ScheduleWithoutTimes = false
             };
-            var conflicts = await _shiftAssignmentProcessor.CheckAvailabilityConflicts(schedule2, (int)request.TradingEmployeeId);
-        }
-        if (request.AcceptingDate != null && request.IsSwap)
-        {
-            var schedule2 = new ScheduleRequest
+
+            // Use times from request if available
+            if (request.TradingUserAssignmentFromTime.HasValue && request.TradingUserAssignmentToTime.HasValue)
             {
-                ShiftId = request.TradingShiftId.Value,
-                ScheduleType = (int)ScheduleType.Daily,
-                RepeatEvery = 1,
-                StartFrom = (DateTime)request.AcceptingDate,
-                ValidUntil = request.AcceptingDate,
-                EndType = (int)EndType.OnDate,
-                IsActive = true,
-                ScheduleWithoutTimes = false
-            };
-            var conflicts = await _shiftAssignmentProcessor.CheckAvailabilityConflicts(schedule2, (int)request.AcceptingEmployeeId);
+                tradingSchedule.StartTime = request.TradingUserAssignmentFromTime.Value.ToString(@"hh\:mm\:ss");
+                tradingSchedule.EndTime = request.TradingUserAssignmentToTime.Value.ToString(@"hh\:mm\:ss");
+                tradingSchedule.ScheduleWithoutTimes = false;
+            }
+            else
+            {
+                tradingSchedule.ScheduleWithoutTimes = true;
+            }
+
+            var conflicts = await _shiftAssignmentProcessor.CheckAvailabilityConflicts(
+                tradingSchedule,
+                request.AcceptingEmployeeId.Value
+            );
+
+            if (conflicts != null && conflicts.Any())
+            {
+                isValid = false;
+                validationMessages.Add($"Conflicting staff availability detected for accepting employee on {request.TradingDate.Value.Date:yyyy-MM-dd}.");
+            }
         }
 
+        // For swaps: Check availability for trading employee (taking accepting assignment)
+        if (request.IsSwap && request.AcceptingDate.HasValue && request.AcceptingShiftId.HasValue && request.TradingEmployeeId.HasValue)
+        {
+            var acceptingSchedule = new ScheduleRequest
+            {
+                ShiftId = request.AcceptingShiftId.Value,
+                ScheduleType = (int)ScheduleType.Daily,
+                RepeatEvery = 1,
+                StartFrom = request.AcceptingDate.Value.Date,
+                ValidUntil = request.AcceptingDate.Value.Date,
+                EndType = (int)EndType.OnDate,
+                IsActive = true,
+                ScheduleWithoutTimes = false
+            };
+
+            // Use times from request if available
+            if (request.AcceptingUserAssignmentFromTime.HasValue && request.AcceptingUserAssignmentToTime.HasValue)
+            {
+                acceptingSchedule.StartTime = request.AcceptingUserAssignmentFromTime.Value.ToString(@"hh\:mm\:ss");
+                acceptingSchedule.EndTime = request.AcceptingUserAssignmentToTime.Value.ToString(@"hh\:mm\:ss");
+                acceptingSchedule.ScheduleWithoutTimes = false;
+            }
+            else
+            {
+                acceptingSchedule.ScheduleWithoutTimes = true;
+            }
+
+            var conflicts = await _shiftAssignmentProcessor.CheckAvailabilityConflicts(
+                acceptingSchedule,
+                request.TradingEmployeeId.Value
+            );
+
+            if (conflicts != null && conflicts.Any())
+            {
+                isValid = false;
+                validationMessages.Add($"Conflicting staff availability detected for trading employee on {request.AcceptingDate.Value.Date:yyyy-MM-dd}.");
+            }
+        }
+
+        return new ValidateJobCodesAndWorkCodesResponse
+        {
+            IsValid = isValid,
+            ValidationMessages = validationMessages
+        };
     }
 
     /// <summary>
@@ -864,6 +936,23 @@ public class ShiftTradesProcessor : BaseProcessor
                         validationResult = validationResult2
                     }.ToJson();
                 }
+            }
+
+            #endregion
+
+            #region Check Staff Availability Conflicts
+
+            // Check availability conflicts using the AvailabilityConflictsValidation method
+            var availabilityValidationResult = await AvailabilityConflictsValidation(request);
+            if (!availabilityValidationResult.IsValid)
+            {
+                return new
+                {
+                    success = false,
+                    message = "Trade request validation failed",
+                    tradeRequestId = (int?)null,
+                    validationResult = availabilityValidationResult
+                }.ToJson();
             }
 
             #endregion
