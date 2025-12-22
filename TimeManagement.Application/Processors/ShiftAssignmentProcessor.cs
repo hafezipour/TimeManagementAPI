@@ -130,7 +130,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
             #region Availability Conflicts
 
             var availabilityConflicts = await CheckAvailabilityConflicts(request.Schedules.FirstOrDefault(), request.UserId);
-            if (availabilityConflicts != null && availabilityConflicts.Any() && DateTime.Now > DateTime.Parse("2025-12-31"))
+            if (availabilityConflicts != null && availabilityConflicts.Any() && DateTime.Now > DateTime.Parse("2025-12-15"))
             {
                 return new
                 {
