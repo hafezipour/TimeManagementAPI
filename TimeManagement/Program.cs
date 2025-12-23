@@ -53,10 +53,16 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseAuthorization();
+app.UseRouting();
 
-// Map gRPC service
-app.MapGrpcService<TimeManagement.Application.Services.HttpGrpcService>();
+// Map gRPC service BEFORE UseAuthorization
+// gRPC services handle authentication/authorization internally via ValidateToken
+// This prevents UseAuthorization middleware from blocking gRPC requests
+app.MapGrpcService<TimeManagement.Application.Services.HttpGrpcService>()
+   .AllowAnonymous();
+
+// Apply authorization only to regular HTTP controllers, not gRPC
+app.UseAuthorization();
 
 app.MapControllers();
 

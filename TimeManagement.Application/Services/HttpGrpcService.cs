@@ -115,6 +115,10 @@ public class HttpGrpcService : HttpService.HttpServiceBase
 
     public override async Task<HttpResponse> Post(HttpRequest request, ServerCallContext context)
     {
+        Console.WriteLine("=== HttpGrpcService.Post called ===");
+        Console.WriteLine($"Service: {request.ServiceName}, Method: {request.MethodName}");
+        Console.WriteLine($"Request reached gRPC handler - middleware did not block it");
+        
         var result = await RouteRequest(request, context);
 
         var response = new HttpResponse

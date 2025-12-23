@@ -139,12 +139,24 @@ public class ValidateToken
         {
             var metadata = context.RequestHeaders;
             
+            // Debug logging
+            Console.WriteLine($"=== ValidateToken.AuthenticateRequest ===");
+            Console.WriteLine($"Total metadata headers received: {metadata.Count}");
+            foreach (var header in metadata)
+            {
+                var value = header.Key.ToLower().Contains("auth") ? "[REDACTED]" : header.Value;
+                Console.WriteLine($"  Header: {header.Key} = {value}");
+            }
+            
             // Get authorization token from metadata
             var authHeader = metadata.FirstOrDefault(m => m.Key.ToLower() == "authorization");
             if (authHeader == null)
             {
+                Console.WriteLine("ERROR: Authorization header not found in metadata!");
                 return (false, null);
             }
+            
+            Console.WriteLine($"Authorization header found: Yes (length: {authHeader.Value.Length})");
 
             string token = authHeader.Value;
             if (!string.IsNullOrEmpty(token) && token.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
