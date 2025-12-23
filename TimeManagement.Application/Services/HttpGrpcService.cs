@@ -1,8 +1,10 @@
 using Grpc.Core;
 using GrpcProtoLibrary.Protos;
-using TimeManagement.Application.Processors;
+using Microsoft.Extensions.Logging;
 using TimeManagement.Application.Extensions;
+using TimeManagement.Application.Processors;
 using TimeManagement.Application.Security;
+using TimeManagement.Infra.Extensions;
 
 namespace TimeManagement.Application.Services;
 
@@ -118,7 +120,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
         Console.WriteLine("=== HttpGrpcService.Post called ===");
         Console.WriteLine($"Service: {request.ServiceName}, Method: {request.MethodName}");
         Console.WriteLine($"Request reached gRPC handler - middleware did not block it");
-        
+
         var result = await RouteRequest(request, context);
 
         var response = new HttpResponse
@@ -163,6 +165,7 @@ public class HttpGrpcService : HttpService.HttpServiceBase
     {
         try
         {
+            //CustomLogger.Log(LogLevel.Error, new Exception() { }, "Issue did came here hehe " + DateTime.UtcNow.ToString());
             // Generic authentication check using ValidateToken
             var authResult = await _validateToken.AuthenticateRequest(context);
             if (!authResult.IsAuthenticated)
