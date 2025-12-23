@@ -1,7 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Grpc.Net.Client;
+using Grpc.Net.Client.Web;
 using GrpcProtoLibrary.Protos;
 using Grpc.Core;
+using System;
 
 namespace TimeManagement.Controllers
 {
@@ -42,17 +44,14 @@ namespace TimeManagement.Controllers
             Console.WriteLine($"JWT Token (first 50 chars): {JwtToken.Substring(0, Math.Min(50, JwtToken.Length))}...");
             Console.WriteLine($"Tenant ID: 4201");
             Console.WriteLine($"Login ID: 2");
+            Console.WriteLine($"gRPC-Web Mode: GrpcWebText");
 
-            // Create gRPC channel with proper configuration
-            var httpHandler = new System.Net.Http.SocketsHttpHandler
-            {
-                // Ensure HTTP/2 is enabled for gRPC
-                EnableMultipleHttp2Connections = true
-            };
+            // Create gRPC-Web handler (works through proxies and browsers)
+            var handler = new GrpcWebHandler(GrpcWebMode.GrpcWebText, new HttpClientHandler());
 
             using var channel = GrpcChannel.ForAddress(BaseUrl, new GrpcChannelOptions
             {
-                HttpHandler = httpHandler,
+                HttpHandler = handler,
                 MaxReceiveMessageSize = 10 * 1024 * 1024,
                 MaxSendMessageSize = 10 * 1024 * 1024
             });

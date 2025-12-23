@@ -15,7 +15,6 @@ namespace TimeManagement.Controllers
             var headers = new Dictionary<string, string>();
             foreach (var header in Request.Headers)
             {
-                headers[header.Key] = string.Join(", ", header.Value);
             }
 
             return Ok(new
