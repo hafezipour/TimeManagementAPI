@@ -23,135 +23,6 @@ public class ShiftAssignmentConflictService
         _scheduleEvaluator = scheduleEvaluator;
     }
 
-    [Obsolete("No more in use, need to remove it in future")]
-    /// <summary>
-    /// Detect schedule conflicts for the provided assignment request against existing assignments.
-    /// </summary>
-    public List<ScheduleConflictDetail>? DetectConflicts(
-        ScheduleEmployeeRequest request,
-        List<ShiftAssignmentDetailDto>? existingAssignments,
-        List<ScheduleResponse>? existingSchedules)
-    {
-        // Nothing to validate if the incoming request doesn't contain a schedule payload.
-        if (request.Schedules == null || request.Schedules.Count == 0)
-        {
-            return null;
-        }
-
-        // No existing assignments or schedules means there can be no conflicts.
-        if (existingAssignments == null || existingAssignments.Count == 0 ||
-            existingSchedules == null || existingSchedules.Count == 0)
-        {
-            return null;
-        }
-
-        // We only support a single schedule entry per request, so take the first one.
-        var newScheduleRequest = request.Schedules.First();
-        var newSchedule = ConvertToScheduleResponse(newScheduleRequest);
-
-        // If the new schedule does not specify a start date we cannot evaluate it.
-        if (newSchedule == null || !newSchedule.StartFrom.HasValue)
-        {
-            return new List<ScheduleConflictDetail>
-            {
-                new ScheduleConflictDetail
-                {
-                    UserId = request.UserId,
-                    RequestedScheduleId = newSchedule?.Id,
-                    Reason = "Requested schedule is missing a valid start date."
-                }
-            };
-        }
-
-        // Determine the evaluation window: from the request start date up to either
-        // the schedule's natural end or the five-year guard horizon (whichever comes first).
-        var rangeStart = newSchedule.StartFrom.Value.Date;
-        var rangeEnd = DetermineRangeEnd(newSchedule, rangeStart);
-
-        if (rangeEnd < rangeStart)
-        {
-            return null;
-        }
-
-        // Expand the requested schedule into concrete occurrences (date + time window).
-        var newOccurrences = GenerateOccurrences(newSchedule, rangeStart, rangeEnd);
-
-        // If the request never produces an occurrence in the evaluation window, there is nothing to check.
-        if (newOccurrences.Count == 0)
-        {
-            return null;
-        }
-
-        // Cache existing schedules by assignment for quicker lookups.
-        var schedulesByAssignmentId = existingSchedules
-            .Where(s => s != null && s.SourceType == (int)ScheduleSourceTypes.ShiftAssignment && s.IsActive.GetValueOrDefault(true))
-            .GroupBy(s => s.SourceId)
-            .ToDictionary(g => g.Key, g => g.ToList());
-
-        var conflicts = new List<ScheduleConflictDetail>();
-
-        foreach (var assignment in existingAssignments)
-        {
-            // Skip null records to be defensive.
-            if (assignment == null)
-            {
-                continue;
-            }
-
-            // Do not compare the request against itself if an update is in progress.
-            if (request.Id.HasValue && assignment.Id == request.Id.Value)
-            {
-                continue;
-            }
-
-            // Fetch any schedules tied to this existing assignment.
-            if (!schedulesByAssignmentId.TryGetValue(assignment.Id, out var assignmentSchedules) || assignmentSchedules == null)
-            {
-                continue;
-            }
-
-            foreach (var existingSchedule in assignmentSchedules)
-            {
-                // Ignore malformed schedules that do not have a start date.
-                if (!existingSchedule.StartFrom.HasValue)
-                {
-                    continue;
-                }
-
-                // Expand the existing schedule within the same evaluation window.
-                var existingOccurrences = GenerateOccurrences(existingSchedule, rangeStart, rangeEnd);
-
-                // No occurrences means nothing to compare for this schedule.
-                if (existingOccurrences.Count == 0)
-                {
-                    continue;
-                }
-
-                // Identify overlapping occurrences between the new request and this existing schedule.
-                var overlappingOccurrences = FindConflicts(newOccurrences, existingOccurrences);
-
-                foreach (var overlap in overlappingOccurrences)
-                {
-                    // Capture the conflict metadata to return to the caller.
-                    conflicts.Add(new ScheduleConflictDetail
-                    {
-                        UserId = request.UserId,
-                        ExistingAssignmentId = assignment.Id,
-                        ExistingScheduleId = existingSchedule.Id,
-                        RequestedScheduleId = newSchedule.Id,
-                        Date = overlap.NewOccurrence.Date,
-                        ExistingShiftName = assignment.ShiftName,
-                        ExistingWindow = overlap.ExistingOccurrence.Window,
-                        RequestedWindow = overlap.NewOccurrence.Window,
-                        Reason = "Schedule overlap detected."
-                    });
-                }
-            }
-        }
-
-        return conflicts.Count > 0 ? conflicts : null;
-    }
-
     /// <summary>
     /// Detect schedule conflicts using precalculated occurrences from assignments (FromDate/ToDate) 
     /// instead of generating from ScheduleResponse Schedules property.
@@ -181,7 +52,7 @@ public class ShiftAssignmentConflictService
                     var occurrenceStart = occurrence.Window.Start.Value;
                     var occurrenceEnd = occurrence.Window.End.Value;
 
-                    if (assignmentFrom <= occurrenceEnd && occurrenceStart <= assignmentTo)
+                    if (assignmentFrom < occurrenceEnd && occurrenceStart < assignmentTo)
                     {
                         conflicts.Add(new ScheduleConflictDetail
                         {
