@@ -48,6 +48,7 @@ public class ShiftAssignmentProcessor : BaseProcessor
             {
                 "scheduleemployee" => await ScheduleEmployee(jsonData.FromJson<ScheduleEmployeeRequest>()),
                 "get" => await Get(jsonData.FromJson<GetShiftAssignmentRequest>()),
+                "deleteassignment" => await DeleteAssignment(jsonData.FromJson<DeleteAssignmentRequest>()),
                 _ => new { success = false, message = $"Unknown method: {methodName}" }.ToJson()
             };
         }
@@ -239,6 +240,39 @@ public class ShiftAssignmentProcessor : BaseProcessor
         catch (Exception ex)
         {
             throw ex;
+        }
+    }
+
+    /// <summary>
+    /// Delete a shift assignment and related unapproved/denied trades
+    /// </summary>
+    public async Task<string> DeleteAssignment(DeleteAssignmentRequest request)
+    {
+        try
+        {
+            if (request == null || request.AssignmentId <= 0)
+            {
+                return new { success = false, message = "Invalid assignment ID" }.ToJson();
+            }
+
+            if (string.IsNullOrEmpty(request.DeleteDate))
+            {
+                return new { success = false, message = "Delete date is required" }.ToJson();
+            }
+
+            var result = await _shiftAssignmentRepository.DeleteAssignment(
+                request.AssignmentId,
+                request.DeleteDate,
+                request.DeleteTime,
+                CurrentUser.LoginId,
+                CurrentUser.TenantID
+            );
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            return new { success = false, message = $"Error deleting assignment: {ex.Message}" }.ToJson();
         }
     }
 }

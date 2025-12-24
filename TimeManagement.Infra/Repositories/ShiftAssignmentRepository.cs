@@ -155,5 +155,34 @@ public class ShiftAssignmentRepository
             throw ex;
         }
     }
+
+    /// <summary>
+    /// Delete a shift assignment and related unapproved/denied trades
+    /// </summary>
+    public async Task<string> DeleteAssignment(
+        int assignmentId,
+        string deleteDate,
+        string? deleteTime,
+        int userId,
+        int tenantId)
+    {
+        try
+        {
+            List<SqlParameterModel> param = new List<SqlParameterModel>()
+            {
+                new SqlParameterModel() { Name = "AssignmentId", Value = assignmentId },
+                new SqlParameterModel() { Name = "DeleteDate", Value = deleteDate },
+                new SqlParameterModel() { Name = "DeleteTime", Value = deleteTime ?? (object)DBNull.Value },
+                new SqlParameterModel() { Name = "UserId", Value = userId },
+                new SqlParameterModel() { Name = "TenantId", Value = tenantId }
+            };
+            var result = await _dbOperations.ExecuteDataSetAsync("usp_ShiftAssignment_DeleteAssignment", param);
+            return result;
+        }
+        catch (Exception ex)
+        {
+            throw ex;
+        }
+    }
 }
 
