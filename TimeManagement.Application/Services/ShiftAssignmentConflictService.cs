@@ -172,21 +172,30 @@ public class ShiftAssignmentConflictService
             foreach (var occurrence in scheduleOccurrences)
             {
                 if (assignment.FromDate.HasValue && assignment.ToDate.HasValue &&
-                    occurrence.Date >= assignment.FromDate.Value.Date &&
-                    occurrence.Date <= assignment.ToDate.Value.Date)
+                    occurrence.Window.Start.HasValue && occurrence.Window.End.HasValue)
                 {
-                    conflicts.Add(new ScheduleConflictDetail
+                    // Check if date ranges overlap: [assignment.FromDate, assignment.ToDate] and [occurrence.Window.Start, occurrence.Window.End]
+                    // Two ranges overlap if: range1.Start <= range2.End && range2.Start <= range1.End
+                    var assignmentFrom = assignment.FromDate.Value;
+                    var assignmentTo = assignment.ToDate.Value;
+                    var occurrenceStart = occurrence.Window.Start.Value;
+                    var occurrenceEnd = occurrence.Window.End.Value;
+
+                    if (assignmentFrom <= occurrenceEnd && occurrenceStart <= assignmentTo)
                     {
-                        UserId = request.UserId,
-                        ExistingAssignmentId = assignment.Id,
-                        ExistingScheduleId = newSchedule.Id,
-                        RequestedScheduleId = newSchedule.Id,
-                        Date = occurrence.Date,
-                        ExistingShiftName = assignment.ShiftName,
-                        ExistingWindow = occurrence.Window,
-                        RequestedWindow = occurrence.Window,
-                        Reason = "Schedule overlap detected."
-                    });
+                        conflicts.Add(new ScheduleConflictDetail
+                        {
+                            UserId = request.UserId,
+                            ExistingAssignmentId = assignment.Id,
+                            ExistingScheduleId = newSchedule.Id,
+                            RequestedScheduleId = newSchedule.Id,
+                            Date = occurrence.Date,
+                            ExistingShiftName = assignment.ShiftName,
+                            ExistingWindow = occurrence.Window,
+                            RequestedWindow = occurrence.Window,
+                            Reason = "Schedule overlap detected."
+                        });
+                    }
                 }
             }
         }
