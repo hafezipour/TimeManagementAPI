@@ -63,17 +63,35 @@ BEGIN
         IF @ScheduleId IS NOT NULL
         BEGIN
             DECLARE @EndDateTime DATETIMEOFFSET;
+            DECLARE @EndTime TIME(7);
+            DECLARE @Year INT, @Month INT, @Day INT;
+            DECLARE @Hour INT, @Minute INT, @Second INT, @Fraction INT;
             
-            -- Combine date and time if time is provided
+            -- Set time to provided time or end of day
             IF @DeleteTime IS NOT NULL
             BEGIN
-                SET @EndDateTime = CAST(@DeleteDate AS DATETIMEOFFSET) + CAST(@DeleteTime AS TIME);
+                SET @EndTime = @DeleteTime;
             END
             ELSE
             BEGIN
-                -- If no time provided, set to end of day
-                SET @EndDateTime = CAST(@DeleteDate AS DATETIMEOFFSET) + CAST('23:59:59' AS TIME);
+                SET @EndTime = CAST('23:59:59' AS TIME(7));
             END
+            
+            -- Extract date parts from @DeleteDate
+            SET @Year = YEAR(@DeleteDate);
+            SET @Month = MONTH(@DeleteDate);
+            SET @Day = DAY(@DeleteDate);
+            
+            -- Extract time parts from @EndTime
+            SET @Hour = DATEPART(HOUR, @EndTime);
+            SET @Minute = DATEPART(MINUTE, @EndTime);
+            SET @Second = DATEPART(SECOND, @EndTime);
+            -- For precision 7, extract fractional seconds (nanoseconds / 100)
+            SET @Fraction = DATEPART(NANOSECOND, @EndTime) / 100;
+            
+            -- Create DATETIMEOFFSET using DATETIMEOFFSETFROMPARTS
+            -- Parameters: year, month, day, hour, minute, second, fractional_seconds, hour_offset, minute_offset, precision
+            SET @EndDateTime = DATETIMEOFFSETFROMPARTS(@Year, @Month, @Day, @Hour, @Minute, @Second, @Fraction, 0, 0, 7);
 
             -- Update the schedule's ValidUntil to end the assignment
             UPDATE [dbo].[Schedules]
