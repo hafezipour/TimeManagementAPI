@@ -93,9 +93,10 @@ BEGIN
             -- Parameters: year, month, day, hour, minute, second, fractional_seconds, hour_offset, minute_offset, precision
             SET @EndDateTime = DATETIMEOFFSETFROMPARTS(@Year, @Month, @Day, @Hour, @Minute, @Second, @Fraction, 0, 0, 7);
 
-            -- Update the schedule's ValidUntil to end the assignment
+            -- Update the schedule's ValidUntil and EndType to end the assignment
             UPDATE [dbo].[Schedules]
             SET ValidUntil = @EndDateTime,
+                EndType = '2', -- 2 = OnDate (ending on a specific date)
                 DateUpdated = SYSUTCDATETIME(),
                 UpdatedBy = @UserId
             WHERE Id = @ScheduleId

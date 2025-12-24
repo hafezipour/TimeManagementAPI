@@ -664,6 +664,7 @@ public class ShiftProcessor : BaseProcessor
 
             allSchedules = JsonConvert.DeserializeObject<List<DTOs.Schedules.ScheduleResponse>>(schedulesJson);
         }
+        allSchedules = allSchedules.Where(c => c.Id == 170).ToList();
 
         foreach (var shift in schedulingShiftsAll)
         {
