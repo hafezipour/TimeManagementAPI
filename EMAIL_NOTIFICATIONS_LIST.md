@@ -2,7 +2,7 @@
 
 ## 📧 Assignment Notifications
 
-### Employee Assigned to Shift
+### 1. Employee Assigned to Shift
 - **Subject**: `You have been assigned to [Shift Name] on [Date]`
 - **Recipients**: Assigned Employee
 - **When**: Immediately after assignment is created
@@ -14,7 +14,7 @@
   - Link to view schedule details
 - **Priority**: High
 
-### Assignment Modified
+### 2. Assignment Modified
 - **Subject**: `Your assignment has been updated - [Shift Name] on [Date]`
 - **Recipients**: Assigned Employee
 - **When**: When assignment details are modified (time, job codes, work codes, notes)
@@ -25,7 +25,7 @@
   - Link to view schedule details
 - **Priority**: Medium
 
-### Assignment Ended/Cancelled
+### 3. Assignment Ended/Cancelled
 - **Subject**: `Your assignment has been ended - [Shift Name] on [Date]`
 - **Recipients**: Assigned Employee
 - **When**: When assignment is ended or cancelled
@@ -36,7 +36,7 @@
   - Link to view schedule details
 - **Priority**: High
 
-### Assignment Removed by Admin
+### 4. Assignment Removed by Admin
 - **Subject**: `Your assignment has been removed - [Shift Name] on [Date]`
 - **Recipients**: Assigned Employee
 - **When**: When admin removes an assignment
@@ -47,7 +47,7 @@
   - Link to view schedule details
 - **Priority**: High
 
-### Open Slot Available Notification
+### 5. Open Slot Available Notification
 - **Subject**: `New open slot available - [Shift Name] on [Date]`
 - **Recipients**: Eligible Employees (based on job codes, work codes, availability)
 - **When**: When a new open slot is created or becomes available
@@ -64,7 +64,7 @@
 
 ## 🔄 Trade Request Notifications
 
-### Trade Request Received
+### 1. Trade Request Received
 - **Subject**: `New trade request from [Employee Name] - [Shift Name] on [Date]`
 - **Recipients**: Requested Employee (accepting employee)
 - **When**: When a trade request is created
@@ -79,7 +79,7 @@
   - Link to approve/deny trade request
 - **Priority**: High
 
-### Trade Request Approved
+### 2. Trade Request Approved
 - **Subject**: `Trade request approved - [Shift Name] on [Date]`
 - **Recipients**: 
   - Trading Employee (original requestor)
@@ -93,7 +93,7 @@
   - Link to view updated schedule
 - **Priority**: High
 
-### Trade Request Denied
+### 3. Trade Request Denied
 - **Subject**: `Trade request denied - [Shift Name] on [Date]`
 - **Recipients**: Trading Employee (original requestor)
 - **When**: When trade request is denied
@@ -104,7 +104,7 @@
   - Link to view schedule
 - **Priority**: Medium
 
-### Trade Request Cancelled
+### 4. Trade Request Cancelled
 - **Subject**: `Trade request cancelled - [Shift Name] on [Date]`
 - **Recipients**: 
   - Accepting Employee (if request was pending)
@@ -116,7 +116,7 @@
   - Link to view schedule
 - **Priority**: Low
 
-### Trade Request Expiring Soon
+### 5. Trade Request Expiring Soon
 - **Subject**: `Reminder: Trade request expiring soon - [Shift Name]`
 - **Recipients**: Accepting Employee
 - **When**: 24 hours before trade request expires (if expiration is set)
@@ -126,7 +126,7 @@
   - Link to approve/deny trade request
 - **Priority**: Medium
 
-### Trade Request Auto-Expired
+### 6. Trade Request Auto-Expired
 - **Subject**: `Trade request expired - [Shift Name] on [Date]`
 - **Recipients**: 
   - Trading Employee
@@ -142,7 +142,7 @@
 
 ## 🏖️ Time Off Request Notifications
 
-### Time Off Request Submitted
+### 1. Time Off Request Submitted
 - **Subject**: `Time off request submitted - [Start Date] to [End Date]`
 - **Recipients**: 
   - Requesting Employee
@@ -156,7 +156,7 @@
   - Link to view request details
 - **Priority**: Medium
 
-### Time Off Request Approved
+### 2. Time Off Request Approved
 - **Subject**: `Time off request approved - [Start Date] to [End Date]`
 - **Recipients**: Requesting Employee
 - **When**: When time off request is approved
@@ -167,7 +167,7 @@
   - Link to view schedule
 - **Priority**: High
 
-### Time Off Request Rejected
+### 3. Time Off Request Rejected
 - **Subject**: `Time off request rejected - [Start Date] to [End Date]`
 - **Recipients**: Requesting Employee
 - **When**: When time off request is rejected
@@ -179,7 +179,7 @@
   - Link to submit new request
 - **Priority**: High
 
-### Time Off Request Cancelled
+### 4. Time Off Request Cancelled
 - **Subject**: `Time off request cancelled - [Start Date] to [End Date]`
 - **Recipients**: Assigned Approvers/Admins
 - **When**: When employee cancels their time off request
@@ -189,7 +189,7 @@
   - Link to view requests
 - **Priority**: Low
 
-### Time Off Request Pending Approval Reminder
+### 5. Time Off Request Pending Approval Reminder
 - **Subject**: `Reminder: Time off request pending approval - [Start Date] to [End Date]`
 - **Recipients**: Assigned Approvers/Admins
 - **When**: Daily reminder if request is pending for more than 2 days
@@ -202,7 +202,7 @@
 
 ## 📍 Availability Notifications
 
-### Availability Updated
+### 1. Availability Updated
 - **Subject**: `Your availability has been updated`
 - **Recipients**: Employee
 - **When**: When employee availability is modified (by employee or admin)
