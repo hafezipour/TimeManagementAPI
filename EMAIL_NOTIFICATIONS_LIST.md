@@ -213,7 +213,7 @@
   - Link to view/edit availability
 - **Priority**: Low
 
-### Availability Conflict Detected
+### 2. Availability Conflict Detected
 - **Subject**: `Availability conflict detected - [Shift Name] on [Date]`
 - **Recipients**: 
   - Assigned Employee
@@ -229,7 +229,7 @@
 
 ---
 
-### Upcoming Shift Reminder
+### 1. Upcoming Shift Reminder
 - **Subject**: `Reminder: You have a shift tomorrow - [Shift Name]`
 - **Recipients**: Assigned Employees
 - **When**: 24 hours before shift start time
@@ -241,7 +241,7 @@
   - Link to view shift details
 - **Priority**: Medium
 
-### Shift Starting Soon Reminder
+### 2. Shift Starting Soon Reminder
 - **Subject**: `Reminder: Your shift starts in [X] hours - [Shift Name]`
 - **Recipients**: Assigned Employees
 - **When**: 2-4 hours before shift start time (configurable)
@@ -256,7 +256,7 @@
 
 ## ⏰ Reminder Notifications
 
-### Trade Request Response Due Soon
+### 1. Trade Request Response Due Soon
 - **Subject**: `Action required: Trade request response due soon`
 - **Recipients**: Employees with pending trade requests
 - **When**: 24 hours before trade request expires
@@ -266,7 +266,7 @@
   - Link to approve/deny
 - **Priority**: Medium
 
-### Time Off Request Approval Due
+### 2. Time Off Request Approval Due
 - **Subject**: `Action required: Time off request pending your approval`
 - **Recipients**: Approvers/Admins
 - **When**: Daily reminder for requests pending more than 1 day
@@ -277,7 +277,7 @@
   - Link to approve/reject
 - **Priority**: Medium
 
-### Availability Update Reminder
+### 3. Availability Update Reminder
 - **Subject**: `Reminder: Update your availability`
 - **Recipients**: Employees with outdated availability
 - **When**: Monthly reminder if availability hasn't been updated in 30+ days
@@ -287,7 +287,7 @@
   - Link to update availability
 - **Priority**: Lowest
 
-### Trade Request Requires Approval
+### 4. Trade Request Requires Approval
 - **Subject**: `Trade request requires admin approval - [Shift Name]`
 - **Recipients**: Admins/Managers
 - **When**: When a trade request requires admin approval (based on settings)
@@ -298,7 +298,7 @@
   - Link to approve/reject
 - **Priority**: Medium
 
-### Open Slot Unfilled Alert
+### 5. Open Slot Unfilled Alert
 - **Subject**: `Alert: Unfilled open slot - [Shift Name] on [Date]`
 - **Recipients**: Admins/Managers
 - **When**: 24-48 hours before shift if open slot remains unfilled
@@ -309,7 +309,7 @@
   - Link to assign employee
 - **Priority**: High
 
-### Minimum Positions Not Met
+### 6. Minimum Positions Not Met
 - **Subject**: `Alert: Minimum positions not met - [Shift Name] on [Date]`
 - **Recipients**: Admins/Managers
 - **When**: When assigned employees are less than minimum required positions
@@ -321,7 +321,7 @@
   - Link to assign employees
 - **Priority**: High
 
-### Schedule Approval Required
+### 7. Schedule Approval Required
 - **Subject**: `Schedule approval required - [Period]`
 - **Recipients**: Approvers/Admins
 - **When**: When a schedule period requires approval before publishing
@@ -332,7 +332,7 @@
   - Link to review and approve schedule
 - **Priority**: Medium
 
-### Employee Self-Scheduling Activity
+### 8. Employee Self-Scheduling Activity
 - **Subject**: `Employee self-scheduled - [Shift Name] on [Date]`
 - **Recipients**: Admins/Managers (if admin approval required for self-scheduling)
 - **When**: When an employee schedules themselves (if approval required)
@@ -342,7 +342,7 @@
   - Link to approve/reject assignment
 - **Priority**: Medium
 
-### Bulk Assignment Completed
+### 9. Bulk Assignment Completed
 - **Subject**: `Bulk assignment completed - [Period]`
 - **Recipients**: Admins/Managers who performed bulk assignment
 - **When**: When bulk assignment operation completes
