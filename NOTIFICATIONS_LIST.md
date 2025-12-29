@@ -475,3 +475,4 @@ Some notifications include dynamic content:
 
 Example: "Employee [John Doe] scheduled successfully for [Morning Shift] on [2025-01-15]"
 
+
